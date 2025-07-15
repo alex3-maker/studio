@@ -1,13 +1,17 @@
 
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import type { User, Duel, DuelOption } from '@/lib/types';
 import { mockUser, mockDuels } from '@/lib/data';
+
+const VOTED_DUELS_STORAGE_KEY = 'dueliax_voted_duels';
+const USER_KEYS_STORAGE_KEY = 'dueliax_user_keys';
 
 interface AppContextType {
   user: User;
   duels: Duel[];
+  votedDuelIds: string[];
   castVote: (duelId: string, optionId: string) => void;
   addDuel: (newDuel: Duel) => void;
   updateDuel: (updatedDuel: Partial<Duel> & { id: string }) => void;
@@ -20,6 +24,25 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User>(mockUser);
   const [duels, setDuels] = useState<Duel[]>(mockDuels);
+  const [votedDuelIds, setVotedDuelIds] = useState<string[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const storedVotedIds = localStorage.getItem(VOTED_DUELS_STORAGE_KEY);
+      if (storedVotedIds) {
+        setVotedDuelIds(JSON.parse(storedVotedIds));
+      }
+
+      const storedKeys = localStorage.getItem(USER_KEYS_STORAGE_KEY);
+      if (storedKeys) {
+        setUser(prevUser => ({...prevUser, keys: JSON.parse(storedKeys)}));
+      }
+    } catch (error) {
+      console.error("Error reading from localStorage", error);
+    }
+    setIsLoaded(true);
+  }, []);
 
   const castVote = useCallback((duelId: string, optionId: string) => {
     setDuels(prevDuels =>
@@ -37,11 +60,30 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       })
     );
 
-    setUser(prevUser => ({
-      ...prevUser,
-      keys: prevUser.keys + 1,
-      votesCast: prevUser.votesCast + 1,
-    }));
+    setUser(prevUser => {
+        const newKeys = prevUser.keys + 1;
+        try {
+            localStorage.setItem(USER_KEYS_STORAGE_KEY, JSON.stringify(newKeys));
+        } catch (error) {
+            console.error("Error saving keys to localStorage", error);
+        }
+        return {
+            ...prevUser,
+            keys: newKeys,
+            votesCast: prevUser.votesCast + 1,
+        }
+    });
+
+    setVotedDuelIds(prevIds => {
+        const newIds = [...prevIds, duelId];
+        try {
+            localStorage.setItem(VOTED_DUELS_STORAGE_KEY, JSON.stringify(newIds));
+        } catch (error) {
+            console.error("Error saving voted duels to localStorage", error);
+        }
+        return newIds;
+    });
+
   }, []);
 
   const addDuel = useCallback((newDuel: Duel) => {
@@ -56,10 +98,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setDuels(prevDuels =>
       prevDuels.map(duel => {
         if (duel.id === updatedDuelData.id) {
-          // Merge new data with existing data, preserving votes
           const updatedOptions = updatedDuelData.options?.map((opt, index) => ({
-            ...duel.options[index], // Preserve original id and votes
-            ...opt, // Apply new title and imageUrl
+            ...duel.options[index],
+            ...opt,
           })) as [DuelOption, DuelOption] | undefined;
 
           return {
@@ -84,7 +125,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setDuels(prevDuels => prevDuels.filter(duel => duel.id !== duelId));
   }, []);
   
-  const value = { user, duels, castVote, addDuel, updateDuel, toggleDuelStatus, deleteDuel };
+  const value = { user, duels, castVote, addDuel, updateDuel, toggleDuelStatus, deleteDuel, votedDuelIds };
+
+  if (!isLoaded) {
+    return null; 
+  }
 
   return (
     <AppContext.Provider value={value}>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useTransition, useMemo, useEffect } from 'react';
@@ -18,7 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 const HINT_STORAGE_KEY = 'dueliax-landscape-hint-dismissed';
 
 export default function VotingFeed() {
-  const { duels, castVote } = useAppContext();
+  const { duels, castVote, votedDuelIds } = useAppContext();
   const [currentDuelIndex, setCurrentDuelIndex] = useState(0);
   const [voted, setVoted] = useState<DuelOption | null>(null);
   const [animationClass, setAnimationClass] = useState('');
@@ -40,7 +41,10 @@ export default function VotingFeed() {
     setShowHint(false);
   };
 
-  const activeDuels = useMemo(() => duels.filter(d => d.status === 'active'), [duels]);
+  const activeDuels = useMemo(() => 
+    duels.filter(d => d.status === 'active' && !votedDuelIds.includes(d.id)), 
+  [duels, votedDuelIds]);
+  
   const currentDuel = activeDuels[currentDuelIndex];
 
   const handleVote = (selectedOption: DuelOption, direction: 'left' | 'right') => {
@@ -53,7 +57,7 @@ export default function VotingFeed() {
       startTransition(() => {
         castVote(currentDuel.id, selectedOption.id);
         toast({
-          duration: 3000, // La notificación desaparecerá después de 3 segundos
+          duration: 3000,
           title: '¡Voto registrado!',
           description: (
             <div className="flex items-center">
@@ -70,11 +74,16 @@ export default function VotingFeed() {
   const handleNextDuel = () => {
     setAnimationClass('');
     setVoted(null);
-    setCurrentDuelIndex((prevIndex) => (prevIndex + 1) % activeDuels.length);
-    document.getElementById(`results-close-${currentDuel.id}`)?.click();
+    if (currentDuel) {
+        document.getElementById(`results-close-${currentDuel.id}`)?.click();
+    }
+    // No incrementamos el índice, al filtrar la lista el siguiente duelo automáticamente ocupará el índice 0
   };
 
-
+  if (!votedDuelIds) { // Loading state while context loads from localstorage
+    return <VotingFeedSkeleton />;
+  }
+  
   if (activeDuels.length === 0) {
     return (
        <div className="text-center py-16">
@@ -85,8 +94,14 @@ export default function VotingFeed() {
   }
 
   if (!currentDuel) {
-    return <VotingFeedSkeleton />;
+    // Esto puede pasar brevemente si el último duelo es votado
+    return (
+        <div className="text-center py-16">
+         <h2 className="text-2xl font-headline mb-4">Cargando siguiente duelo...</h2>
+       </div>
+     )
   }
+
 
   return (
     <div className="max-w-4xl mx-auto">
