@@ -2,8 +2,8 @@
 
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useFormState, useFormStatus } from 'react-dom';
-import { useEffect } from 'react';
+import { useActionState, useEffect } from 'react';
+import { useFormStatus } from 'react-dom';
 
 import { createDuelSchema, type CreateDuelFormValues } from '@/lib/schemas';
 import { createDuelAction } from '@/lib/actions';
@@ -48,7 +48,7 @@ function SubmitButton() {
 }
 
 export default function CreateDuelForm() {
-  const [state, formAction] = useFormState(createDuelAction, initialState);
+  const [state, formAction] = useActionState(createDuelAction, initialState);
   const { toast } = useToast();
 
   const form = useForm<CreateDuelFormValues>({
