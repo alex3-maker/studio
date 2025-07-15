@@ -32,6 +32,7 @@ function getFormData(formData: FormData) {
 
   return {
     id: formData.get('id') as string | undefined,
+    userKeys: Number(formData.get('userKeys') || '0'),
     title: formData.get('title') as string,
     description: formData.get('description') as string,
     type: formData.get('type') as "A_VS_B" | "LIST" | "KING_OF_THE_HILL",
@@ -85,7 +86,7 @@ export async function createDuelAction(
     };
   }
   
-  const { title, options, description, type, startsAt, endsAt } = validatedFields.data;
+  const { title, options, description, type, startsAt, endsAt, userKeys } = validatedFields.data;
 
   try {
     const moderationResult = await runModeration({ title, options });
@@ -96,25 +97,16 @@ export async function createDuelAction(
     revalidatePath('/');
     revalidatePath('/panel/mis-duelos');
 
-    const userKeys = Number(formData.get('userKeys') || '0');
     const hasEnoughKeys = userKeys >= DUEL_CREATION_COST;
-    
-    const now = new Date();
-    let status: Duel['status'];
-
-    if (hasEnoughKeys) {
-        status = startsAt <= now && endsAt > now ? 'active' : 'scheduled';
-    } else {
-        status = 'draft';
-    }
+    const status: Duel['status'] = hasEnoughKeys ? 'scheduled' : 'draft'; // Let the context determine if it's active
 
     const newDuel: Duel = {
       id: `duel-${Date.now()}`,
       title,
       description: description || '',
       type,
-      status,
-      createdAt: formatISO(now),
+      status, // Will be re-evaluated in the context
+      createdAt: formatISO(new Date()),
       startsAt: formatISO(startsAt),
       endsAt: formatISO(endsAt),
       creator: {

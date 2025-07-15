@@ -101,7 +101,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     } catch (error) {
       console.error("Error reading from localStorage, resetting data.", error);
-      localStorage.clear();
+      // Don't clear storage, just use defaults
       setUser(mockUser);
       setDuels(mockDuels);
     }
@@ -215,18 +215,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   }, [duels, duelVotingHistory, addKeyTransaction]);
 
-  const addDuel = useCallback((newDuel: Duel) => {
+  const addDuel = useCallback((newDuelData: Duel) => {
+    const newDuel = {...newDuelData, status: getStatus(newDuelData)};
+
     setDuels(prevDuels => [newDuel, ...prevDuels]);
+    
     setUser(prevUser => {
       const updatedUser = { ...prevUser, duelsCreated: prevUser.duelsCreated + 1 };
+      
       if (newDuel.status !== 'draft') {
-          updatedUser.keys -= DUEL_CREATION_COST;
-          addKeyTransaction('spent', DUEL_CREATION_COST, `Creación de "${newDuel.title}"`);
-          addNotification({
-              type: 'keys-spent',
-              message: `Has gastado ${DUEL_CREATION_COST} llaves en crear el duelo: "${newDuel.title}".`,
-              link: null
-          });
+        updatedUser.keys -= DUEL_CREATION_COST;
+        addKeyTransaction('spent', DUEL_CREATION_COST, `Creación de "${newDuel.title}"`);
+        addNotification({
+            type: 'keys-spent',
+            message: `Has gastado ${DUEL_CREATION_COST} llaves en crear el duelo: "${newDuel.title}".`,
+            link: null
+        });
       }
       return updatedUser;
     });
@@ -243,7 +247,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setDuels(prevDuels => prevDuels.map(d => 
-        d.id === duelId ? { ...d, status: 'scheduled' } : d
+        d.id === duelId ? { ...d, status: getStatus({...d, status: 'scheduled'}) } : d // re-evaluate status
     ));
 
     return true;
