@@ -31,7 +31,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Terminal, Upload, CalendarIcon } from 'lucide-react';
-import type { Duel } from '@/lib/types';
+import type { Duel, User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import type { FormState } from '@/lib/actions';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -55,6 +55,7 @@ function SubmitButton({ isEditing = false, isPending }: SubmitButtonProps) {
 }
 
 interface CreateDuelFormProps {
+  user?: User; // Make user optional for editing from admin panel later
   state: FormState;
   formAction: (payload: FormData) => void;
   duelData?: Duel;
@@ -62,7 +63,7 @@ interface CreateDuelFormProps {
   isPending: boolean;
 }
 
-export default function CreateDuelForm({ state, formAction, duelData, isEditing = false, isPending }: CreateDuelFormProps) {
+export default function CreateDuelForm({ user, state, formAction, duelData, isEditing = false, isPending }: CreateDuelFormProps) {
   const { toast } = useToast();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   
@@ -116,7 +117,10 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
     const formData = new FormData();
     if (isEditing && duelData?.id) {
         formData.append('id', duelData.id);
+    } else if (user) {
+        formData.append('userKeys', user.keys.toString());
     }
+
     formData.append('title', data.title);
     formData.append('description', data.description || '');
     formData.append('type', data.type);

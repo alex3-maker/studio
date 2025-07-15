@@ -28,7 +28,7 @@ export default function CreateDuelPage() {
 
   useEffect(() => {
     if (state.success && state.newDuel) {
-      addDuel(state.newDuel, user.keys); // Pass current keys for logic
+      addDuel(state.newDuel);
       toast({
         title: state.newDuel.status === 'draft' ? '¡Borrador Guardado!' : '¡Éxito!',
         description: state.message,
@@ -66,7 +66,7 @@ export default function CreateDuelPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <CreateDuelForm state={state} formAction={formAction} isPending={isPending} />
+            <CreateDuelForm user={user} state={state} formAction={formAction} isPending={isPending} />
           </CardContent>
         </Card>
       </div>
