@@ -6,7 +6,7 @@ import { useAppContext } from "@/context/app-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, Power, PowerOff, Edit } from "lucide-react";
+import { Trash2, Power, PowerOff, Edit, RotateCcw } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,14 +23,24 @@ import ResultsChart from "@/components/panel/results-chart";
 import DuelResultsDetails from "@/components/duel-results-details";
 import type { Duel } from "@/lib/types";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminDuelsPage() {
-  const { duels, toggleDuelStatus, deleteDuel } = useAppContext();
+  const { duels, toggleDuelStatus, deleteDuel, resetDuelVotes } = useAppContext();
   const [selectedDuel, setSelectedDuel] = useState<Duel | null>(null);
+  const { toast } = useToast();
 
   const handleRowClick = (duel: Duel) => {
     setSelectedDuel(duel);
   };
+
+  const handleResetVotes = (duelId: string) => {
+    resetDuelVotes(duelId);
+    toast({
+      title: "Votos Reiniciados",
+      description: `Los votos para el duelo han sido reseteados. Se ha notificado a los votantes.`,
+    });
+  }
 
   return (
     <>
@@ -67,9 +77,6 @@ export default function AdminDuelsPage() {
                   <p className="text-sm text-muted-foreground">
                     Creado por: {duel.creator.name}
                   </p>
-                  <p className="text-xs text-muted-foreground font-mono mt-1">
-                    ID: {duel.id}
-                  </p>
                 </div>
                 
                  <Separator className="md:hidden" />
@@ -87,6 +94,26 @@ export default function AdminDuelsPage() {
                     {duel.status === 'active' ? <PowerOff className="h-4 w-4 text-orange-500" /> : <Power className="h-4 w-4 text-green-500" />}
                     <span className="sr-only">{duel.status === 'active' ? 'Cerrar Duelo' : 'Activar Duelo'}</span>
                   </Button>
+                   <AlertDialog onOpenChange={(open) => !open && e.stopPropagation()}>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+                        <RotateCcw className="h-4 w-4 text-blue-500" />
+                        <span className="sr-only">Resetear Votos</span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>¿Resetear votación?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta acción pondrá a cero todos los votos para este duelo. No se puede deshacer.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleResetVotes(duel.id)}>Resetear</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                   <AlertDialog onOpenChange={(open) => !open && e.stopPropagation()}>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>

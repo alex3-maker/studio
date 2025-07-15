@@ -82,9 +82,6 @@ export default function DuelList({ duels }: DuelListProps) {
                 {/* Title & Meta */}
                 <div className="flex-grow">
                   <p className="font-bold text-lg">{duel.title}</p>
-                   <p className="text-xs text-muted-foreground font-mono mt-1">
-                    ID: {duel.id}
-                  </p>
                 </div>
 
                 {/* Actions */}

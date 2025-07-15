@@ -18,6 +18,7 @@ interface AppContextType {
   updateDuel: (updatedDuel: Partial<Duel> & { id: string }) => void;
   toggleDuelStatus: (duelId: string) => void;
   deleteDuel: (duelId: string) => void;
+  resetDuelVotes: (duelId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -149,7 +150,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     );
   }, []);
 
-
   const toggleDuelStatus = useCallback((duelId: string) => {
     setDuels(prevDuels => {
       const newDuels = prevDuels.map(duel => 
@@ -176,7 +176,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
   
-  const value = { user, duels, castVote, addDuel, updateDuel, toggleDuelStatus, deleteDuel, votedDuelIds };
+  const resetDuelVotes = useCallback((duelId: string) => {
+    setDuels(prevDuels => {
+      const newDuels = prevDuels.map(duel => {
+        if (duel.id === duelId) {
+          const resetOptions = duel.options.map(option => ({ ...option, votes: 0 })) as [DuelOption, DuelOption];
+          return { ...duel, options: resetOptions };
+        }
+        return duel;
+      });
+      try {
+        localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
+      } catch (error) {
+        console.error("Error saving duels to localStorage", error);
+      }
+      return newDuels;
+    });
+  }, []);
+
+  const value = { user, duels, castVote, addDuel, updateDuel, toggleDuelStatus, deleteDuel, resetDuelVotes, votedDuelIds };
 
   if (!isLoaded) {
     return null; 
