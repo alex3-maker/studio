@@ -59,7 +59,7 @@ export default function DuelList({ duels }: DuelListProps) {
             ))}
           </TableBody>
         </Table>
-      </Content>
+      </CardContent>
     </Card>
   );
 }
