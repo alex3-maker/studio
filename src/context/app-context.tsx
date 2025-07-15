@@ -24,13 +24,13 @@ interface AppContextType {
   deleteDuel: (duelId: string) => void;
   resetDuelVotes: (duelId: string, isAdminReset?: boolean) => void;
   getDuelStatus: (duel: Duel) => Duel['status'];
+  markNotificationAsRead: (notificationId: string) => void;
   markAllNotificationsAsRead: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const getStatus = (duel: Duel): Duel['status'] => {
-    // Defensive check in case a duel somehow still has invalid dates
     if (!duel.startsAt || !duel.endsAt) {
       console.warn(`Duel ${duel.id} is missing date information.`);
       return 'closed';
@@ -103,6 +103,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setIsLoaded(true);
   }, []);
 
+  const persistVotedDuels = (newIds: string[]) => {
+      try {
+        setVotedDuelIds(newIds);
+        localStorage.setItem(VOTED_DUELS_STORAGE_KEY, JSON.stringify(newIds));
+      } catch (error) {
+        console.error("Error saving voted duels to localStorage", error);
+      }
+  }
+
   const persistDuels = (newDuels: Duel[]) => {
     try {
       localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
@@ -172,11 +181,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     setVotedDuelIds(prevIds => {
         const newIds = [...prevIds, duelId];
-        try {
-            localStorage.setItem(VOTED_DUELS_STORAGE_KEY, JSON.stringify(newIds));
-        } catch (error) {
-            console.error("Error saving voted duels to localStorage", error);
-        }
+        persistVotedDuels(newIds);
         return newIds;
     });
 
@@ -221,8 +226,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     );
     addNotification({
         type: 'duel-edited',
-        message: `El duelo "${duelTitle}" ha sido actualizado por su creador.`,
-        link: `/` // Or link to the specific duel if a page exists
+        message: `El duelo "${duelTitle}" ha sido actualizado.`,
+        link: null // No link needed, it's just an info
     })
   }, [addNotification]);
 
@@ -240,7 +245,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             addNotification({
                 type: 'duel-closed',
                 message: `El duelo "${duel.title}" ha finalizado. ¡Mira los resultados!`,
-                link: `/`
+                link: `/` // Or a dedicated results page
             });
           } else {
              newEndsAt = addDays(new Date(), 7).toISOString();
@@ -278,6 +283,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return newDuels;
     });
 
+    setVotedDuelIds(prevIds => {
+      const newIds = prevIds.filter(id => id !== duelId);
+      persistVotedDuels(newIds);
+      return newIds;
+    });
+
     const message = isOwnerReset 
         ? `Has reiniciado los votos de tu duelo "${duelTitle}".`
         : `Un administrador ha reiniciado los votos del duelo "${duelTitle}".`;
@@ -285,10 +296,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
      addNotification({
         type: 'duel-reset',
         message: message,
-        link: `/`
+        link: null
     });
 
   }, [addNotification]);
+
+  const markNotificationAsRead = useCallback((notificationId: string) => {
+    setNotifications(prev => {
+        const newNotifications = prev.map(n => n.id === notificationId ? {...n, read: true} : n);
+        persistNotifications(newNotifications);
+        return newNotifications;
+    });
+  }, []);
 
   const markAllNotificationsAsRead = useCallback(() => {
     setNotifications(prev => {
@@ -298,7 +317,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
-  const value = { user, duels, castVote, addDuel, updateDuel, toggleDuelStatus, deleteDuel, resetDuelVotes, votedDuelIds, getDuelStatus, notifications, markAllNotificationsAsRead };
+  const value = { user, duels, castVote, addDuel, updateDuel, toggleDuelStatus, deleteDuel, resetDuelVotes, votedDuelIds, getDuelStatus, notifications, markNotificationAsRead, markAllNotificationsAsRead };
 
   if (!isLoaded) {
     return null; 

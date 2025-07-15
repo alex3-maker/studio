@@ -34,7 +34,7 @@ export type Notification = {
     id: string;
     type: 'duel-closed' | 'duel-edited' | 'duel-reset' | 'winner-changed';
     message: string;
-    link: string;
+    link: string | null;
     timestamp: string; // ISO 8601 string
     read: boolean;
 }

@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Flame, Key, Menu, Swords, ShieldCheck, Bell, CheckCheck } from 'lucide-react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Separator } from '../ui/separator';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import type { Notification } from '@/lib/types';
 
 const navLinks = [
   { href: '/', label: 'Inicio', icon: Swords },
@@ -23,8 +24,16 @@ const navLinks = [
 
 export default function Header() {
   const pathname = usePathname();
-  const { user, notifications, markAllNotificationsAsRead } = useAppContext();
+  const router = useRouter();
+  const { user, notifications, markNotificationAsRead, markAllNotificationsAsRead } = useAppContext();
   const unreadNotifications = notifications.filter(n => !n.read);
+
+  const handleNotificationClick = (notification: Notification) => {
+    markNotificationAsRead(notification.id);
+    if (notification.link) {
+      router.push(notification.link);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -141,17 +150,19 @@ export default function Header() {
                         </div>
                     ) : (
                         notifications.map(n => (
-                            <Link key={n.id} href={n.link} passHref>
-                                <div className={cn(
-                                    "block p-2 rounded-md transition-colors hover:bg-muted",
-                                    !n.read && "bg-secondary"
-                                )}>
-                                    <p className="text-sm">{n.message}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        {formatDistanceToNow(new Date(n.timestamp), { locale: es, addSuffix: true })}
-                                    </p>
-                                </div>
-                            </Link>
+                           <div 
+                              key={n.id} 
+                              onClick={() => handleNotificationClick(n)}
+                              className={cn(
+                                "block p-2 rounded-md transition-colors hover:bg-muted cursor-pointer",
+                                !n.read && "bg-secondary"
+                              )}
+                            >
+                                <p className="text-sm">{n.message}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {formatDistanceToNow(new Date(n.timestamp), { locale: es, addSuffix: true })}
+                                </p>
+                           </div>
                         ))
                     )}
                  </div>
