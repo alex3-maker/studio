@@ -79,7 +79,7 @@ export async function createDuelAction(
     };
 
   } catch (error) {
-    console.error('Error creating duel:', error);
+    console.error('Error creando duelo:', error);
     return {
       message: 'Ocurrió un error inesperado. Por favor, inténtalo de nuevo.',
       success: false,

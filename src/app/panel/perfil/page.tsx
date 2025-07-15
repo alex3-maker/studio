@@ -53,7 +53,7 @@ export default function PerfilPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" defaultValue={`${user.name.toLowerCase().replace(' ', '.')}@duel-dash.com`} disabled />
+            <Input id="email" type="email" defaultValue={`${user.name.toLowerCase().replace(' ', '.')}@dueliax.com`} disabled />
           </div>
         </div>
          <div className="space-y-2">

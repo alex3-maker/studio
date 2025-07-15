@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/app-context';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
-const HINT_STORAGE_KEY = 'duelDash-landscape-hint-dismissed';
+const HINT_STORAGE_KEY = 'dueliax-landscape-hint-dismissed';
 
 export default function VotingFeed() {
   const { duels, castVote } = useAppContext();
@@ -27,7 +27,7 @@ export default function VotingFeed() {
   const [showHint, setShowHint] = useState(false);
 
   useEffect(() => {
-    // Show hint only on mobile and if not previously dismissed
+    // Mostrar pista solo en móvil y si no se ha descartado previamente
     if (window.innerWidth < 768) {
       const hintDismissed = localStorage.getItem(HINT_STORAGE_KEY);
       if (hintDismissed !== 'true') {
@@ -54,10 +54,10 @@ export default function VotingFeed() {
       startTransition(() => {
         castVote(currentDuel.id, selectedOption.id);
         toast({
-          title: 'Vote Cast!',
+          title: '¡Voto registrado!',
           description: (
             <div className="flex items-center">
-              You earned a key! <Key className="ml-2 h-4 w-4 text-yellow-500" />
+              ¡Has ganado una llave! <Key className="ml-2 h-4 w-4 text-yellow-500" />
             </div>
           ),
         });
@@ -78,8 +78,8 @@ export default function VotingFeed() {
   if (activeDuels.length === 0) {
     return (
        <div className="text-center py-16">
-        <h2 className="text-2xl font-headline mb-4">No More Duels!</h2>
-        <p className="text-muted-foreground">You've voted on all available duels. Check back later or create your own!</p>
+        <h2 className="text-2xl font-headline mb-4">¡No hay más duelos!</h2>
+        <p className="text-muted-foreground">Has votado en todos los duelos disponibles. ¡Vuelve más tarde o crea el tuyo!</p>
       </div>
     )
   }
@@ -131,19 +131,19 @@ export default function VotingFeed() {
         }}>
           <DialogTrigger asChild>
              <Button id={`results-trigger-${currentDuel.id}`} className="hidden" variant="outline">
-                View Results
+                Ver Resultados
               </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Results: {currentDuel.title}</DialogTitle>
+              <DialogTitle>Resultados: {currentDuel.title}</DialogTitle>
             </DialogHeader>
             <div className="h-64 w-full">
               <ResultsChart duel={currentDuel} />
             </div>
             <DialogClose asChild>
               <Button id={`results-close-${currentDuel.id}`} onClick={handleNextDuel} className="w-full" size="lg">
-                Next Duel <ArrowRight className="ml-2 h-4 w-4" />
+                Siguiente Duelo <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </DialogClose>
           </DialogContent>
@@ -151,7 +151,7 @@ export default function VotingFeed() {
 
         {voted && (
           <p className="text-lg font-semibold text-primary">
-            You voted for: {voted.title}
+            Has votado por: {voted.title}
           </p>
         )}
       </div>

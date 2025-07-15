@@ -8,9 +8,9 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 const dashboardNavLinks = [
-  { href: '/dashboard', label: 'Mis Duelos', icon: Grip },
-  { href: '/dashboard/profile', label: 'Perfil', icon: User },
-  { href: '/dashboard/notifications', label: 'Notificaciones', icon: Bell },
+  { href: '/dashboard/mis-duelos', label: 'Mis Duelos', icon: Grip },
+  { href: '/dashboard/perfil', label: 'Perfil', icon: User },
+  { href: '/dashboard/notificaciones', label: 'Notificaciones', icon: Bell },
 ];
 
 export default function DashboardLayout({

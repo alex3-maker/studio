@@ -17,8 +17,8 @@ export default function LoginPage() {
       title: "Inicio de Sesión Correcto",
       description: "¡Bienvenido de nuevo! Redirigiendo...",
     });
-    // In a real app, you'd handle auth state here.
-    // For this demo, we'll just redirect.
+    // En una app real, aquí se gestionaría el estado de autenticación.
+    // Para esta demo, solo redirigimos.
     setTimeout(() => {
       router.push('/');
     }, 1000);

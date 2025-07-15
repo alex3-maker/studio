@@ -3,19 +3,19 @@ import { z } from "zod";
 const imageRegex = /\.(jpeg|jpg|png|gif|webp|svg)$/i;
 
 export const duelOptionSchema = z.object({
-  title: z.string().min(1, { message: "Option title is required." }).max(50),
+  title: z.string().min(1, { message: "El título de la opción es requerido." }).max(50),
   imageUrl: z.string()
-    .url({ message: "Please enter a valid URL." })
-    .regex(imageRegex, { message: "URL must end with a valid image extension (e.g., .jpg, .png, .svg)." }),
+    .url({ message: "Por favor, introduce una URL válida." })
+    .regex(imageRegex, { message: "La URL debe terminar con una extensión de imagen válida (ej: .jpg, .png, .svg)." }),
 });
 
 export const createDuelSchema = z.object({
-  title: z.string().min(3, { message: "Title must be at least 3 characters long." }).max(100),
+  title: z.string().min(3, { message: "El título debe tener al menos 3 caracteres." }).max(100),
   description: z.string().max(500).optional(),
   type: z.enum(["A_VS_B", "LIST", "KING_OF_THE_HILL"], {
-    required_error: "You need to select a duel type.",
+    required_error: "Necesitas seleccionar un tipo de duelo.",
   }),
-  options: z.array(duelOptionSchema).min(2, { message: "You must have at least 2 options." }).max(2, { message: "A vs B duels can only have 2 options." }), // For now, only A vs B
+  options: z.array(duelOptionSchema).min(2, { message: "Debes tener al menos 2 opciones." }).max(2, { message: "Los duelos A vs B solo pueden tener 2 opciones." }),
 });
 
 export type CreateDuelFormValues = z.infer<typeof createDuelSchema>;

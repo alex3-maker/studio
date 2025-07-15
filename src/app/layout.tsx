@@ -17,7 +17,7 @@ const spaceGrotesk = Space_Grotesk({
 
 
 export const metadata: Metadata = {
-  title: 'DuelDash',
+  title: 'Dueliax',
   description: 'Duelos interactivos y votaciones.',
 };
 

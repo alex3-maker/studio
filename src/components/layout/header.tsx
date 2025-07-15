@@ -11,9 +11,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useAppContext } from '@/context/app-context';
 
 const navLinks = [
-  { href: '/', label: 'Feed', icon: Swords },
+  { href: '/', label: 'Inicio', icon: Swords },
   { href: '/create', label: 'Crear Duelo', icon: Flame },
-  { href: '/panel', label: 'Panel', icon: Key },
+  { href: '/panel/mis-duelos', label: 'Panel', icon: Key },
 ];
 
 export default function Header() {
@@ -27,7 +27,7 @@ export default function Header() {
           <Link href="/" className="mr-6 flex items-center space-x-2">
             <Swords className="h-6 w-6 text-primary" />
             <span className="hidden font-bold font-headline sm:inline-block">
-              DuelDash
+              Dueliax
             </span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
@@ -37,7 +37,7 @@ export default function Header() {
                 href={link.href}
                 className={cn(
                   'transition-colors hover:text-foreground/80',
-                  pathname === link.href ? 'text-foreground' : 'text-foreground/60'
+                  pathname.startsWith(link.href) && link.href !== '/' || pathname === link.href ? 'text-foreground' : 'text-foreground/60'
                 )}
               >
                 {link.label}
@@ -52,13 +52,13 @@ export default function Header() {
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle Menu</span>
+                <span className="sr-only">Abrir Menú</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="left">
               <Link href="/" className="mr-6 flex items-center space-x-2 mb-6">
                 <Swords className="h-6 w-6 text-primary" />
-                <span className="font-bold font-headline">DuelDash</span>
+                <span className="font-bold font-headline">Dueliax</span>
               </Link>
               <nav className="flex flex-col space-y-4">
                 {navLinks.map((link) => (
@@ -67,7 +67,7 @@ export default function Header() {
                     href={link.href}
                     className={cn(
                       'transition-colors hover:text-primary',
-                      pathname === link.href ? 'text-foreground font-semibold' : 'text-muted-foreground'
+                       pathname.startsWith(link.href) && link.href !== '/' || pathname === link.href ? 'text-foreground font-semibold' : 'text-muted-foreground'
                     )}
                   >
                     {link.label}

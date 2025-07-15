@@ -12,11 +12,11 @@ export const mockUser: User = {
 export const mockDuels: Duel[] = [
   {
     id: 'duel-1',
-    title: 'Which is the best futuristic city?',
-    description: 'Vote for your favorite vision of the future.',
+    title: '¿Cuál es la mejor ciudad futurista?',
+    description: 'Vota por tu visión favorita del futuro.',
     options: [
-      { id: 'opt-1a', title: 'Neon Metropolis', imageUrl: 'https://placehold.co/600x600.png', votes: 120, "data-ai-hint": "futuristic city" },
-      { id: 'opt-1b', title: 'Eco-Utopia', imageUrl: 'https://placehold.co/600x600.png', votes: 95, "data-ai-hint": "utopian city" },
+      { id: 'opt-1a', title: 'Metrópolis de Neón', imageUrl: 'https://placehold.co/600x600.png', votes: 120, "data-ai-hint": "futuristic city" },
+      { id: 'opt-1b', title: 'Eco-Utopía', imageUrl: 'https://placehold.co/600x600.png', votes: 95, "data-ai-hint": "utopian city" },
     ],
     creator: { id: 'user-2', name: 'SciFiFan', avatarUrl: 'https://placehold.co/40x40.png' },
     type: 'A_VS_B',
@@ -24,11 +24,11 @@ export const mockDuels: Duel[] = [
   },
   {
     id: 'duel-2',
-    title: 'Favorite Fantasy Creature',
-    description: 'Which magical beast reigns supreme?',
+    title: 'Criatura Fantástica Favorita',
+    description: '¿Qué bestia mágica reina suprema?',
     options: [
-      { id: 'opt-2a', title: 'Dragon', imageUrl: 'https://placehold.co/600x600.png', votes: 250, "data-ai-hint": "fantasy dragon" },
-      { id: 'opt-2b', title: 'Griffin', imageUrl: 'https://placehold.co/600x600.png', votes: 180, "data-ai-hint": "mythical griffin" },
+      { id: 'opt-2a', title: 'Dragón', imageUrl: 'https://placehold.co/600x600.png', votes: 250, "data-ai-hint": "fantasy dragon" },
+      { id: 'opt-2b', title: 'Grifo', imageUrl: 'https://placehold.co/600x600.png', votes: 180, "data-ai-hint": "mythical griffin" },
     ],
     creator: { id: 'user-3', name: 'MythMaster', avatarUrl: 'https://placehold.co/40x40.png' },
     type: 'A_VS_B',
@@ -36,8 +36,8 @@ export const mockDuels: Duel[] = [
   },
   {
     id: 'duel-3',
-    title: 'Cutest Puppy Breed',
-    description: 'A very important and scientific question.',
+    title: 'Raza de Cachorro más Adorable',
+    description: 'Una pregunta muy importante y científica.',
     options: [
       { id: 'opt-3a', title: 'Golden Retriever', imageUrl: 'https://placehold.co/600x600.png', votes: 300, "data-ai-hint": "golden retriever" },
       { id: 'opt-3b', title: 'Corgi', imageUrl: 'https://placehold.co/600x600.png', votes: 350, "data-ai-hint": "corgi puppy" },
@@ -48,11 +48,11 @@ export const mockDuels: Duel[] = [
   },
   {
     id: 'duel-4',
-    title: 'Ultimate Vacation Spot',
-    description: 'Beach relaxation or mountain adventure?',
+    title: 'Destino de Vacaciones Definitivo',
+    description: '¿Relax en la playa o aventura en la montaña?',
     options: [
-      { id: 'opt-4a', title: 'Tropical Beach', imageUrl: 'https://placehold.co/600x600.png', votes: 190, "data-ai-hint": "tropical beach" },
-      { id: 'opt-4b', title: 'Snowy Mountains', imageUrl: 'https://placehold.co/600x600.png', votes: 210, "data-ai-hint": "snowy mountains" },
+      { id: 'opt-4a', title: 'Playa Tropical', imageUrl: 'https://placehold.co/600x600.png', votes: 190, "data-ai-hint": "tropical beach" },
+      { id: 'opt-4b', title: 'Montañas Nevadas', imageUrl: 'https://placehold.co/600x600.png', votes: 210, "data-ai-hint": "snowy mountains" },
     ],
     creator: { id: 'user-1', name: 'Alex Doe', avatarUrl: 'https://placehold.co/40x40.png' },
     type: 'A_VS_B',
@@ -60,11 +60,11 @@ export const mockDuels: Duel[] = [
   },
   {
     id: 'duel-5',
-    title: 'Cats vs Dogs',
-    description: 'The eternal question must be settled.',
+    title: 'Gatos vs Perros',
+    description: 'La eterna pregunta debe ser resuelta.',
     options: [
-      { id: 'opt-5a', title: 'Cats', imageUrl: 'https://placehold.co/600x600.png', votes: 500, "data-ai-hint": "tabby cat" },
-      { id: 'opt-5b', title: 'Dogs', imageUrl: 'https://placehold.co/600x600.png', votes: 501, "data-ai-hint": "happy dog" },
+      { id: 'opt-5a', title: 'Gatos', imageUrl: 'https://placehold.co/600x600.png', votes: 500, "data-ai-hint": "tabby cat" },
+      { id: 'opt-5b', title: 'Perros', imageUrl: 'https://placehold.co/600x600.png', votes: 501, "data-ai-hint": "happy dog" },
     ],
     creator: { id: 'user-1', name: 'Alex Doe', avatarUrl: 'https://placehold.co/40x40.png' },
     type: 'A_VS_B',

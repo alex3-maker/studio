@@ -17,8 +17,8 @@ export default function SignupPage() {
       title: "¡Cuenta Creada!",
       description: "¡Bienvenido! Estamos iniciando tu sesión...",
     });
-    // In a real app, you'd handle user creation and auth state.
-    // For this demo, we'll just redirect.
+    // En una app real, aquí se gestionaría la creación de usuario y el estado de autenticación.
+    // Para esta demo, solo redirigimos.
     setTimeout(() => {
       router.push('/');
     }, 1000);
