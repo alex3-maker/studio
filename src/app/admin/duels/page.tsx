@@ -29,9 +29,7 @@ export default function AdminDuelsPage() {
   const [selectedDuel, setSelectedDuel] = useState<Duel | null>(null);
 
   const handleRowClick = (duel: Duel) => {
-    if (duel.status === 'closed') {
-      setSelectedDuel(duel);
-    }
+    setSelectedDuel(duel);
   };
 
   return (
@@ -57,7 +55,7 @@ export default function AdminDuelsPage() {
                 <TableRow 
                   key={duel.id} 
                   onClick={() => handleRowClick(duel)}
-                  className={duel.status === 'closed' ? 'cursor-pointer' : ''}
+                  className="cursor-pointer"
                 >
                   <TableCell className="font-medium">
                     <div className="flex flex-col">
@@ -73,7 +71,7 @@ export default function AdminDuelsPage() {
                   </TableCell>
                   <TableCell>
                     <div className="h-10 w-10">
-                      {duel.status === 'closed' && <ResultsChart duel={duel} />}
+                      <ResultsChart duel={duel} />
                     </div>
                   </TableCell>
                   <TableCell className="text-right space-x-2">

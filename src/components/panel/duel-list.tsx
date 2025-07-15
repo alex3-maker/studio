@@ -34,9 +34,7 @@ export default function DuelList({ duels }: DuelListProps) {
   const [selectedDuel, setSelectedDuel] = useState<Duel | null>(null);
 
   const handleRowClick = (duel: Duel) => {
-    if (duel.status === 'closed') {
-      setSelectedDuel(duel);
-    }
+    setSelectedDuel(duel);
   };
 
   if (duels.length === 0) {
@@ -60,7 +58,7 @@ export default function DuelList({ duels }: DuelListProps) {
     <Card>
       <CardHeader>
         <CardTitle className="font-headline">Mis Duelos</CardTitle>
-        <CardDescription>Aquí puedes ver y gestionar tus duelos. Haz clic en un duelo cerrado para ver los resultados.</CardDescription>
+        <CardDescription>Aquí puedes ver y gestionar tus duelos. Haz clic en un duelo para ver sus resultados.</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
@@ -77,7 +75,7 @@ export default function DuelList({ duels }: DuelListProps) {
               <TableRow 
                 key={duel.id}
                 onClick={() => handleRowClick(duel)}
-                className={duel.status === 'closed' ? 'cursor-pointer' : ''}
+                className="cursor-pointer"
               >
                 <TableCell className="font-medium">{duel.title}</TableCell>
                 <TableCell>
@@ -88,7 +86,7 @@ export default function DuelList({ duels }: DuelListProps) {
                 <TableCell>
                     <div className="h-12 w-full flex justify-start">
                       <div className="w-12">
-                        {duel.status === 'closed' && <ResultsChart duel={duel} />}
+                        <ResultsChart duel={duel} />
                       </div>
                     </div>
                 </TableCell>
