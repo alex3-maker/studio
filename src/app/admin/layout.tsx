@@ -55,12 +55,10 @@ export default function AdminLayout({
                 asChild
                 variant={pathname === link.href ? 'default' : 'ghost'}
                 className="justify-start"
-                disabled={link.href === '/admin/users'} // Feature para el futuro
               >
                 <Link href={link.href}>
                   <link.icon className="mr-2 h-4 w-4" />
                   {link.label}
-                  {link.href === '/admin/users' && <span className="text-xs ml-2">(Próx.)</span>}
                 </Link>
               </Button>
             ))}

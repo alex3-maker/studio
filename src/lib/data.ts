@@ -12,6 +12,7 @@ export const mockUser: User = {
   duelsCreated: 3,
   votesCast: 42,
   role: 'admin',
+  createdAt: formatISO(subDays(now, 30)),
 };
 
 export const mockUsers: User[] = [
@@ -24,6 +25,7 @@ export const mockUsers: User[] = [
     duelsCreated: 1,
     votesCast: 15,
     role: 'user',
+    createdAt: formatISO(subDays(now, 25)),
   },
   {
     id: 'user-3',
@@ -33,6 +35,7 @@ export const mockUsers: User[] = [
     duelsCreated: 1,
     votesCast: 22,
     role: 'user',
+    createdAt: formatISO(subDays(now, 18)),
   },
 ]
 

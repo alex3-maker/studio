@@ -7,6 +7,7 @@ export type User = {
   duelsCreated: number;
   votesCast: number;
   role: 'admin' | 'user';
+  createdAt?: string; // ISO 8601 string
 };
 
 export type DuelOption = {

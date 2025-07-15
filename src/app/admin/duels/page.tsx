@@ -1,12 +1,12 @@
 
 'use client';
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAppContext } from "@/context/app-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, Power, PowerOff, Edit, RotateCcw, Clock, CalendarDays, BarChart2, CheckCircle } from "lucide-react";
+import { Trash2, Power, PowerOff, Edit, RotateCcw, Clock, CalendarDays, BarChart2, CheckCircle, Search } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +18,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import ResultsChart from "@/components/panel/results-chart";
 import DuelResultsDetails from "@/components/duel-results-details";
@@ -28,6 +30,7 @@ import { es } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
 const statusConfig = {
+  all: { text: "Todos", className: "" },
   active: { text: "Activo", className: "bg-green-500 hover:bg-green-600" },
   closed: { text: "Cerrado", className: "bg-red-500 hover:bg-red-600" },
   scheduled: { text: "Programado", className: "bg-blue-500 hover:bg-blue-600" },
@@ -35,11 +38,23 @@ const statusConfig = {
   inactive: { text: "Inactivo", className: "bg-orange-400 hover:bg-orange-500" },
 };
 
-
 export default function AdminDuelsPage() {
   const { duels, toggleDuelStatus, deleteDuel, resetDuelVotes, getDuelStatus, activateDraftDuel } = useAppContext();
   const [selectedDuel, setSelectedDuel] = useState<Duel | null>(null);
   const { toast } = useToast();
+
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredDuels = useMemo(() => {
+    return duels.filter(duel => {
+      const statusMatch = statusFilter === 'all' || getDuelStatus(duel) === statusFilter;
+      const searchMatch = !searchQuery || 
+                          duel.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          duel.creator.name.toLowerCase().includes(searchQuery.toLowerCase());
+      return statusMatch && searchMatch;
+    });
+  }, [duels, statusFilter, searchQuery, getDuelStatus]);
 
   const handleRowClick = (duel: Duel) => {
     setSelectedDuel(duel);
@@ -50,7 +65,7 @@ export default function AdminDuelsPage() {
     resetDuelVotes(duelId);
     toast({
       title: "Votos Reiniciados",
-      description: `Los votos para el duelo han sido reseteados. (Notificación simulada a usuarios)`,
+      description: `Los votos para el duelo han sido reseteados.`,
     });
   }
 
@@ -78,13 +93,39 @@ export default function AdminDuelsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-2xl">Gestionar Duelos</CardTitle>
-          <CardDescription>Visualiza, activa, cierra, edita y elimina duelos de todos los usuarios.</CardDescription>
+          <CardDescription>Visualiza, filtra, activa, cierra, edita y elimina duelos de todos los usuarios.</CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="flex flex-col md:flex-row gap-2 mb-4">
+            <div className="relative flex-grow">
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+               <Input 
+                  placeholder="Buscar por título o creador..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Filtrar por estado" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(statusConfig).map(([key, value]) => (
+                  <SelectItem key={key} value={key}>{value.text}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="text-sm text-muted-foreground mb-4">
+            {filteredDuels.length} duelo(s) encontrado(s).
+          </div>
+
           <div className="space-y-4">
-            {duels.map((duel) => {
+            {filteredDuels.map((duel) => {
               const currentStatus = getDuelStatus(duel);
-              const statusInfo = statusConfig[currentStatus];
+              const statusInfo = statusConfig[currentStatus as keyof typeof statusConfig];
 
               return (
                 <Card key={duel.id} className="overflow-hidden cursor-pointer" onClick={() => handleRowClick(duel)}>
@@ -133,11 +174,11 @@ export default function AdminDuelsPage() {
                                 <RotateCcw className="h-4 w-4 text-blue-500" />
                               </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent>
+                            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                               <AlertDialogHeader><AlertDialogTitle>¿Resetear votación?</AlertDialogTitle><AlertDialogDescription>Esta acción pondrá a cero todos los votos para este duelo. No se puede deshacer.</AlertDialogDescription></AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleResetVotes(event as any, duel.id)}>Resetear</AlertDialogAction>
+                                <AlertDialogAction onClick={(e) => { e.stopPropagation(); handleResetVotes(e, duel.id)}}>Resetear</AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -147,11 +188,11 @@ export default function AdminDuelsPage() {
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent>
+                            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                               <AlertDialogHeader><AlertDialogTitle>¿Estás seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Esto eliminará permanentemente el duelo.</AlertDialogDescription></AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => deleteDuel(duel.id)}>Eliminar</AlertDialogAction>
+                                <AlertDialogAction onClick={(e) => { e.stopPropagation(); deleteDuel(duel.id)}}>Eliminar</AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -184,9 +225,9 @@ export default function AdminDuelsPage() {
                 </Card>
               )
             })}
-            {duels.length === 0 && (
+            {filteredDuels.length === 0 && (
                 <div className="h-24 text-center flex items-center justify-center text-muted-foreground">
-                    No hay duelos para mostrar.
+                    No hay duelos para mostrar con los filtros actuales.
                 </div>
             )}
           </div>
