@@ -4,7 +4,7 @@
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import type { User, Duel, DuelOption, Notification, KeyTransaction } from '@/lib/types';
 import { mockUser, mockDuels } from '@/lib/data';
-import { isAfter, isBefore, parseISO, formatISO, addDays } from 'date-fns';
+import { isAfter, isBefore, parseISO, formatISO } from 'date-fns';
 
 const VOTED_DUELS_STORAGE_KEY = 'dueliax_voted_duels';
 const DUEL_VOTING_HISTORY_STORAGE_KEY = 'dueliax_duel_voting_history';
@@ -37,23 +37,17 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const getStatus = (duel: Duel): Duel['status'] => {
-    if (!duel || duel.status === 'draft') {
-        return 'draft';
-    }
-    if (!duel.startsAt || !duel.endsAt) {
-      return 'closed';
-    }
+    if (!duel) return 'closed';
+    if (duel.status === 'draft') return 'draft';
+    if (duel.status === 'inactive') return 'inactive';
+    
     try {
         const now = new Date();
         const startsAt = parseISO(duel.startsAt);
         const endsAt = parseISO(duel.endsAt);
 
-        if (isBefore(now, startsAt)) {
-            return 'scheduled';
-        }
-        if (isAfter(now, endsAt)) {
-            return 'closed';
-        }
+        if (isBefore(now, startsAt)) return 'scheduled';
+        if (isAfter(now, endsAt)) return 'closed';
         return 'active';
     } catch (error) {
         console.error("Error parsing duel dates, defaulting to closed:", duel, error);
@@ -100,14 +94,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (storedNotifications) setNotifications(JSON.parse(storedNotifications));
 
     } catch (error) {
-      console.error("Error reading from localStorage, resetting data.", error);
-      // Don't clear storage, just use defaults
+      console.error("Error reading from localStorage, using defaults.", error);
       setUser(mockUser);
       setDuels(mockDuels);
     }
     setIsLoaded(true);
   }, []);
-
+  
+  // Persist state to localStorage on change
   useEffect(() => {
     if (isLoaded) localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
   }, [user, isLoaded]);
@@ -127,10 +121,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (isLoaded) localStorage.setItem(KEY_HISTORY_STORAGE_KEY, JSON.stringify(keyHistory));
   }, [keyHistory, isLoaded]);
-
+  
   useEffect(() => {
     if (isLoaded) localStorage.setItem(DUEL_VOTING_HISTORY_STORAGE_KEY, JSON.stringify(duelVotingHistory));
   }, [duelVotingHistory, isLoaded]);
+
 
   const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
     setNotifications(prev => [
@@ -216,25 +211,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [duels, duelVotingHistory, addKeyTransaction]);
 
   const addDuel = useCallback((newDuelData: Duel) => {
-    const newDuel = {...newDuelData, status: getStatus(newDuelData)};
+    const hasEnoughKeys = user.keys >= DUEL_CREATION_COST;
+    const duelWithStatus = { ...newDuelData, status: hasEnoughKeys ? getStatus(newDuelData) : 'draft' };
 
-    setDuels(prevDuels => [newDuel, ...prevDuels]);
+    setDuels(prevDuels => [duelWithStatus, ...prevDuels]);
     
-    setUser(prevUser => {
-      const updatedUser = { ...prevUser, duelsCreated: prevUser.duelsCreated + 1 };
-      
-      if (newDuel.status !== 'draft') {
-        updatedUser.keys -= DUEL_CREATION_COST;
-        addKeyTransaction('spent', DUEL_CREATION_COST, `Creación de "${newDuel.title}"`);
-        addNotification({
-            type: 'keys-spent',
-            message: `Has gastado ${DUEL_CREATION_COST} llaves en crear el duelo: "${newDuel.title}".`,
-            link: null
-        });
-      }
-      return updatedUser;
-    });
-  }, [addKeyTransaction, addNotification]);
+    setUser(prevUser => ({ ...prevUser, duelsCreated: prevUser.duelsCreated + 1 }));
+    
+    if (duelWithStatus.status !== 'draft') {
+        spendKeys(DUEL_CREATION_COST, `Creación de "${newDuelData.title}"`);
+    }
+
+  }, [user.keys, spendKeys]);
 
   const activateDraftDuel = useCallback((duelId: string): boolean => {
     const duel = duels.find(d => d.id === duelId);
@@ -246,9 +234,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return false; 
     }
 
-    setDuels(prevDuels => prevDuels.map(d => 
-        d.id === duelId ? { ...d, status: getStatus({...d, status: 'scheduled'}) } : d // re-evaluate status
-    ));
+    setDuels(prevDuels => prevDuels.map(d => {
+      if (d.id === duelId) {
+        // Change status from draft and let getStatus determine the new state
+        return { ...d, status: getStatus({ ...d, status: 'scheduled' }) };
+      }
+      return d;
+    }));
 
     return true;
 
@@ -285,25 +277,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setDuels(prevDuels => prevDuels.map(duel => {
         if (duel.id === duelId) {
           const currentStatus = getStatus(duel);
-          let newEndsAt = duel.endsAt;
-          let newStartsAt = duel.startsAt;
-          let newStatus = duel.status;
+          let newStatus: Duel['status'];
 
-          if (currentStatus === 'active') { // Active -> Closed
-            newEndsAt = new Date().toISOString();
-            newStatus = 'closed';
+          if (currentStatus === 'active') { // Active -> Inactive
+            newStatus = 'inactive';
             addNotification({
-                type: 'duel-closed',
-                message: `El duelo "${duel.title}" ha finalizado. ¡Mira los resultados!`,
+                type: 'duel-edited',
+                message: `El duelo "${duel.title}" ha sido desactivado.`,
                 link: `/`
             });
-          } else { // Scheduled/Closed -> Active
-             const now = new Date();
-             newStartsAt = now.toISOString();
-             newEndsAt = addDays(now, 7).toISOString();
+          } else { // Inactive, Scheduled, Closed -> Active
              newStatus = 'active';
+             // If we are reactivating, we should ensure the end date is in the future.
+             // But for now, we just toggle the state. The getStatus will handle the rest.
+             // A better approach might be needed if explicit reactivation of closed duels is desired.
           }
-          return { ...duel, endsAt: newEndsAt, startsAt: newStartsAt, status: newStatus };
+          return { ...duel, status: newStatus };
         }
         return duel;
       })
@@ -317,7 +306,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setDuels(prevDuels => prevDuels.filter(duel => duel.id !== duelId));
     
     if (duelToDelete.creator.id === user.id) {
-        setUser(prevUser => ({ ...prevUser, duelsCreated: Math.max(0, prevUser.duelsCreated - 1) }));
+      setUser(prevUser => ({ ...prevUser, duelsCreated: Math.max(0, prevUser.duelsCreated - 1) }));
     }
   }, [duels, user.id]);
   

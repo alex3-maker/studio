@@ -32,6 +32,7 @@ const statusConfig = {
   closed: { text: "Cerrado", className: "bg-red-500 hover:bg-red-600" },
   scheduled: { text: "Programado", className: "bg-blue-500 hover:bg-blue-600" },
   draft: { text: "Borrador", className: "bg-gray-400 hover:bg-gray-500" },
+  inactive: { text: "Inactivo", className: "bg-orange-400 hover:bg-orange-500" },
 };
 
 
