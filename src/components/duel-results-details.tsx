@@ -15,28 +15,36 @@ export default function DuelResultsDetails({ duel }: DuelResultsDetailsProps) {
   return (
     <div className="w-full space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        {duel.options.map((option, index) => {
+        {duel.options.map((option) => {
           const percentage = totalVotes > 0 ? (option.votes / totalVotes) * 100 : 0;
           const isWinner =
             duel.options.every((o) => o.votes <= option.votes) &&
             !duel.options.every((o) => o.votes === duel.options[0].votes);
+          const hasImage = !!option.imageUrl;
 
           return (
             <div key={option.id} className="flex flex-col items-center gap-4">
               <Card
                 className={cn(
                   'w-full overflow-hidden relative',
-                  isWinner && 'border-primary border-4 shadow-lg'
+                  isWinner && 'border-primary border-4 shadow-lg',
+                  !hasImage && 'bg-gradient-to-br from-secondary to-card'
                 )}
               >
                 <div className="relative aspect-square w-full">
-                  <Image
-                    src={option.imageUrl}
-                    alt={option.title}
-                    fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    className="object-cover"
-                  />
+                  {hasImage ? (
+                    <Image
+                      src={option.imageUrl!}
+                      alt={option.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center p-4 text-center">
+                       <h3 className="text-xl font-bold font-headline text-foreground">{option.title}</h3>
+                    </div>
+                  )}
                   {isWinner && (
                     <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-full">
                       GANADOR

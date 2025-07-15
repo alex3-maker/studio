@@ -12,7 +12,7 @@ export type User = {
 export type DuelOption = {
   id: string;
   title: string;
-  imageUrl: string;
+  imageUrl?: string;
   votes: number;
   "data-ai-hint"?: string;
 };

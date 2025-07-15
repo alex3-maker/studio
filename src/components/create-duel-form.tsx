@@ -72,7 +72,7 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
       title: duelData.title,
       description: duelData.description,
       type: duelData.type,
-      options: duelData.options.map(opt => ({ title: opt.title, imageUrl: opt.imageUrl })),
+      options: duelData.options.map(opt => ({ title: opt.title, imageUrl: opt.imageUrl || '' })),
       startsAt: new Date(duelData.startsAt),
       endsAt: new Date(duelData.endsAt),
     } : {
@@ -125,7 +125,7 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
 
     data.options.forEach((option, index) => {
         formData.append(`options.${index}.title`, option.title);
-        formData.append(`options.${index}.imageUrl`, option.imageUrl);
+        formData.append(`options.${index}.imageUrl`, option.imageUrl || '');
         if (isEditing && duelData?.options[index]?.id) {
           formData.append(`options.${index}.id`, duelData.options[index].id);
         }
@@ -310,7 +310,7 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
                             name={`options.${index}.imageUrl`}
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>URL de la Imagen o Subir Archivo</FormLabel>
+                                    <FormLabel>URL de la Imagen (Opcional)</FormLabel>
                                     <div className="flex gap-2">
                                         <FormControl>
                                             <Input placeholder="https://... o sube un archivo" {...field} />
@@ -330,14 +330,14 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
                                         accept="image/png, image/jpeg, image/gif, image/webp"
                                         onChange={(e) => handleFileChange(e, index)}
                                     />
-                                    <FormDescription>Pega una URL o sube una imagen (máx 2MB).</FormDescription>
+                                    <FormDescription>Pega una URL o sube una imagen (máx 2MB). Déjalo en blanco para una opción de solo texto.</FormDescription>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
                          {form.watch(`options.${index}.imageUrl`) && (
                             <div className="relative w-full h-48 mt-2 rounded-md overflow-hidden border">
-                                <img src={form.watch(`options.${index}.imageUrl`)} alt="Vista previa" className="w-full h-full object-cover" />
+                                <img src={form.watch(`options.${index}.imageUrl`) as string} alt="Vista previa" className="w-full h-full object-cover" />
                             </div>
                         )}
                     </CardContent>

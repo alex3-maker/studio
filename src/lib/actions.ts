@@ -117,8 +117,8 @@ export async function createDuelAction(
         avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop'
       },
       options: [
-        { id: `opt-${Date.now()}-a`, title: options[0].title, imageUrl: options[0].imageUrl, votes: 0 },
-        { id: `opt-${Date.now()}-b`, title: options[1].title, imageUrl: options[1].imageUrl, votes: 0 },
+        { id: `opt-${Date.now()}-a`, title: options[0].title, imageUrl: options[0].imageUrl || undefined, votes: 0 },
+        { id: `opt-${Date.now()}-b`, title: options[1].title, imageUrl: options[1].imageUrl || undefined, votes: 0 },
       ],
     };
 
@@ -181,7 +181,7 @@ export async function updateDuelAction(
       options: rawFormData.options.map((opt, index) => ({
         id: opt.id || `opt-${rawFormData.id}-${index}`, // Ensure option has an id
         title: options[index].title,
-        imageUrl: options[index].imageUrl,
+        imageUrl: options[index].imageUrl || undefined,
         // Votes are preserved from the original state in the context, so no need to set them here
       })) as [any, any] // Type assertion to satisfy partial update
     };
