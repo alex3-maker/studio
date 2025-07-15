@@ -4,7 +4,7 @@
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import type { User, Duel, DuelOption } from '@/lib/types';
 import { mockUser, mockDuels } from '@/lib/data';
-import { isAfter, isBefore, parseISO } from 'date-fns';
+import { isAfter, isBefore, parseISO, formatISO, addDays } from 'date-fns';
 
 const VOTED_DUELS_STORAGE_KEY = 'dueliax_voted_duels';
 const USER_KEYS_STORAGE_KEY = 'dueliax_user_keys';
@@ -26,6 +26,11 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const getStatus = (duel: Duel): Duel['status'] => {
+    // Defensive check in case a duel somehow still has invalid dates
+    if (!duel.startsAt || !duel.endsAt) {
+      console.warn(`Duel ${duel.id} is missing date information.`);
+      return 'closed';
+    }
     const now = new Date();
     const startsAt = parseISO(duel.startsAt);
     const endsAt = parseISO(duel.endsAt);
@@ -58,16 +63,35 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const storedDuels = localStorage.getItem(DUELS_STORAGE_KEY);
+      let duelsToLoad: Duel[] = mockDuels;
+
       if (storedDuels) {
-        setDuels(JSON.parse(storedDuels));
-      } else {
-        setDuels(mockDuels);
-        localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(mockDuels));
+        const parsedDuels: Duel[] = JSON.parse(storedDuels);
+        // Data migration/repair logic
+        const repairedDuels = parsedDuels.map(d => {
+          if (!d.startsAt || !d.endsAt) {
+            console.warn(`Repairing duel ${d.id} with missing dates.`);
+            return {
+              ...d,
+              startsAt: d.createdAt || formatISO(new Date()),
+              endsAt: formatISO(addDays(new Date(), 7)),
+              status: 'active', // Assign a default status
+            };
+          }
+          return d;
+        });
+        duelsToLoad = repairedDuels;
+      }
+      
+      setDuels(duelsToLoad);
+      if (!storedDuels) {
+        localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(duelsToLoad));
       }
 
     } catch (error) {
-      console.error("Error reading from localStorage", error);
-      if(duels.length === 0) setDuels(mockDuels);
+      console.error("Error reading from localStorage, resetting duels.", error);
+      setDuels(mockDuels);
+      localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(mockDuels));
     }
     setIsLoaded(true);
   }, []);
