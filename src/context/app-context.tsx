@@ -4,6 +4,7 @@
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import type { User, Duel, DuelOption } from '@/lib/types';
 import { mockUser, mockDuels } from '@/lib/data';
+import { isAfter, isBefore, parseISO } from 'date-fns';
 
 const VOTED_DUELS_STORAGE_KEY = 'dueliax_voted_duels';
 const USER_KEYS_STORAGE_KEY = 'dueliax_user_keys';
@@ -19,9 +20,24 @@ interface AppContextType {
   toggleDuelStatus: (duelId: string) => void;
   deleteDuel: (duelId: string) => void;
   resetDuelVotes: (duelId: string) => void;
+  getDuelStatus: (duel: Duel) => Duel['status'];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+const getStatus = (duel: Duel): Duel['status'] => {
+    const now = new Date();
+    const startsAt = parseISO(duel.startsAt);
+    const endsAt = parseISO(duel.endsAt);
+
+    if (isBefore(now, startsAt)) {
+        return 'scheduled';
+    }
+    if (isAfter(now, endsAt)) {
+        return 'closed';
+    }
+    return 'active';
+}
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User>(mockUser);
@@ -63,6 +79,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error saving duels to localStorage", error);
     }
   };
+  
+  const getDuelStatus = useCallback((duel: Duel): Duel['status'] => {
+      return getStatus(duel);
+  }, []);
 
   const castVote = useCallback((duelId: string, optionId: string) => {
     setDuels(prevDuels => {
@@ -124,8 +144,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setDuels(prevDuels => {
         const newDuels = prevDuels.map(duel => {
           if (duel.id === updatedDuelData.id) {
-            const updatedOptions = updatedDuelData.options?.map((opt) => {
-                const originalOption = duel.options.find(o => o.id === opt.id) || opt;
+            const originalOptions = duel.options;
+            const updatedOptions = updatedDuelData.options?.map((opt, index) => {
+                const originalOption = originalOptions.find(o => o.id === opt.id) || originalOptions[index];
                 return { ...originalOption, ...opt };
             }) as [DuelOption, DuelOption] | undefined;
 
@@ -146,9 +167,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const toggleDuelStatus = useCallback((duelId: string) => {
     setDuels(prevDuels => {
-      const newDuels = prevDuels.map(duel => 
-        duel.id === duelId ? { ...duel, status: duel.status === 'active' ? 'closed' : 'active' } : duel
-      );
+      const newDuels = prevDuels.map(duel => {
+        if (duel.id === duelId) {
+          const currentStatus = getStatus(duel);
+          if (currentStatus === 'active') {
+            // If active, close it now.
+            return { ...duel, endsAt: new Date().toISOString() };
+          } else {
+            // If closed or scheduled, make it active indefinitely.
+            return { 
+                ...duel, 
+                startsAt: new Date().toISOString(),
+                endsAt: new Date(new Date().setFullYear(new Date().getFullYear() + 10)).toISOString() // active for 10 years
+            };
+          }
+        }
+        return duel;
+      });
       persistDuels(newDuels);
       return newDuels;
     });
@@ -176,7 +211,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
-  const value = { user, duels, castVote, addDuel, updateDuel, toggleDuelStatus, deleteDuel, resetDuelVotes, votedDuelIds };
+  const value = { user, duels, castVote, addDuel, updateDuel, toggleDuelStatus, deleteDuel, resetDuelVotes, votedDuelIds, getDuelStatus };
 
   if (!isLoaded) {
     return null; 

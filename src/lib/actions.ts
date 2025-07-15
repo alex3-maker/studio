@@ -5,6 +5,7 @@ import { moderateContent } from '@/ai/flows/moderate-content';
 import { createDuelSchema } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import type { Duel } from './types';
+import { formatISO } from 'date-fns';
 
 export type FormState = {
   message: string;
@@ -14,6 +15,8 @@ export type FormState = {
     description?: string[];
     type?: string[];
     options?: (string | undefined)[] | string;
+    startsAt?: string[];
+    endsAt?: string[];
     moderation?: string;
     _form?: string[];
   };
@@ -22,6 +25,9 @@ export type FormState = {
 };
 
 function getFormData(formData: FormData) {
+  const startsAt = formData.get('startsAt') as string;
+  const endsAt = formData.get('endsAt') as string;
+
   return {
     id: formData.get('id') as string | undefined,
     title: formData.get('title') as string,
@@ -30,33 +36,36 @@ function getFormData(formData: FormData) {
     options: [
       { id: formData.get('options.0.id') as string | undefined, title: formData.get('options.0.title') as string, imageUrl: formData.get('options.0.imageUrl') as string },
       { id: formData.get('options.1.id') as string | undefined, title: formData.get('options.1.title') as string, imageUrl: formData.get('options.1.imageUrl') as string }
-    ]
+    ],
+    startsAt: startsAt ? new Date(startsAt) : undefined,
+    endsAt: endsAt ? new Date(endsAt) : undefined,
   };
 }
 
-async function runModeration(data: { title: string; options: { title: string }[] }): Promise<{ success: boolean; message?: string; errors?: { moderation: string } }> {
-  const { title, options } = data;
-  const titleModeration = await moderateContent({ content: title, contentType: 'text' });
-  if (!titleModeration.isSafe) {
-    return {
-      success: false,
-      message: `El título del duelo fue marcado como inapropiado. Razones: ${titleModeration.reasons.join(', ')}`,
-      errors: { moderation: `El título del duelo fue marcado como inapropiado.` },
-    };
-  }
+// Commented out to avoid API key errors during development
+// async function runModeration(data: { title: string; options: { title: string }[] }): Promise<{ success: boolean; message?: string; errors?: { moderation: string } }> {
+//   const { title, options } = data;
+//   const titleModeration = await moderateContent({ content: title, contentType: 'text' });
+//   if (!titleModeration.isSafe) {
+//     return {
+//       success: false,
+//       message: `El título del duelo fue marcado como inapropiado. Razones: ${titleModeration.reasons.join(', ')}`,
+//       errors: { moderation: `El título del duelo fue marcado como inapropiado.` },
+//     };
+//   }
 
-  for (const option of options) {
-    const optionTitleModeration = await moderateContent({ content: option.title, contentType: 'text' });
-    if (!optionTitleModeration.isSafe) {
-      return {
-        success: false,
-        message: `El título de la opción "${option.title}" fue marcado como inapropiado. Razones: ${optionTitleModeration.reasons.join(', ')}`,
-        errors: { moderation: `El título de la opción "${option.title}" es inapropiado.` },
-      };
-    }
-  }
-  return { success: true };
-}
+//   for (const option of options) {
+//     const optionTitleModeration = await moderateContent({ content: option.title, contentType: 'text' });
+//     if (!optionTitleModeration.isSafe) {
+//       return {
+//         success: false,
+//         message: `El título de la opción "${option.title}" fue marcado como inapropiado. Razones: ${optionTitleModeration.reasons.join(', ')}`,
+//         errors: { moderation: `El título de la opción "${option.title}" es inapropiado.` },
+//       };
+//     }
+//   }
+//   return { success: true };
+// }
 
 
 export async function createDuelAction(
@@ -75,7 +84,7 @@ export async function createDuelAction(
     };
   }
   
-  const { title, options, description, type } = validatedFields.data;
+  const { title, options, description, type, startsAt, endsAt } = validatedFields.data;
 
   try {
     // const moderationResult = await runModeration({ title, options });
@@ -86,13 +95,23 @@ export async function createDuelAction(
     revalidatePath('/');
     revalidatePath('/panel/mis-duelos');
     
-    // In a real app, you would add this to a database.
+    const now = new Date();
+    let status: Duel['status'] = 'scheduled';
+    if (startsAt <= now && endsAt > now) {
+      status = 'active';
+    } else if (endsAt <= now) {
+      status = 'closed';
+    }
+
     const newDuel: Duel = {
       id: `duel-${Date.now()}`,
       title,
       description: description || '',
       type,
-      status: 'active',
+      status,
+      createdAt: formatISO(now),
+      startsAt: formatISO(startsAt),
+      endsAt: formatISO(endsAt),
       creator: {
         id: 'user-1',
         name: 'Alex Doe',
@@ -141,7 +160,7 @@ export async function updateDuelAction(
     };
   }
 
-  const { title, options, description } = validatedFields.data;
+  const { title, options, description, startsAt, endsAt } = validatedFields.data;
 
   try {
     // const moderationResult = await runModeration({ title, options });
@@ -156,9 +175,11 @@ export async function updateDuelAction(
       id: rawFormData.id,
       title,
       description: description || '',
+      startsAt: formatISO(startsAt),
+      endsAt: formatISO(endsAt),
       options: [
-        { id: rawFormData.options[0].id!, title: options[0].title, imageUrl: options[0].imageUrl, votes: 0 }, // votes is ignored in context
-        { id: rawFormData.options[1].id!, title: options[1].title, imageUrl: options[1].imageUrl, votes: 0 }, // votes is ignored in context
+        { id: rawFormData.options[0].id!, title: options[0].title, imageUrl: options[0].imageUrl, votes: 0 },
+        { id: rawFormData.options[1].id!, title: options[1].title, imageUrl: options[1].imageUrl, votes: 0 },
       ],
     };
 

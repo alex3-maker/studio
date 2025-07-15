@@ -1,5 +1,8 @@
 
 import type { User, Duel } from './types';
+import { subDays, addDays, formatISO } from 'date-fns';
+
+const now = new Date();
 
 export const mockUser: User = {
   id: 'user-1',
@@ -45,6 +48,9 @@ export const mockDuels: Duel[] = [
     creator: { id: 'user-2', name: 'SciFiFan', avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1974&auto=format&fit=crop' },
     type: 'A_VS_B',
     status: 'active',
+    createdAt: formatISO(subDays(now, 2)),
+    startsAt: formatISO(subDays(now, 2)),
+    endsAt: formatISO(addDays(now, 5)),
   },
   {
     id: 'duel-2',
@@ -57,6 +63,9 @@ export const mockDuels: Duel[] = [
     creator: { id: 'user-3', name: 'MythMaster', avatarUrl: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=2070&auto=format&fit=crop' },
     type: 'A_VS_B',
     status: 'active',
+    createdAt: formatISO(subDays(now, 1)),
+    startsAt: formatISO(subDays(now, 1)),
+    endsAt: formatISO(addDays(now, 10)),
   },
   {
     id: 'duel-3',
@@ -68,7 +77,10 @@ export const mockDuels: Duel[] = [
     ],
     creator: { id: 'user-1', name: 'Alex Doe', avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop' },
     type: 'A_VS_B',
-    status: 'active',
+    status: 'scheduled',
+    createdAt: formatISO(now),
+    startsAt: formatISO(addDays(now, 1)),
+    endsAt: formatISO(addDays(now, 8)),
   },
   {
     id: 'duel-4',
@@ -81,6 +93,9 @@ export const mockDuels: Duel[] = [
     creator: { id: 'user-1', name: 'Alex Doe', avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop' },
     type: 'A_VS_B',
     status: 'closed',
+    createdAt: formatISO(subDays(now, 10)),
+    startsAt: formatISO(subDays(now, 10)),
+    endsAt: formatISO(subDays(now, 3)),
   },
   {
     id: 'duel-5',
@@ -93,5 +108,8 @@ export const mockDuels: Duel[] = [
     creator: { id: 'user-1', name: 'Alex Doe', avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop' },
     type: 'A_VS_B',
     status: 'closed',
+    createdAt: formatISO(subDays(now, 20)),
+    startsAt: formatISO(subDays(now, 20)),
+    endsAt: formatISO(subDays(now, 15)),
   },
 ];

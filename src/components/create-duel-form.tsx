@@ -4,6 +4,8 @@
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRef } from 'react';
+import { format } from "date-fns";
+import { es } from 'date-fns/locale';
 
 import { createDuelSchema, type CreateDuelFormValues } from '@/lib/schemas';
 import { Button } from '@/components/ui/button';
@@ -28,10 +30,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Terminal, Upload } from 'lucide-react';
+import { Terminal, Upload, CalendarIcon } from 'lucide-react';
 import type { Duel } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import type { FormState } from '@/lib/actions';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar } from './ui/calendar';
+import { cn } from '@/lib/utils';
 
 interface SubmitButtonProps {
   isEditing?: boolean;
@@ -68,6 +73,8 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
       description: duelData.description,
       type: duelData.type,
       options: duelData.options.map(opt => ({ title: opt.title, imageUrl: opt.imageUrl })),
+      startsAt: new Date(duelData.startsAt),
+      endsAt: new Date(duelData.endsAt),
     } : {
       title: '',
       description: '',
@@ -76,6 +83,8 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
         { title: '', imageUrl: '' },
         { title: '', imageUrl: '' },
       ],
+      startsAt: new Date(),
+      endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
     },
   });
 
@@ -111,10 +120,12 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
     formData.append('title', data.title);
     formData.append('description', data.description || '');
     formData.append('type', data.type);
+    formData.append('startsAt', data.startsAt.toISOString());
+    formData.append('endsAt', data.endsAt.toISOString());
+
     data.options.forEach((option, index) => {
         formData.append(`options.${index}.title`, option.title);
         formData.append(`options.${index}.imageUrl`, option.imageUrl);
-        // Include original IDs for editing context
         if (isEditing && duelData?.options[index]?.id) {
           formData.append(`options.${index}.id`, duelData.options[index].id);
         }
@@ -156,6 +167,97 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
             </FormItem>
           )}
         />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="startsAt"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Fecha de Inicio</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP", { locale: es })
+                        ) : (
+                          <span>Elige una fecha</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) =>
+                        date < new Date(new Date().setHours(0, 0, 0, 0))
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormDescription>
+                  Cuándo empezará a ser visible el duelo.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="endsAt"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Fecha de Fin</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP", { locale: es })
+                        ) : (
+                          <span>Elige una fecha</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) =>
+                        date < (form.getValues("startsAt") || new Date())
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormDescription>
+                   Cuándo se cerrará el duelo a nuevas votaciones.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={form.control}

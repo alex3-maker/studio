@@ -18,6 +18,12 @@ export const createDuelSchema = z.object({
     required_error: "Necesitas seleccionar un tipo de duelo.",
   }),
   options: z.array(duelOptionSchema).min(2, { message: "Debes tener al menos 2 opciones." }).max(2, { message: "Los duelos A vs B solo pueden tener 2 opciones." }),
+  startsAt: z.date({ required_error: "La fecha de inicio es requerida." }),
+  endsAt: z.date({ required_error: "La fecha de fin es requerida." }),
+}).refine(data => data.endsAt > data.startsAt, {
+  message: "La fecha de fin debe ser posterior a la fecha de inicio.",
+  path: ["endsAt"],
 });
+
 
 export type CreateDuelFormValues = z.infer<typeof createDuelSchema>;
