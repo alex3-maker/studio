@@ -20,6 +20,7 @@ export type DuelIdeaOutput = z.infer<typeof DuelIdeaOutputSchema>;
 
 const generateDuelIdeaPrompt = ai.definePrompt({
     name: 'generateDuelIdeaPrompt',
+    input: { schema: z.object({}) },
     output: { schema: DuelIdeaOutputSchema },
     prompt: `You are a creative assistant specialized in creating engaging "A vs B" style duel topics for a social voting app called DueliaX.
 
