@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, Power, PowerOff, ShieldQuestion } from "lucide-react";
+import { Trash2, Power, PowerOff, Edit } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import Link from "next/link";
 
 export default function AdminDuelsPage() {
   const { duels, toggleDuelStatus, deleteDuel } = useAppContext();
@@ -26,7 +27,7 @@ export default function AdminDuelsPage() {
     <Card>
       <CardHeader>
         <CardTitle className="font-headline text-2xl">Gestionar Duelos</CardTitle>
-        <CardDescription>Visualiza, activa, cierra y elimina duelos de todos los usuarios.</CardDescription>
+        <CardDescription>Visualiza, activa, cierra, edita y elimina duelos de todos los usuarios.</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
@@ -54,6 +55,12 @@ export default function AdminDuelsPage() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right space-x-2">
+                   <Button asChild variant="ghost" size="icon">
+                    <Link href={`/admin/duels/${duel.id}/edit`}>
+                      <Edit className="h-4 w-4" />
+                      <span className="sr-only">Editar Duelo</span>
+                    </Link>
+                  </Button>
                   <Button variant="ghost" size="icon" onClick={() => toggleDuelStatus(duel.id)}>
                     {duel.status === 'active' ? <PowerOff className="h-4 w-4 text-orange-500" /> : <Power className="h-4 w-4 text-green-500" />}
                      <span className="sr-only">{duel.status === 'active' ? 'Cerrar Duelo' : 'Activar Duelo'}</span>
@@ -83,7 +90,7 @@ export default function AdminDuelsPage() {
             ))}
              {duels.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
+                    <TableCell colSpan={5} className="h-24 text-center">
                         No hay duelos para mostrar.
                     </TableCell>
                 </TableRow>
@@ -94,4 +101,3 @@ export default function AdminDuelsPage() {
     </Card>
   );
 }
-

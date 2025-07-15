@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createContext, useContext, useState, ReactNode } from 'react';
@@ -9,6 +10,7 @@ interface AppContextType {
   duels: Duel[];
   castVote: (duelId: string, optionId: string) => void;
   addDuel: (newDuel: Duel) => void;
+  updateDuel: (updatedDuel: Duel) => void;
   toggleDuelStatus: (duelId: string) => void;
   deleteDuel: (duelId: string) => void;
 }
@@ -29,7 +31,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             }
             return option;
           }) as [DuelOption, DuelOption];
-          return { ...duel, options: newOptions, votes: (duel.options[0].votes + duel.options[1].votes + 1) };
+          return { ...duel, options: newOptions };
         }
         return duel;
       })
@@ -50,6 +52,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }));
   };
 
+  const updateDuel = (updatedDuel: Duel) => {
+    setDuels(prevDuels => prevDuels.map(d => (d.id === updatedDuel.id ? updatedDuel : d)));
+  };
+
   const toggleDuelStatus = (duelId: string) => {
     setDuels(prevDuels => prevDuels.map(duel => 
       duel.id === duelId ? { ...duel, status: duel.status === 'active' ? 'closed' : 'active' } : duel
@@ -61,7 +67,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
   
   return (
-    <AppContext.Provider value={{ user, duels, castVote, addDuel, toggleDuelStatus, deleteDuel }}>
+    <AppContext.Provider value={{ user, duels, castVote, addDuel, updateDuel, toggleDuelStatus, deleteDuel }}>
       {children}
     </AppContext.Provider>
   );

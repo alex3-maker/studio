@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -28,12 +29,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Terminal } from 'lucide-react';
+import type { Duel } from '@/lib/types';
 
-function SubmitButton() {
+interface SubmitButtonProps {
+  isEditing?: boolean;
+}
+
+function SubmitButton({ isEditing = false }: SubmitButtonProps) {
   const { pending } = useFormStatus();
+  const buttonText = isEditing ? 'Guardar Cambios' : 'Crear Duelo';
+  const pendingText = isEditing ? 'Guardando...' : 'Creando Duelo...';
+
   return (
     <Button type="submit" disabled={pending} className="w-full">
-      {pending ? 'Creando Duelo...' : 'Crear Duelo'}
+      {pending ? pendingText : buttonText}
     </Button>
   );
 }
@@ -54,12 +63,19 @@ type FormState = {
 interface CreateDuelFormProps {
   state: FormState;
   formAction: (payload: FormData) => void;
+  duelData?: Duel;
+  isEditing?: boolean;
 }
 
-export default function CreateDuelForm({ state, formAction }: CreateDuelFormProps) {
+export default function CreateDuelForm({ state, formAction, duelData, isEditing = false }: CreateDuelFormProps) {
   const form = useForm<CreateDuelFormValues>({
     resolver: zodResolver(createDuelSchema),
-    defaultValues: {
+    defaultValues: duelData ? {
+      title: duelData.title,
+      description: duelData.description,
+      type: duelData.type,
+      options: duelData.options,
+    } : {
       title: '',
       description: '',
       type: 'A_VS_B',
@@ -81,6 +97,9 @@ export default function CreateDuelForm({ state, formAction }: CreateDuelFormProp
         action={formAction}
         className="space-y-8"
       >
+        {isEditing && duelData?.id && (
+          <input type="hidden" name="id" value={duelData.id} />
+        )}
         <FormField
           control={form.control}
           name="title"
@@ -116,7 +135,7 @@ export default function CreateDuelForm({ state, formAction }: CreateDuelFormProp
           render={({ field }) => (
             <FormItem>
               <FormLabel>Tipo de Duelo</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isEditing}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona un formato de duelo" />
@@ -128,7 +147,9 @@ export default function CreateDuelForm({ state, formAction }: CreateDuelFormProp
                   <SelectItem value="KING_OF_THE_HILL" disabled>Rey de la Colina (Próximamente)</SelectItem>
                 </SelectContent>
               </Select>
-              <FormDescription>Actualmente, solo el formato A vs B está disponible.</FormDescription>
+              <FormDescription>
+                {isEditing ? "El tipo de duelo no se puede cambiar una vez creado." : "Actualmente, solo el formato A vs B está disponible."}
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -178,7 +199,7 @@ export default function CreateDuelForm({ state, formAction }: CreateDuelFormProp
             </Alert>
         )}
 
-        <SubmitButton />
+        <SubmitButton isEditing={isEditing} />
       </form>
     </Form>
   );
