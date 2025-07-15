@@ -86,18 +86,18 @@ export default function VotingFeed() {
     }, 350);
   };
   
-  const handleNextDuel = () => {
+  const onDialogClose = () => {
+    // Cuando el diálogo se cierra (tras ver los resultados), pasamos al siguiente duelo.
+    // React se encargará de re-renderizar si la lista de 'activeDuels' ha cambiado (por ejemplo, al reiniciar un voto)
     setAnimationClass('');
     setVoted(null);
-    if (currentDuel) {
-        document.getElementById(`results-close-${currentDuel.id}`)?.click();
-    }
-    // El useMemo se encargará de actualizar el duelo actual
-    // Si el índice actual es mayor que el nuevo tamaño de la lista, se ajustará
-    if (currentDuelIndex >= activeDuels.length -1) {
+    if (currentDuelIndex >= activeDuels.length - 1) {
         setCurrentDuelIndex(0);
+    } else {
+        setCurrentDuelIndex(currentDuelIndex + 1);
     }
-  };
+  }
+
 
   if (!votedDuelIds) { // Loading state while context loads from localstorage
     return <VotingFeedSkeleton />;
@@ -160,7 +160,7 @@ export default function VotingFeed() {
       <div className="text-center mt-8">
         <Dialog onOpenChange={(open) => {
           if (!open) {
-            handleNextDuel();
+            onDialogClose();
           }
         }}>
           <DialogTrigger asChild>
@@ -176,7 +176,7 @@ export default function VotingFeed() {
               <ResultsChart duel={currentDuel} />
             </div>
             <DialogClose asChild>
-              <Button id={`results-close-${currentDuel.id}`} onClick={handleNextDuel} className="w-full" size="lg">
+              <Button id={`results-close-${currentDuel.id}`} className="w-full" size="lg">
                 Siguiente Duelo <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </DialogClose>
