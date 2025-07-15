@@ -42,30 +42,29 @@ function getFormData(formData: FormData) {
   };
 }
 
-// Commented out to avoid API key errors during development
-// async function runModeration(data: { title: string; options: { title: string }[] }): Promise<{ success: boolean; message?: string; errors?: { moderation: string } }> {
-//   const { title, options } = data;
-//   const titleModeration = await moderateContent({ content: title, contentType: 'text' });
-//   if (!titleModeration.isSafe) {
-//     return {
-//       success: false,
-//       message: `El título del duelo fue marcado como inapropiado. Razones: ${titleModeration.reasons.join(', ')}`,
-//       errors: { moderation: `El título del duelo fue marcado como inapropiado.` },
-//     };
-//   }
+async function runModeration(data: { title: string; options: { title: string }[] }): Promise<{ success: boolean; message?: string; errors?: { moderation: string } }> {
+  // const { title, options } = data;
+  // const titleModeration = await moderateContent({ content: title, contentType: 'text' });
+  // if (!titleModeration.isSafe) {
+  //   return {
+  //     success: false,
+  //     message: `El título del duelo fue marcado como inapropiado. Razones: ${titleModeration.reasons.join(', ')}`,
+  //     errors: { moderation: `El título del duelo fue marcado como inapropiado.` },
+  //   };
+  // }
 
-//   for (const option of options) {
-//     const optionTitleModeration = await moderateContent({ content: option.title, contentType: 'text' });
-//     if (!optionTitleModeration.isSafe) {
-//       return {
-//         success: false,
-//         message: `El título de la opción "${option.title}" fue marcado como inapropiado. Razones: ${optionTitleModeration.reasons.join(', ')}`,
-//         errors: { moderation: `El título de la opción "${option.title}" es inapropiado.` },
-//       };
-//     }
-//   }
-//   return { success: true };
-// }
+  // for (const option of options) {
+  //   const optionTitleModeration = await moderateContent({ content: option.title, contentType: 'text' });
+  //   if (!optionTitleModeration.isSafe) {
+  //     return {
+  //       success: false,
+  //       message: `El título de la opción "${option.title}" fue marcado como inapropiado. Razones: ${optionTitleModeration.reasons.join(', ')}`,
+  //       errors: { moderation: `El título de la opción "${option.title}" es inapropiado.` },
+  //     };
+  //   }
+  // }
+  return { success: true };
+}
 
 
 export async function createDuelAction(
@@ -87,10 +86,10 @@ export async function createDuelAction(
   const { title, options, description, type, startsAt, endsAt } = validatedFields.data;
 
   try {
-    // const moderationResult = await runModeration({ title, options });
-    // if (!moderationResult.success) {
-    //   return { ...moderationResult, message: moderationResult.message! };
-    // }
+    const moderationResult = await runModeration({ title, options });
+    if (!moderationResult.success) {
+      return { ...moderationResult, message: moderationResult.message! };
+    }
     
     revalidatePath('/');
     revalidatePath('/panel/mis-duelos');
@@ -108,7 +107,7 @@ export async function createDuelAction(
       title,
       description: description || '',
       type,
-      status,
+      status, // This status is initial, the context will derive the real-time status
       createdAt: formatISO(now),
       startsAt: formatISO(startsAt),
       endsAt: formatISO(endsAt),
@@ -163,13 +162,15 @@ export async function updateDuelAction(
   const { title, options, description, startsAt, endsAt } = validatedFields.data;
 
   try {
-    // const moderationResult = await runModeration({ title, options });
-    // if (!moderationResult.success) {
-    //   return { ...moderationResult, message: moderationResult.message! };
-    // }
+    const moderationResult = await runModeration({ title, options });
+    if (!moderationResult.success) {
+      return { ...moderationResult, message: moderationResult.message! };
+    }
 
     revalidatePath('/admin/duels');
     revalidatePath(`/admin/duels/${rawFormData.id}/edit`);
+    revalidatePath('/panel/mis-duelos');
+    revalidatePath(`/panel/mis-duelos/${rawFormData.id}/edit`);
 
     const updatedDuel: Partial<Duel> & { id: string } = {
       id: rawFormData.id,
@@ -177,10 +178,12 @@ export async function updateDuelAction(
       description: description || '',
       startsAt: formatISO(startsAt),
       endsAt: formatISO(endsAt),
-      options: [
-        { id: rawFormData.options[0].id!, title: options[0].title, imageUrl: options[0].imageUrl, votes: 0 },
-        { id: rawFormData.options[1].id!, title: options[1].title, imageUrl: options[1].imageUrl, votes: 0 },
-      ],
+      options: rawFormData.options.map((opt, index) => ({
+        id: opt.id || `opt-${rawFormData.id}-${index}`, // Ensure option has an id
+        title: options[index].title,
+        imageUrl: options[index].imageUrl,
+        // Votes are preserved from the original state in the context, so no need to set them here
+      })) as [any, any] // Type assertion to satisfy partial update
     };
 
     return {
