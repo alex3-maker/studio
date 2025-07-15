@@ -1,4 +1,8 @@
+
+'use client';
+
 import Link from "next/link";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +22,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useAppContext } from "@/context/app-context";
+import DuelResultsDetails from "../duel-results-details";
 
 
 interface DuelListProps {
@@ -26,6 +31,13 @@ interface DuelListProps {
 
 export default function DuelList({ duels }: DuelListProps) {
   const { toggleDuelStatus, deleteDuel } = useAppContext();
+  const [selectedDuel, setSelectedDuel] = useState<Duel | null>(null);
+
+  const handleRowClick = (duel: Duel) => {
+    if (duel.status === 'closed') {
+      setSelectedDuel(duel);
+    }
+  };
 
   if (duels.length === 0) {
     return (
@@ -44,9 +56,11 @@ export default function DuelList({ duels }: DuelListProps) {
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle className="font-headline">Mis Duelos</CardTitle>
+        <CardDescription>Aquí puedes ver y gestionar tus duelos. Haz clic en un duelo cerrado para ver los resultados.</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
@@ -60,7 +74,11 @@ export default function DuelList({ duels }: DuelListProps) {
           </TableHeader>
           <TableBody>
             {duels.map((duel) => (
-              <TableRow key={duel.id}>
+              <TableRow 
+                key={duel.id}
+                onClick={() => handleRowClick(duel)}
+                className={duel.status === 'closed' ? 'cursor-pointer' : ''}
+              >
                 <TableCell className="font-medium">{duel.title}</TableCell>
                 <TableCell>
                   <Badge variant={duel.status === 'active' ? 'default' : 'secondary'}>
@@ -70,24 +88,24 @@ export default function DuelList({ duels }: DuelListProps) {
                 <TableCell>
                     <div className="h-12 w-full flex justify-start">
                       <div className="w-12">
-                        <ResultsChart duel={duel} />
+                        {duel.status === 'closed' && <ResultsChart duel={duel} />}
                       </div>
                     </div>
                 </TableCell>
                 <TableCell className="text-right space-x-2">
                    <Button asChild variant="ghost" size="icon">
-                    <Link href={`/panel/mis-duelos/${duel.id}/edit`}>
+                    <Link href={`/panel/mis-duelos/${duel.id}/edit`} onClick={e => e.stopPropagation()}>
                       <Edit className="h-4 w-4" />
                       <span className="sr-only">Editar Duelo</span>
                     </Link>
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => toggleDuelStatus(duel.id)}>
+                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); toggleDuelStatus(duel.id); }}>
                     {duel.status === 'active' ? <PowerOff className="h-4 w-4 text-orange-500" /> : <Power className="h-4 w-4 text-green-500" />}
                      <span className="sr-only">{duel.status === 'active' ? 'Cerrar Duelo' : 'Activar Duelo'}</span>
                   </Button>
                    <AlertDialog>
                     <AlertDialogTrigger asChild>
-                       <Button variant="ghost" size="icon">
+                       <Button variant="ghost" size="icon" onClick={e => e.stopPropagation()}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                          <span className="sr-only">Eliminar Duelo</span>
                       </Button>
@@ -112,5 +130,24 @@ export default function DuelList({ duels }: DuelListProps) {
         </Table>
       </CardContent>
     </Card>
+      
+    {/* Results Dialog */}
+    <AlertDialog open={!!selectedDuel} onOpenChange={(open) => !open && setSelectedDuel(null)}>
+      <AlertDialogContent className="max-w-2xl">
+        {selectedDuel && (
+          <>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Resultados: {selectedDuel.title}</AlertDialogTitle>
+              <AlertDialogDescription>{selectedDuel.description}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <DuelResultsDetails duel={selectedDuel} />
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setSelectedDuel(null)}>Cerrar</AlertDialogCancel>
+            </AlertDialogFooter>
+          </>
+        )}
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
