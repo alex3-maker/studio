@@ -101,7 +101,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setIsLoaded(true);
   }, []);
   
-  // Persist state to localStorage on change
   useEffect(() => {
     if (isLoaded) localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
   }, [user, isLoaded]);
@@ -211,17 +210,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [duels, duelVotingHistory, addKeyTransaction]);
 
   const addDuel = useCallback((newDuelData: Duel) => {
-    const hasEnoughKeys = user.keys >= DUEL_CREATION_COST;
-    const duelWithStatus = { ...newDuelData, status: hasEnoughKeys ? getStatus(newDuelData) : 'draft' };
+      const hasEnoughKeys = user.keys >= DUEL_CREATION_COST;
+      const status = hasEnoughKeys ? getStatus(newDuelData) : 'draft';
+      const duelWithStatus = { ...newDuelData, status };
 
-    setDuels(prevDuels => [duelWithStatus, ...prevDuels]);
-    
-    setUser(prevUser => ({ ...prevUser, duelsCreated: prevUser.duelsCreated + 1 }));
-    
-    if (duelWithStatus.status !== 'draft') {
-        spendKeys(DUEL_CREATION_COST, `Creación de "${newDuelData.title}"`);
-    }
-
+      setDuels(prevDuels => [duelWithStatus, ...prevDuels]);
+      
+      setUser(prevUser => ({ ...prevUser, duelsCreated: prevUser.duelsCreated + 1 }));
+      
+      if (status !== 'draft') {
+          spendKeys(DUEL_CREATION_COST, `Creación de "${newDuelData.title}"`);
+      }
   }, [user.keys, spendKeys]);
 
   const activateDraftDuel = useCallback((duelId: string): boolean => {
@@ -257,46 +256,55 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 return { ...originalOption, ...opt };
             }) as [DuelOption, DuelOption] | undefined;
 
-            return {
+            const newDuel = {
               ...duel,
               ...updatedDuelData,
               options: updatedOptions || duel.options,
             };
+            
+            addNotification({
+                type: 'duel-edited',
+                message: `El duelo "${newDuel.title}" ha sido actualizado.`,
+                link: null
+            });
+            return newDuel;
           }
           return duel;
         })
     );
-    addNotification({
-        type: 'duel-edited',
-        message: `El duelo "${duelTitle}" ha sido actualizado.`,
-        link: null
-    })
   }, [addNotification]);
 
   const toggleDuelStatus = useCallback((duelId: string) => {
-    setDuels(prevDuels => prevDuels.map(duel => {
+    setDuels(prevDuels => {
+      return prevDuels.map(duel => {
         if (duel.id === duelId) {
           const currentStatus = getStatus(duel);
           let newStatus: Duel['status'];
+          let notificationMessage = '';
 
-          if (currentStatus === 'active') { // Active -> Inactive
+          if (currentStatus === 'active') {
             newStatus = 'inactive';
+            notificationMessage = `El duelo "${duel.title}" ha sido desactivado.`;
+          } else {
+            // This will handle inactive, scheduled, closed -> active
+            // We let getStatus figure out the correct resulting state (scheduled or active)
+            newStatus = getStatus({ ...duel, status: 'active' }); 
+            notificationMessage = `El duelo "${duel.title}" ha sido activado.`;
+          }
+          
+          if(notificationMessage) {
             addNotification({
                 type: 'duel-edited',
-                message: `El duelo "${duel.title}" ha sido desactivado.`,
+                message: notificationMessage,
                 link: `/`
             });
-          } else { // Inactive, Scheduled, Closed -> Active
-             newStatus = 'active';
-             // If we are reactivating, we should ensure the end date is in the future.
-             // But for now, we just toggle the state. The getStatus will handle the rest.
-             // A better approach might be needed if explicit reactivation of closed duels is desired.
           }
+
           return { ...duel, status: newStatus };
         }
         return duel;
-      })
-    );
+      });
+    });
   }, [addNotification]);
 
   const deleteDuel = useCallback((duelId: string) => {
@@ -305,10 +313,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     
     setDuels(prevDuels => prevDuels.filter(duel => duel.id !== duelId));
     
-    if (duelToDelete.creator.id === user.id) {
-      setUser(prevUser => ({ ...prevUser, duelsCreated: Math.max(0, prevUser.duelsCreated - 1) }));
-    }
-  }, [duels, user.id]);
+    setUser(prevUser => {
+      if (duelToDelete.creator.id === prevUser.id) {
+        return { ...prevUser, duelsCreated: Math.max(0, prevUser.duelsCreated - 1) };
+      }
+      return prevUser;
+    });
+  }, [duels]);
   
   const resetDuelVotes = useCallback((duelId: string, isOwnerReset: boolean = false) => {
     let duelTitle = '';
