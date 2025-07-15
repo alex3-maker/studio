@@ -10,13 +10,13 @@ import { useMemo } from "react";
 export default function MisDuelosPage() {
     const { user, duels } = useAppContext();
     
-    // Filter duels created by the current user
     const userDuels = useMemo(() => duels.filter(duel => duel.creator.id === user.id), [duels, user.id]);
     
-    // The stats should reflect the actual count of created duels from the user object, which is now the source of truth
+    const duelsCreatedCount = userDuels.length;
+
     const stats = [
         { label: "Llaves Ganadas", value: user.keys, icon: Key, color: "text-yellow-500" },
-        { label: "Duelos Creados", value: user.duelsCreated, icon: Flame, color: "text-red-500" },
+        { label: "Duelos Creados", value: duelsCreatedCount, icon: Flame, color: "text-red-500" },
         { label: "Votos Emitidos", value: user.votesCast, icon: Vote, color: "text-blue-500" },
     ];
 

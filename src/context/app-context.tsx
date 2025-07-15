@@ -21,7 +21,7 @@ interface AppContextType {
   notifications: Notification[];
   keyHistory: KeyTransaction[];
   castVote: (duelId: string, optionId: string) => boolean;
-  addDuel: (newDuel: Duel, userKeys: number) => void;
+  addDuel: (newDuel: Duel) => void;
   updateDuel: (updatedDuel: Partial<Duel> & { id: string }) => void;
   toggleDuelStatus: (duelId: string) => void;
   deleteDuel: (duelId: string) => void;
@@ -37,7 +37,6 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const getStatus = (duel: Duel): Duel['status'] => {
-    // Ensure duel and its properties exist before trying to access them
     if (!duel || duel.status === 'draft') {
         return 'draft';
     }
@@ -71,32 +70,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [duelVotingHistory, setDuelVotingHistory] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load initial state from localStorage
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem(USER_STORAGE_KEY);
-      if (storedUser) setUser(JSON.parse(storedUser));
-      else localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mockUser));
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      } else {
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mockUser));
+      }
       
       const storedDuels = localStorage.getItem(DUELS_STORAGE_KEY);
       if (storedDuels) {
-        const parsedDuels: Duel[] = JSON.parse(storedDuels);
-        const repairedDuels = parsedDuels.map(d => {
-            if (!d.startsAt || !d.endsAt || !d.createdAt) {
-                const now = new Date();
-                return {
-                    ...d,
-                    createdAt: d.createdAt || formatISO(now),
-                    startsAt: d.startsAt || formatISO(now),
-                    endsAt: d.endsAt || formatISO(addDays(now, 7)),
-                    status: d.status || 'closed',
-                };
-            }
-            return d;
-        });
-        setDuels(repairedDuels);
+        setDuels(JSON.parse(storedDuels));
       } else {
         setDuels(mockDuels);
+        localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(mockDuels));
       }
       
       const storedVotedIds = localStorage.getItem(VOTED_DUELS_STORAGE_KEY);
@@ -113,44 +101,36 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     } catch (error) {
       console.error("Error reading from localStorage, resetting data.", error);
-      localStorage.clear(); // Clear all if there's a parsing error.
+      localStorage.clear();
       setUser(mockUser);
       setDuels(mockDuels);
     }
     setIsLoaded(true);
   }, []);
 
-  // Persist state changes to localStorage
   useEffect(() => {
-    if (!isLoaded) return;
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+    if (isLoaded) localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
   }, [user, isLoaded]);
 
   useEffect(() => {
-    if (!isLoaded) return;
-    localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(duels));
+    if (isLoaded) localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(duels));
   }, [duels, isLoaded]);
 
   useEffect(() => {
-    if (!isLoaded) return;
-    localStorage.setItem(VOTED_DUELS_STORAGE_KEY, JSON.stringify(votedDuelIds));
+    if (isLoaded) localStorage.setItem(VOTED_DUELS_STORAGE_KEY, JSON.stringify(votedDuelIds));
   }, [votedDuelIds, isLoaded]);
 
   useEffect(() => {
-    if (!isLoaded) return;
-    localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifications));
+    if (isLoaded) localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifications));
   }, [notifications, isLoaded]);
 
   useEffect(() => {
-    if (!isLoaded) return;
-    localStorage.setItem(KEY_HISTORY_STORAGE_KEY, JSON.stringify(keyHistory));
+    if (isLoaded) localStorage.setItem(KEY_HISTORY_STORAGE_KEY, JSON.stringify(keyHistory));
   }, [keyHistory, isLoaded]);
 
   useEffect(() => {
-    if (!isLoaded) return;
-    localStorage.setItem(DUEL_VOTING_HISTORY_STORAGE_KEY, JSON.stringify(duelVotingHistory));
+    if (isLoaded) localStorage.setItem(DUEL_VOTING_HISTORY_STORAGE_KEY, JSON.stringify(duelVotingHistory));
   }, [duelVotingHistory, isLoaded]);
-
 
   const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
     setNotifications(prev => [
@@ -188,12 +168,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             success = false;
             return prevUser;
         }
+        addKeyTransaction('spent', amount, description);
         addNotification({
           type: 'keys-spent',
           message: `Has gastado ${amount} llaves en: ${description}.`,
           link: null,
         });
-        addKeyTransaction('spent', amount, description);
         success = true;
         return { ...prevUser, keys: prevUser.keys - amount };
     });
@@ -236,14 +216,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [duels, duelVotingHistory, addKeyTransaction]);
 
   const addDuel = useCallback((newDuel: Duel) => {
-    if (newDuel.status !== 'draft') {
-        spendKeys(DUEL_CREATION_COST, `Creación de "${newDuel.title}"`);
-    }
-    
     setDuels(prevDuels => [newDuel, ...prevDuels]);
-    setUser(prevUser => ({ ...prevUser, duelsCreated: prevUser.duelsCreated + 1 }));
-
-  }, [spendKeys]);
+    setUser(prevUser => {
+      const updatedUser = { ...prevUser, duelsCreated: prevUser.duelsCreated + 1 };
+      if (newDuel.status !== 'draft') {
+          updatedUser.keys -= DUEL_CREATION_COST;
+          addKeyTransaction('spent', DUEL_CREATION_COST, `Creación de "${newDuel.title}"`);
+          addNotification({
+              type: 'keys-spent',
+              message: `Has gastado ${DUEL_CREATION_COST} llaves en crear el duelo: "${newDuel.title}".`,
+              link: null
+          });
+      }
+      return updatedUser;
+    });
+  }, [addKeyTransaction, addNotification]);
 
   const activateDraftDuel = useCallback((duelId: string): boolean => {
     const duel = duels.find(d => d.id === duelId);
