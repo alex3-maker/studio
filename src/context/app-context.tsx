@@ -211,8 +211,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const addDuel = useCallback((newDuelData: Duel) => {
       const hasEnoughKeys = user.keys >= DUEL_CREATION_COST;
-      const status = hasEnoughKeys ? getStatus(newDuelData) : 'draft';
-      const duelWithStatus = { ...newDuelData, status };
+      const status = getStatus({ ...newDuelData, status: hasEnoughKeys ? 'active' : 'draft'});
+      
+      const duelWithStatus: Duel = {
+          ...newDuelData,
+          status: status
+      };
 
       setDuels(prevDuels => [duelWithStatus, ...prevDuels]);
       
@@ -246,10 +250,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [duels, spendKeys]);
 
   const updateDuel = useCallback((updatedDuelData: Partial<Duel> & { id: string }) => {
-    let duelTitle = '';
     setDuels(prevDuels => prevDuels.map(duel => {
           if (duel.id === updatedDuelData.id) {
-            duelTitle = duel.title;
             const originalOptions = duel.options;
             const updatedOptions = updatedDuelData.options?.map((opt, index) => {
                 const originalOption = originalOptions.find(o => o.id === opt.id) || originalOptions[index];
@@ -261,22 +263,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               ...updatedDuelData,
               options: updatedOptions || duel.options,
             };
-            
-            addNotification({
-                type: 'duel-edited',
-                message: `El duelo "${newDuel.title}" ha sido actualizado.`,
-                link: null
-            });
             return newDuel;
           }
           return duel;
         })
     );
-  }, [addNotification]);
+  }, []);
 
   const toggleDuelStatus = useCallback((duelId: string) => {
     setDuels(prevDuels => {
-      return prevDuels.map(duel => {
+      const newDuels = prevDuels.map(duel => {
         if (duel.id === duelId) {
           const currentStatus = getStatus(duel);
           let newStatus: Duel['status'];
@@ -304,6 +300,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
         return duel;
       });
+      return newDuels;
     });
   }, [addNotification]);
 
