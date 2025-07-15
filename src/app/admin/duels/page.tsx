@@ -87,11 +87,11 @@ export default function AdminDuelsPage() {
               const statusInfo = statusConfig[currentStatus];
 
               return (
-                <Card key={duel.id} className="overflow-hidden">
+                <Card key={duel.id} className="overflow-hidden cursor-pointer" onClick={() => handleRowClick(duel)}>
                   <div className="p-4 flex flex-col md:flex-row gap-4">
                     {/* Image & Status */}
                     <div className="flex-shrink-0 w-full md:w-24 flex md:flex-col items-center gap-4">
-                        <div className="w-24 h-24 relative cursor-pointer" onClick={() => handleRowClick(duel)}>
+                        <div className="w-24 h-24 relative">
                            <ResultsChart duel={duel} />
                            <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity rounded-full">
                                 <BarChart2 className="text-white h-8 w-8" />
