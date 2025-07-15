@@ -4,8 +4,6 @@
 import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import type { User, Duel, DuelOption } from '@/lib/types';
 import { mockUser, mockDuels } from '@/lib/data';
-import { useActionState } from 'react';
-import { createDuelAction } from '@/lib/actions';
 
 interface AppContextType {
   user: User;

@@ -3,9 +3,7 @@
 
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useFormStatus } from 'react-dom';
 import { useRef } from 'react';
-import { useActionState } from 'react';
 
 import { createDuelSchema, type CreateDuelFormValues } from '@/lib/schemas';
 import { Button } from '@/components/ui/button';
@@ -37,16 +35,16 @@ import type { FormState } from '@/lib/actions';
 
 interface SubmitButtonProps {
   isEditing?: boolean;
+  isPending: boolean;
 }
 
-function SubmitButton({ isEditing = false }: SubmitButtonProps) {
-  const { pending } = useFormStatus();
+function SubmitButton({ isEditing = false, isPending }: SubmitButtonProps) {
   const buttonText = isEditing ? 'Guardar Cambios' : 'Crear Duelo';
   const pendingText = isEditing ? 'Guardando...' : 'Creando Duelo...';
 
   return (
-    <Button type="submit" disabled={pending} className="w-full">
-      {pending ? pendingText : buttonText}
+    <Button type="submit" disabled={isPending} className="w-full">
+      {isPending ? pendingText : buttonText}
     </Button>
   );
 }
@@ -56,20 +54,20 @@ interface CreateDuelFormProps {
   formAction: (payload: FormData) => void;
   duelData?: Duel;
   isEditing?: boolean;
+  isPending: boolean;
 }
 
-export default function CreateDuelForm({ state, formAction, duelData, isEditing = false }: CreateDuelFormProps) {
+export default function CreateDuelForm({ state, formAction, duelData, isEditing = false, isPending }: CreateDuelFormProps) {
   const { toast } = useToast();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const formRef = useRef<HTMLFormElement>(null);
-
+  
   const form = useForm<CreateDuelFormValues>({
     resolver: zodResolver(createDuelSchema),
     defaultValues: duelData ? {
       title: duelData.title,
       description: duelData.description,
       type: duelData.type,
-      options: duelData.options,
+      options: duelData.options.map(opt => ({ title: opt.title, imageUrl: opt.imageUrl })),
     } : {
       title: '',
       description: '',
@@ -123,7 +121,6 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
   return (
     <Form {...form}>
       <form
-        ref={formRef}
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-8"
       >
@@ -232,6 +229,11 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
                                 </FormItem>
                             )}
                         />
+                         {field.imageUrl && (
+                          <div className="relative w-full h-48 mt-2 rounded-md overflow-hidden border">
+                              <img src={field.imageUrl} alt="Vista previa" className="w-full h-full object-cover" />
+                          </div>
+                        )}
                     </CardContent>
                 </Card>
             ))}
@@ -245,7 +247,15 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
             </Alert>
         )}
 
-        <SubmitButton isEditing={isEditing} />
+        {state.errors?._form && (
+             <Alert variant="destructive">
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{state.errors._form.join(', ')}</AlertDescription>
+            </Alert>
+        )}
+
+        <SubmitButton isEditing={isEditing} isPending={isPending} />
       </form>
     </Form>
   );

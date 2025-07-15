@@ -21,7 +21,7 @@ export default function EditDuelPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { toast } = useToast();
   const { duels, updateDuel } = useAppContext();
-  const [state, formAction] = useActionState(updateDuelAction, initialState);
+  const [state, formAction, isPending] = useActionState(updateDuelAction, initialState);
 
   const duel = duels.find(d => d.id === params.id);
 
@@ -75,7 +75,7 @@ export default function EditDuelPage({ params }: { params: { id: string } }) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <CreateDuelForm state={state} formAction={formAction} duelData={duel} isEditing={true} />
+            <CreateDuelForm state={state} formAction={formAction} duelData={duel} isEditing={true} isPending={isPending} />
           </CardContent>
         </Card>
       </div>
