@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -5,9 +6,12 @@
  * - generateDuelIdea - A function that returns a duel idea.
  * - DuelIdeaOutput - The return type for the generateDuelIdea function.
  */
+import { genkit, z } from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
-import { ai } from '@/ai/genkit';
-import { z } from 'zod';
+const DuelIdeaInputSchema = z.object({
+  apiKey: z.string().optional(),
+});
 
 const DuelIdeaOutputSchema = z.object({
   title: z.string().describe('The title of the duel. Should be a question.'),
@@ -45,15 +49,22 @@ const generateDuelIdeaPrompt = ai.definePrompt({
 const generateDuelIdeaFlow = ai.defineFlow(
   {
     name: 'generateDuelIdeaFlow',
+    inputSchema: DuelIdeaInputSchema,
     outputSchema: DuelIdeaOutputSchema,
   },
-  async () => {
-    const { output } = await generateDuelIdeaPrompt({});
+  async ({ apiKey }) => {
+    
+    // Dynamically configure Genkit for this specific flow execution
+    const dynamicAi = genkit({
+      plugins: [googleAI({ apiKey: apiKey || process.env.GEMINI_API_KEY })],
+    });
+
+    const { output } = await dynamicAi.prompt(generateDuelIdeaPrompt)({});
     return output!;
   }
 );
 
 
-export async function generateDuelIdea(): Promise<DuelIdeaOutput> {
-  return generateDuelIdeaFlow();
+export async function generateDuelIdea(apiKey?: string): Promise<DuelIdeaOutput> {
+  return generateDuelIdeaFlow({ apiKey });
 }

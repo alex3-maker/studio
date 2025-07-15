@@ -26,7 +26,7 @@ const initialState: FormState = {
 export default function CreateDuelPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { addDuel, user } = useAppContext();
+  const { addDuel, user, apiKey } = useAppContext();
   const [state, formAction, isPending] = useActionState(createDuelAction, initialState);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedData, setGeneratedData] = useState<Partial<CreateDuelFormValues> | null>(null);
@@ -49,9 +49,18 @@ export default function CreateDuelPage() {
   }, [state, toast, router, addDuel, user.keys]);
 
   const handleGenerate = async () => {
+    if (!apiKey) {
+       toast({
+        variant: 'destructive',
+        title: 'Falta la Clave de API',
+        description: 'Por favor, introduce una clave de API de Gemini en el panel de Ajustes de IA del administrador.',
+        duration: 8000
+      });
+      return;
+    }
     setIsGenerating(true);
     try {
-      const idea = await generateDuelIdea();
+      const idea = await generateDuelIdea(apiKey);
       setGeneratedData({
         title: idea.title,
         description: idea.description,

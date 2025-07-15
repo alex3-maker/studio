@@ -3,7 +3,7 @@
 
 import { useAppContext } from '@/context/app-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldAlert } from 'lucide-react';
+import { ShieldAlert, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { Swords, Users } from 'lucide-react';
 const adminNavLinks = [
   { href: '/admin/duels', label: 'Gestionar Duelos', icon: Swords },
   { href: '/admin/users', label: 'Gestionar Usuarios', icon: Users },
+  { href: '/admin/settings', label: 'Ajustes de IA', icon: Settings },
 ];
 
 export default function AdminLayout({

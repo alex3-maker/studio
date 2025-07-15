@@ -134,7 +134,7 @@ export async function createDuelAction(
     console.error('Error creando duelo:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return {
-      message: `Ocurrió un error inesperado: ${errorMessage}`,
+      message: `Ocurrió un error inesperado. Por favor, inténtalo de nuevo. Detalle: ${errorMessage}`,
       success: false,
       errors: { _form: [`Ocurrió un error inesperado. Por favor, inténtalo de nuevo. Detalle: ${errorMessage}`] },
     };
