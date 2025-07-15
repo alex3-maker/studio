@@ -25,9 +25,8 @@ export default function CreateDuelPage() {
         title: '¡Éxito!',
         description: state.message,
       });
-      // Redirigir al panel tras una creación exitosa
       router.push('/panel/mis-duelos');
-    } else if (state.message && !state.success) {
+    } else if (state.message && !state.success && (state.errors?.moderation || state.errors?._form)) {
        toast({
         variant: 'destructive',
         title: 'Error',

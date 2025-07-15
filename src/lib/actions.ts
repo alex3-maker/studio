@@ -4,6 +4,7 @@ import { moderateContent } from '@/ai/flows/moderate-content';
 import { createDuelSchema } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import type { CreateDuelFormValues } from '@/lib/schemas';
+import type { Duel } from './types';
 
 export type FormState = {
   message: string;
@@ -16,7 +17,7 @@ export type FormState = {
     moderation?: string;
     _form?: string[];
   };
-  newDuel?: CreateDuelFormValues & { options: { title: string, imageUrl: string }[] };
+  newDuel?: Duel;
 };
 
 export async function createDuelAction(
@@ -47,7 +48,6 @@ export async function createDuelAction(
   const { title, options, description, type } = validatedFields.data;
 
   try {
-    // Moderate duel title
     const titleModeration = await moderateContent({ content: title, contentType: 'text' });
     if (!titleModeration.isSafe) {
       return {
@@ -57,7 +57,6 @@ export async function createDuelAction(
       };
     }
 
-    // Moderate each option's title
     for (const option of options) {
       const optionTitleModeration = await moderateContent({ content: option.title, contentType: 'text' });
       if (!optionTitleModeration.isSafe) {
@@ -70,12 +69,30 @@ export async function createDuelAction(
     }
     
     revalidatePath('/');
-    revalidatePath('/panel');
+    revalidatePath('/panel/mis-duelos');
     
+    // The duel is created here, but not added to a DB. It will be added to the state on the client.
+    const newDuel: Duel = {
+      id: `duel-${Date.now()}`,
+      title,
+      description: description || '',
+      type,
+      status: 'active',
+      creator: { // In a real app, this would come from the session
+        id: 'user-1',
+        name: 'Alex Doe',
+        avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop'
+      },
+      options: [
+        { id: `opt-${Date.now()}-a`, title: options[0].title, imageUrl: options[0].imageUrl, votes: 0 },
+        { id: `opt-${Date.now()}-b`, title: options[1].title, imageUrl: options[1].imageUrl, votes: 0 },
+      ],
+    };
+
     return {
       message: '¡Duelo creado con éxito!',
       success: true,
-      newDuel: validatedFields.data,
+      newDuel: newDuel
     };
 
   } catch (error) {
