@@ -4,6 +4,7 @@
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useFormStatus } from 'react-dom';
+import { useRef } from 'react';
 
 import { createDuelSchema, type CreateDuelFormValues } from '@/lib/schemas';
 import { Button } from '@/components/ui/button';
@@ -28,8 +29,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Terminal } from 'lucide-react';
+import { Terminal, Upload } from 'lucide-react';
 import type { Duel } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 interface SubmitButtonProps {
   isEditing?: boolean;
@@ -68,6 +70,9 @@ interface CreateDuelFormProps {
 }
 
 export default function CreateDuelForm({ state, formAction, duelData, isEditing = false }: CreateDuelFormProps) {
+  const { toast } = useToast();
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  
   const form = useForm<CreateDuelFormValues>({
     resolver: zodResolver(createDuelSchema),
     defaultValues: duelData ? {
@@ -80,8 +85,8 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
       description: '',
       type: 'A_VS_B',
       options: [
-        { title: '', imageUrl: 'https://placehold.co/600x600.png' },
-        { title: '', imageUrl: 'https://placehold.co/600x600.png' },
+        { title: '', imageUrl: '' },
+        { title: '', imageUrl: '' },
       ],
     },
   });
@@ -90,6 +95,26 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
     control: form.control,
     name: 'options',
   });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast({
+          variant: "destructive",
+          title: "Archivo demasiado grande",
+          description: "Por favor, selecciona una imagen de menos de 2MB.",
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue(`options.${index}.imageUrl`, reader.result as string, { shouldValidate: true });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
 
   return (
     <Form {...form}>
@@ -180,8 +205,27 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
                             name={`options.${index}.imageUrl`}
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>URL de la Imagen</FormLabel>
-                                    <FormControl><Input placeholder="https://..." {...field} /></FormControl>
+                                    <FormLabel>URL de la Imagen o Subir Archivo</FormLabel>
+                                    <div className="flex gap-2">
+                                        <FormControl>
+                                            <Input placeholder="https://... o sube un archivo" {...field} />
+                                        </FormControl>
+                                        <Button 
+                                            type="button" 
+                                            variant="outline" 
+                                            onClick={() => fileInputRefs.current[index]?.click()}
+                                        >
+                                            <Upload className="mr-2" /> Subir
+                                        </Button>
+                                    </div>
+                                    <input 
+                                        type="file"
+                                        ref={el => fileInputRefs.current[index] = el}
+                                        className="hidden"
+                                        accept="image/png, image/jpeg, image/gif, image/webp"
+                                        onChange={(e) => handleFileChange(e, index)}
+                                    />
+                                    <FormDescription>Pega una URL o sube una imagen (máx 2MB).</FormDescription>
                                     <FormMessage />
                                 </FormItem>
                             )}
