@@ -145,14 +145,18 @@ export default function DuelList({ duels }: DuelListProps) {
 
                       {/* Footer Info */}
                        <div className="border-t mt-2 pt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <CalendarDays className="h-3 w-3" />
-                          <span>Creado {format(new Date(duel.createdAt), "dd MMM yyyy", { locale: es })}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                           <Clock className="h-3 w-3" />
-                          <span>Cierra en {formatDistanceToNow(new Date(duel.endsAt), { locale: es, addSuffix: true })}</span>
-                        </div>
+                        {duel.createdAt && (
+                          <div className="flex items-center gap-1">
+                            <CalendarDays className="h-3 w-3" />
+                            <span>Creado {format(new Date(duel.createdAt), "dd MMM yyyy", { locale: es })}</span>
+                          </div>
+                        )}
+                        {duel.endsAt && (
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>Cierra {formatDistanceToNow(new Date(duel.endsAt), { locale: es, addSuffix: true })}</span>
+                          </div>
+                        )}
                          <div className="flex items-center gap-1 font-semibold">
                           <BarChart2 className="h-3 w-3" />
                           <span>{getTotalVotes(duel)} Votos</span>
