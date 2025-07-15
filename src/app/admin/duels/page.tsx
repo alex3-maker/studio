@@ -6,7 +6,7 @@ import { useAppContext } from "@/context/app-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, Power, PowerOff, Edit, RotateCcw, Clock, CalendarDays, BarChart2 } from "lucide-react";
+import { Trash2, Power, PowerOff, Edit, RotateCcw, Clock, CalendarDays, BarChart2, CheckCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,11 +31,12 @@ const statusConfig = {
   active: { text: "Activo", className: "bg-green-500 hover:bg-green-600" },
   closed: { text: "Cerrado", className: "bg-red-500 hover:bg-red-600" },
   scheduled: { text: "Programado", className: "bg-blue-500 hover:bg-blue-600" },
+  draft: { text: "Borrador", className: "bg-gray-400 hover:bg-gray-500" },
 };
 
 
 export default function AdminDuelsPage() {
-  const { duels, toggleDuelStatus, deleteDuel, resetDuelVotes, getDuelStatus } = useAppContext();
+  const { duels, toggleDuelStatus, deleteDuel, resetDuelVotes, getDuelStatus, activateDraftDuel } = useAppContext();
   const [selectedDuel, setSelectedDuel] = useState<Duel | null>(null);
   const { toast } = useToast();
 
@@ -50,6 +51,23 @@ export default function AdminDuelsPage() {
       title: "Votos Reiniciados",
       description: `Los votos para el duelo han sido reseteados. (Notificación simulada a usuarios)`,
     });
+  }
+
+  const handleActivateDuel = (e: React.MouseEvent, duelId: string) => {
+     e.stopPropagation();
+     const success = activateDraftDuel(duelId);
+      if (success) {
+        toast({
+          title: "Duelo Activado",
+          description: "El duelo ahora está programado y será visible en su fecha de inicio.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error al Activar",
+          description: "No se pudo activar el duelo. ¿Tiene el creador suficientes llaves?",
+        });
+      }
   }
   
   const getTotalVotes = (duel: Duel) => duel.options.reduce((sum, option) => sum + option.votes, 0);
@@ -94,17 +112,23 @@ export default function AdminDuelsPage() {
                         </div>
                         {/* Action Buttons */}
                         <div className="flex items-center gap-1">
+                          {currentStatus === 'draft' ? (
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleActivateDuel(e, duel.id)}>
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                </Button>
+                          ) : (
+                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); toggleDuelStatus(duel.id); }}>
+                                {currentStatus === 'active' ? <PowerOff className="h-4 w-4 text-orange-500" /> : <Power className="h-4 w-4 text-green-500" />}
+                            </Button>
+                          )}
                           <Button asChild variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
                             <Link href={`/admin/duels/${duel.id}/edit`}>
                               <Edit className="h-4 w-4" />
                             </Link>
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); toggleDuelStatus(duel.id); }}>
-                            {currentStatus === 'active' ? <PowerOff className="h-4 w-4 text-orange-500" /> : <Power className="h-4 w-4 text-green-500" />}
-                          </Button>
                           <AlertDialog onOpenChange={(open) => !open && event.stopPropagation()}>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()} disabled={currentStatus === 'draft'}>
                                 <RotateCcw className="h-4 w-4 text-blue-500" />
                               </Button>
                             </AlertDialogTrigger>
@@ -129,14 +153,20 @@ export default function AdminDuelsPage() {
 
                       {/* Footer Info */}
                       <div className="border-t mt-2 pt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <CalendarDays className="h-3 w-3" />
-                          <span>Creado {format(new Date(duel.createdAt), "dd MMM yyyy", { locale: es })}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                           <Clock className="h-3 w-3" />
-                          <span>Cierra en {formatDistanceToNow(new Date(duel.endsAt), { locale: es, addSuffix: true })}</span>
-                        </div>
+                        {duel.createdAt && (
+                          <div className="flex items-center gap-1">
+                            <CalendarDays className="h-3 w-3" />
+                            <span>Creado {format(new Date(duel.createdAt), "dd MMM yyyy", { locale: es })}</span>
+                          </div>
+                        )}
+                        {duel.endsAt && (
+                          <div className="flex items-center gap-1">
+                             <Clock className="h-3 w-3" />
+                            <span>
+                                {currentStatus === 'draft' ? 'Pendiente de activación' : `Cierra ${formatDistanceToNow(new Date(duel.endsAt), { locale: es, addSuffix: true })}`}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-1 font-semibold">
                           <BarChart2 className="h-3 w-3" />
                           <span>{getTotalVotes(duel)} Votos</span>

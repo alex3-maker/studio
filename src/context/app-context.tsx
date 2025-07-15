@@ -14,7 +14,6 @@ const NOTIFICATIONS_STORAGE_KEY = 'dueliax_notifications';
 const KEY_HISTORY_STORAGE_KEY = 'dueliax_key_history';
 const DUEL_CREATION_COST = 5;
 
-
 interface AppContextType {
   user: User;
   duels: Duel[];
@@ -22,7 +21,7 @@ interface AppContextType {
   notifications: Notification[];
   keyHistory: KeyTransaction[];
   castVote: (duelId: string, optionId: string) => boolean;
-  addDuel: (newDuel: Duel) => void;
+  addDuel: (newDuel: Duel, userKeys: number) => void;
   updateDuel: (updatedDuel: Partial<Duel> & { id: string }) => void;
   toggleDuelStatus: (duelId: string) => void;
   deleteDuel: (duelId: string) => void;
@@ -32,12 +31,15 @@ interface AppContextType {
   markAllNotificationsAsRead: () => void;
   deleteNotification: (notificationId: string) => void;
   clearAllNotifications: () => void;
-  spendKeys: (amount: number, description: string) => boolean;
+  activateDraftDuel: (duelId: string) => boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const getStatus = (duel: Duel): Duel['status'] => {
+    if (duel.status === 'draft') {
+        return 'draft';
+    }
     if (!duel.startsAt || !duel.endsAt) {
       console.warn(`Duel ${duel.id} is missing date information.`);
       return 'closed';
@@ -99,6 +101,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               createdAt: d.createdAt || formatISO(now),
               startsAt: d.startsAt || formatISO(now),
               endsAt: d.endsAt || formatISO(addDays(now, 7)),
+              status: d.status || 'closed', // Ensure status exists
             };
           }
           return d;
@@ -216,11 +219,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setUser(prevUser => {
         const newKeys = prevUser.keys - amount;
         localStorage.setItem(USER_KEYS_STORAGE_KEY, JSON.stringify(newKeys));
+        addNotification({
+          type: 'keys-spent',
+          message: `Has gastado ${amount} llaves en: ${description}.`,
+          link: null,
+        });
+        addKeyTransaction('spent', amount, description);
         return { ...prevUser, keys: newKeys };
     });
-    addKeyTransaction('spent', amount, description);
     return true;
-  }, [user.keys, addKeyTransaction]);
+  }, [user.keys, addKeyTransaction, addNotification]);
 
   const castVote = useCallback((duelId: string, optionId: string): boolean => {
     const duel = duels.find(d => d.id === duelId);
@@ -277,10 +285,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   }, [duels, duelVotingHistory, addKeyTransaction]);
 
-  const addDuel = useCallback((newDuel: Duel) => {
-     if (!spendKeys(DUEL_CREATION_COST, `Creación de "${newDuel.title}"`)) {
-        console.error("No se pudo crear el duelo, fondos insuficientes.");
-        return;
+  const addDuel = useCallback((newDuel: Duel, userKeys: number) => {
+    if (newDuel.status !== 'draft') {
+        spendKeys(DUEL_CREATION_COST, `Creación de "${newDuel.title}"`);
     }
     
     setDuels(prevDuels => {
@@ -288,11 +295,40 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       persistDuels(newDuels);
       return newDuels;
     });
+
     setUser(prevUser => ({
       ...prevUser,
       duelsCreated: prevUser.duelsCreated + 1,
     }));
   }, [spendKeys]);
+
+  const activateDraftDuel = useCallback((duelId: string): boolean => {
+    const duel = duels.find(d => d.id === duelId);
+    if (!duel || duel.status !== 'draft') {
+        return false;
+    }
+
+    if (user.keys < DUEL_CREATION_COST) {
+        return false;
+    }
+    
+    spendKeys(DUEL_CREATION_COST, `Activación de "${duel.title}"`);
+
+    setDuels(prevDuels => {
+        const newDuels = prevDuels.map(d => {
+            if (d.id === duelId) {
+                // The status will be recalculated to scheduled/active by persistDuels
+                return { ...d, status: 'scheduled' }; 
+            }
+            return d;
+        });
+        persistDuels(newDuels);
+        return newDuels;
+    });
+
+    return true;
+
+  }, [duels, user.keys, spendKeys]);
 
   const updateDuel = useCallback((updatedDuelData: Partial<Duel> & { id: string }) => {
     let duelTitle = '';
@@ -332,18 +368,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         if (duel.id === duelId) {
           const currentStatus = getStatus(duel);
           let newEndsAt = duel.endsAt;
+          let newStartsAt = duel.startsAt;
+          let newStatus = duel.status;
 
-          if (currentStatus === 'active') {
+          if (currentStatus === 'active') { // Active -> Closed
             newEndsAt = new Date().toISOString();
+            newStatus = 'closed';
             addNotification({
                 type: 'duel-closed',
                 message: `El duelo "${duel.title}" ha finalizado. ¡Mira los resultados!`,
-                link: `/` // Or a dedicated results page
+                link: `/`
             });
-          } else {
-             newEndsAt = addDays(new Date(), 7).toISOString();
+          } else { // Scheduled/Closed -> Active
+             const now = new Date();
+             newStartsAt = now.toISOString();
+             newEndsAt = addDays(now, 7).toISOString();
+             newStatus = 'active';
           }
-          return { ...duel, endsAt: newEndsAt };
+          return { ...duel, endsAt: newEndsAt, startsAt: newStartsAt, status: newStatus };
         }
         return duel;
       });
@@ -439,7 +481,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     deleteNotification,
     clearAllNotifications,
     keyHistory,
-    spendKeys
+    activateDraftDuel
   };
 
   if (!isLoaded) {

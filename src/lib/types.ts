@@ -24,7 +24,7 @@ export type Duel = {
   options: [DuelOption, DuelOption];
   creator: Pick<User, 'name' | 'avatarUrl' | 'id'>;
   type: 'A_VS_B' | 'LIST' | 'KING_OF_THE_HILL';
-  status: 'active' | 'closed' | 'scheduled';
+  status: 'active' | 'closed' | 'scheduled' | 'draft';
   createdAt: string; // ISO 8601 string
   startsAt: string; // ISO 8601 string
   endsAt: string; // ISO 8601 string
@@ -32,7 +32,7 @@ export type Duel = {
 
 export type Notification = {
     id: string;
-    type: 'duel-closed' | 'duel-edited' | 'duel-reset' | 'winner-changed';
+    type: 'duel-closed' | 'duel-edited' | 'duel-reset' | 'winner-changed' | 'keys-spent';
     message: string;
     link: string | null;
     timestamp: string; // ISO 8601 string

@@ -10,9 +10,7 @@ import { createDuelAction, type FormState } from '@/lib/actions';
 import { useActionState } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Key, Terminal } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
+import { Key, Info } from 'lucide-react';
 
 const DUEL_CREATION_COST = 5;
 
@@ -30,9 +28,9 @@ export default function CreateDuelPage() {
 
   useEffect(() => {
     if (state.success && state.newDuel) {
-      addDuel(state.newDuel);
+      addDuel(state.newDuel, user.keys); // Pass current keys for logic
       toast({
-        title: '¡Éxito!',
+        title: state.newDuel.status === 'draft' ? '¡Borrador Guardado!' : '¡Éxito!',
         description: state.message,
       });
       router.push('/panel/mis-duelos');
@@ -43,45 +41,27 @@ export default function CreateDuelPage() {
         description: state.message,
       });
     }
-  }, [state, toast, router, addDuel]);
-
-  if (user.keys < DUEL_CREATION_COST) {
-    return (
-       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-3xl font-headline">No tienes suficientes llaves</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <Alert variant="destructive">
-                    <Key className="h-4 w-4" />
-                    <AlertTitle>Coste de creación: {DUEL_CREATION_COST} llaves</AlertTitle>
-                    <AlertDescription>
-                        Necesitas al menos {DUEL_CREATION_COST} llaves para crear un nuevo duelo. Actualmente tienes {user.keys}. ¡Sigue votando para ganar más!
-                    </AlertDescription>
-                </Alert>
-                <Button asChild className="mt-6 w-full">
-                    <Link href="/">Volver al inicio para votar</Link>
-                </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    )
-  }
-
+  }, [state, toast, router, addDuel, user.keys]);
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto">
+        {user.keys < DUEL_CREATION_COST && (
+          <Alert variant="default" className="mb-4 bg-blue-50 border-blue-200 text-blue-800">
+              <Info className="h-4 w-4 !text-blue-800" />
+              <AlertTitle>No tienes suficientes llaves</AlertTitle>
+              <AlertDescription>
+                  Puedes rellenar y guardar el duelo como un borrador. Cuando tengas suficientes llaves ({DUEL_CREATION_COST}), podrás activarlo desde el panel "Mis Duelos".
+              </AlertDescription>
+          </Alert>
+        )}
         <Card>
           <CardHeader>
             <CardTitle className="text-3xl font-headline">Crear un Nuevo Duelo</CardTitle>
             <CardDescription className='flex items-center gap-2'>
               Rellena el formulario para lanzar tu duelo. 
               <span className='font-bold flex items-center gap-1'>
-                Coste: 5 <Key className="h-4 w-4 text-yellow-500" />
+                Coste de activación: 5 <Key className="h-4 w-4 text-yellow-500" />
               </span>
             </CardDescription>
           </CardHeader>

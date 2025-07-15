@@ -24,6 +24,8 @@ export type FormState = {
   updatedDuel?: Partial<Duel> & { id: string };
 };
 
+const DUEL_CREATION_COST = 5;
+
 function getFormData(formData: FormData) {
   const startsAt = formData.get('startsAt') as string;
   const endsAt = formData.get('endsAt') as string;
@@ -93,13 +95,17 @@ export async function createDuelAction(
     
     revalidatePath('/');
     revalidatePath('/panel/mis-duelos');
+
+    const userKeys = Number(formData.get('userKeys') || '0');
+    const hasEnoughKeys = userKeys >= DUEL_CREATION_COST;
     
     const now = new Date();
-    let status: Duel['status'] = 'scheduled';
-    if (startsAt <= now && endsAt > now) {
-      status = 'active';
-    } else if (endsAt <= now) {
-      status = 'closed';
+    let status: Duel['status'];
+
+    if (hasEnoughKeys) {
+        status = startsAt <= now && endsAt > now ? 'active' : 'scheduled';
+    } else {
+        status = 'draft';
     }
 
     const newDuel: Duel = {
@@ -107,7 +113,7 @@ export async function createDuelAction(
       title,
       description: description || '',
       type,
-      status, // This status is initial, the context will derive the real-time status
+      status,
       createdAt: formatISO(now),
       startsAt: formatISO(startsAt),
       endsAt: formatISO(endsAt),
@@ -122,8 +128,12 @@ export async function createDuelAction(
       ],
     };
 
+    const message = hasEnoughKeys
+      ? '¡Duelo creado con éxito!'
+      : 'No tienes suficientes llaves. El duelo se ha guardado como borrador.';
+
     return {
-      message: '¡Duelo creado con éxito!',
+      message: message,
       success: true,
       newDuel: newDuel
     };
