@@ -18,7 +18,7 @@ export type FormState = {
     _form?: string[];
   };
   newDuel?: Duel;
-  updatedDuel?: Duel;
+  updatedDuel?: Partial<Duel>; // Can be partial as we merge it in the context
 };
 
 function getFormData(formData: FormData) {
@@ -153,17 +153,13 @@ export async function updateDuelAction(
 
     // This is where you would update the duel in your database.
     // For this demo, we'll just construct the updated duel object.
-    const updatedDuel: Duel = {
-      // We carry over the original properties that are not editable
+    // The votes will be merged in the context, not handled here.
+    const updatedDuel: Partial<Duel> = {
       id: rawFormData.id,
-      type: validatedFields.data.type,
-      creator: { id: 'user-1', name: 'Alex Doe', avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop' },
-      status: 'active', // This could be preserved from original duel
-      // And update the ones that are
       title,
       description: description || '',
       options: [
-        { id: `opt-${rawFormData.id}-a`, title: options[0].title, imageUrl: options[0].imageUrl, votes: 0 }, // Votes would be preserved from original
+        { id: `opt-${rawFormData.id}-a`, title: options[0].title, imageUrl: options[0].imageUrl, votes: 0 }, // Votes are preserved in context
         { id: `opt-${rawFormData.id}-b`, title: options[1].title, imageUrl: options[1].imageUrl, votes: 0 },
       ],
     };

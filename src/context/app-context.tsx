@@ -10,7 +10,7 @@ interface AppContextType {
   duels: Duel[];
   castVote: (duelId: string, optionId: string) => void;
   addDuel: (newDuel: Duel) => void;
-  updateDuel: (updatedDuel: Duel) => void;
+  updateDuel: (updatedDuel: Partial<Duel>) => void;
   toggleDuelStatus: (duelId: string) => void;
   deleteDuel: (duelId: string) => void;
 }
@@ -52,9 +52,30 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }));
   }, []);
 
-  const updateDuel = useCallback((updatedDuel: Duel) => {
-    setDuels(prevDuels => prevDuels.map(d => (d.id === updatedDuel.id ? updatedDuel : d)));
+  const updateDuel = useCallback((updatedDuel: Partial<Duel>) => {
+    if (!updatedDuel.id) return;
+    
+    setDuels(prevDuels =>
+      prevDuels.map(duel => {
+        if (duel.id === updatedDuel.id) {
+          // Preserve original votes while updating other details
+          const newOptions = updatedDuel.options?.map((opt, index) => ({
+            ...opt,
+            id: duel.options[index].id, // Keep original option ID
+            votes: duel.options[index].votes, // PRESERVE ORIGINAL VOTES
+          })) as [DuelOption, DuelOption] | undefined;
+
+          return {
+            ...duel, // Start with the original duel
+            ...updatedDuel, // Override with new data
+            options: newOptions || duel.options, // Use new options if they exist
+          };
+        }
+        return duel;
+      })
+    );
   }, []);
+
 
   const toggleDuelStatus = useCallback((duelId: string) => {
     setDuels(prevDuels => prevDuels.map(duel => 
