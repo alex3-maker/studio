@@ -393,11 +393,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteDuel = useCallback((duelId: string) => {
     setDuels(prevDuels => {
-        const newDuels = prevDuels.filter(duel => duel.id !== duelId)
-        persistDuels(newDuels);
-        return newDuels;
+      const duelToDelete = prevDuels.find(d => d.id === duelId);
+      if (duelToDelete && duelToDelete.creator.id === user.id) {
+        const newUserState = { ...user, duelsCreated: Math.max(0, user.duelsCreated - 1) };
+        persistUser(newUserState);
+      }
+      const newDuels = prevDuels.filter(duel => duel.id !== duelId);
+      persistDuels(newDuels);
+      return newDuels;
     });
-  }, []);
+  }, [user]);
   
   const resetDuelVotes = useCallback((duelId: string, isOwnerReset: boolean = false) => {
     let duelTitle = '';
