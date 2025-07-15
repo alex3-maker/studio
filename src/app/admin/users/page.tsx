@@ -141,7 +141,7 @@ export default function AdminUsersPage() {
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" disabled={user.id === adminUser.id}>
+                        <Button variant="ghost" size="icon">
                           <MoreHorizontal className="h-4 w-4" />
                           <span className="sr-only">Abrir menú</span>
                         </Button>
@@ -149,7 +149,7 @@ export default function AdminUsersPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => openDialog('role', user)}>
+                        <DropdownMenuItem onClick={() => openDialog('role', user)} disabled={user.id === adminUser.id}>
                           {user.role === 'admin' ? <UserIcon className="mr-2 h-4 w-4" /> : <Shield className="mr-2 h-4 w-4" />}
                           {user.role === 'admin' ? 'Cambiar a Usuario' : 'Cambiar a Admin'}
                         </DropdownMenuItem>
@@ -159,7 +159,7 @@ export default function AdminUsersPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem disabled>Ver Perfil</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDialog('delete', user)}>
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDialog('delete', user)} disabled={user.id === adminUser.id}>
                           <Trash2 className="mr-2 h-4 w-4" />
                           Eliminar Usuario
                         </DropdownMenuItem>
