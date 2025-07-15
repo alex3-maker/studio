@@ -7,6 +7,7 @@ import { mockUser, mockDuels } from '@/lib/data';
 import { isAfter, isBefore, parseISO, formatISO, addDays } from 'date-fns';
 
 const VOTED_DUELS_STORAGE_KEY = 'dueliax_voted_duels';
+const DUEL_VOTING_HISTORY_STORAGE_KEY = 'dueliax_duel_voting_history';
 const USER_KEYS_STORAGE_KEY = 'dueliax_user_keys';
 const DUELS_STORAGE_KEY = 'dueliax_duels';
 const NOTIFICATIONS_STORAGE_KEY = 'dueliax_notifications';
@@ -17,7 +18,7 @@ interface AppContextType {
   duels: Duel[];
   votedDuelIds: string[];
   notifications: Notification[];
-  castVote: (duelId: string, optionId: string) => void;
+  castVote: (duelId: string, optionId: string) => boolean;
   addDuel: (newDuel: Duel) => void;
   updateDuel: (updatedDuel: Partial<Duel> & { id: string }) => void;
   toggleDuelStatus: (duelId: string) => void;
@@ -53,12 +54,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [duels, setDuels] = useState<Duel[]>([]);
   const [votedDuelIds, setVotedDuelIds] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [duelVotingHistory, setDuelVotingHistory] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     try {
       const storedVotedIds = localStorage.getItem(VOTED_DUELS_STORAGE_KEY);
       if (storedVotedIds) setVotedDuelIds(JSON.parse(storedVotedIds));
+
+      const storedVotingHistory = localStorage.getItem(DUEL_VOTING_HISTORY_STORAGE_KEY);
+      if (storedVotingHistory) setDuelVotingHistory(JSON.parse(storedVotingHistory));
 
       const storedKeys = localStorage.getItem(USER_KEYS_STORAGE_KEY);
       if (storedKeys) setUser(prevUser => ({...prevUser, keys: JSON.parse(storedKeys)}));
@@ -79,12 +84,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               createdAt: d.createdAt || formatISO(new Date()),
               startsAt: d.startsAt || formatISO(new Date()),
               endsAt: d.endsAt || formatISO(addDays(new Date(), 7)),
-              status: 'active',
             };
           }
           return d;
-        });
+        }).map(d => ({
+            ...d,
+            status: getStatus(d) // Pre-calculate status
+        }));
         duelsToLoad = repairedDuels;
+      } else {
+         duelsToLoad = mockDuels.map(d => ({...d, status: getStatus(d)}));
       }
       
       setDuels(duelsToLoad);
@@ -94,11 +103,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     } catch (error) {
       console.error("Error reading from localStorage, resetting data.", error);
-      setDuels(mockDuels);
-      localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(mockDuels));
+      const duelsWithStatus = mockDuels.map(d => ({...d, status: getStatus(d)}));
+      setDuels(duelsWithStatus);
+      localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(duelsWithStatus));
       localStorage.removeItem(USER_KEYS_STORAGE_KEY);
       localStorage.removeItem(VOTED_DUELS_STORAGE_KEY);
       localStorage.removeItem(NOTIFICATIONS_STORAGE_KEY);
+      localStorage.removeItem(DUEL_VOTING_HISTORY_STORAGE_KEY);
     }
     setIsLoaded(true);
   }, []);
@@ -114,11 +125,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const persistDuels = (newDuels: Duel[]) => {
     try {
-      localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
+      const duelsWithStatus = newDuels.map(d => ({ ...d, status: getStatus(d) }));
+      setDuels(duelsWithStatus);
+      localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(duelsWithStatus));
     } catch (error) {
       console.error("Error saving duels to localStorage", error);
     }
   };
+  
+  const persistVotingHistory = (newHistory: string[]) => {
+    try {
+        setDuelVotingHistory(newHistory);
+        localStorage.setItem(DUEL_VOTING_HISTORY_STORAGE_KEY, JSON.stringify(newHistory));
+    } catch (error) {
+        console.error("Error saving voting history to localStorage", error);
+    }
+  }
 
   const persistNotifications = (newNotifications: Notification[]) => {
     try {
@@ -147,7 +169,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return getStatus(duel);
   }, []);
 
-  const castVote = useCallback((duelId: string, optionId: string) => {
+  const castVote = useCallback((duelId: string, optionId: string): boolean => {
     setDuels(prevDuels => {
       const newDuels = prevDuels.map(duel => {
         if (duel.id === duelId) {
@@ -165,19 +187,35 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return newDuels;
     });
 
-    setUser(prevUser => {
-        const newKeys = prevUser.keys + 1;
-        try {
-            localStorage.setItem(USER_KEYS_STORAGE_KEY, JSON.stringify(newKeys));
-        } catch (error) {
-            console.error("Error saving keys to localStorage", error);
-        }
-        return {
-            ...prevUser,
-            keys: newKeys,
-            votesCast: prevUser.votesCast + 1,
-        }
-    });
+    const hasVotedBefore = duelVotingHistory.includes(duelId);
+    let awardedKey = false;
+    
+    if (!hasVotedBefore) {
+        awardedKey = true;
+        setUser(prevUser => {
+            const newKeys = prevUser.keys + 1;
+            try {
+                localStorage.setItem(USER_KEYS_STORAGE_KEY, JSON.stringify(newKeys));
+            } catch (error) {
+                console.error("Error saving keys to localStorage", error);
+            }
+            return {
+                ...prevUser,
+                keys: newKeys,
+            };
+        });
+        
+        setDuelVotingHistory(prevHistory => {
+            const newHistory = [...prevHistory, duelId];
+            persistVotingHistory(newHistory);
+            return newHistory;
+        });
+    }
+
+    setUser(prevUser => ({
+        ...prevUser,
+        votesCast: prevUser.votesCast + 1,
+    }));
 
     setVotedDuelIds(prevIds => {
         const newIds = [...prevIds, duelId];
@@ -185,7 +223,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return newIds;
     });
 
-  }, []);
+    return awardedKey;
+
+  }, [duelVotingHistory]);
 
   const addDuel = useCallback((newDuel: Duel) => {
     setDuels(prevDuels => {
@@ -236,12 +276,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const newDuels = prevDuels.map(duel => {
         if (duel.id === duelId) {
           const currentStatus = getStatus(duel);
-          let newStatus: Duel['status'];
           let newEndsAt = duel.endsAt;
 
           if (currentStatus === 'active') {
             newEndsAt = new Date().toISOString();
-            newStatus = 'closed';
             addNotification({
                 type: 'duel-closed',
                 message: `El duelo "${duel.title}" ha finalizado. ¡Mira los resultados!`,
@@ -249,9 +287,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             });
           } else {
              newEndsAt = addDays(new Date(), 7).toISOString();
-             newStatus = 'active';
           }
-          return { ...duel, endsAt: newEndsAt, status: newStatus };
+          return { ...duel, endsAt: newEndsAt };
         }
         return duel;
       });

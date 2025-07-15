@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
-import type { DuelOption } from '@/lib/types';
+import type { Duel, DuelOption } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/app-context';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -42,10 +42,22 @@ export default function VotingFeed() {
   };
 
   const activeDuels = useMemo(() => 
-    duels.filter(d => d.status === 'active' && !votedDuelIds.includes(d.id)), 
+    duels.filter(d => {
+        const status = d.status; // status is pre-calculated now in context
+        return status === 'active' && !votedDuelIds.includes(d.id)
+    }), 
   [duels, votedDuelIds]);
-  
-  const currentDuel = activeDuels[currentDuelIndex];
+
+  const currentDuel: Duel | undefined = useMemo(() => {
+    if (activeDuels.length === 0) return undefined;
+    // Asegurarse de que el índice no esté fuera de los límites
+    const newIndex = Math.min(currentDuelIndex, activeDuels.length - 1);
+    if (newIndex !== currentDuelIndex) {
+        setCurrentDuelIndex(newIndex);
+    }
+    return activeDuels[newIndex];
+  }, [activeDuels, currentDuelIndex]);
+
 
   const handleVote = (selectedOption: DuelOption, direction: 'left' | 'right') => {
     if (voted || !currentDuel) return;
@@ -55,14 +67,17 @@ export default function VotingFeed() {
 
     setTimeout(() => {
       startTransition(() => {
-        castVote(currentDuel.id, selectedOption.id);
+        const awardedKey = castVote(currentDuel.id, selectedOption.id);
+        
         toast({
           duration: 3000,
           title: '¡Voto registrado!',
-          description: (
+          description: awardedKey ? (
             <div className="flex items-center">
               ¡Has ganado una llave! <Key className="ml-2 h-4 w-4 text-yellow-500" />
             </div>
+          ) : (
+            <div>Tu voto ha sido contado.</div>
           ),
         });
         
@@ -77,7 +92,11 @@ export default function VotingFeed() {
     if (currentDuel) {
         document.getElementById(`results-close-${currentDuel.id}`)?.click();
     }
-    // No incrementamos el índice, al filtrar la lista el siguiente duelo automáticamente ocupará el índice 0
+    // El useMemo se encargará de actualizar el duelo actual
+    // Si el índice actual es mayor que el nuevo tamaño de la lista, se ajustará
+    if (currentDuelIndex >= activeDuels.length -1) {
+        setCurrentDuelIndex(0);
+    }
   };
 
   if (!votedDuelIds) { // Loading state while context loads from localstorage
