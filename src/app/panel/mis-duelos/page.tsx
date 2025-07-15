@@ -1,3 +1,4 @@
+
 'use client';
 
 import DuelList from "@/components/panel/duel-list";

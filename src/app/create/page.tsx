@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -5,10 +6,11 @@ import { useRouter } from 'next/navigation';
 import CreateDuelForm from "@/components/create-duel-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from '@/hooks/use-toast';
-import { createDuelAction } from '@/lib/actions';
+import { createDuelAction, type FormState } from '@/lib/actions';
 import { useActionState } from 'react';
+import { useAppContext } from '@/context/app-context';
 
-const initialState = {
+const initialState: FormState = {
   message: '',
   success: false,
   errors: {},
@@ -17,10 +19,12 @@ const initialState = {
 export default function CreateDuelPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [state, formAction] = useActionState(createDuelAction, initialState);
+  const { addDuel } = useAppContext();
+  const [state, formAction, isPending] = useActionState(createDuelAction, initialState);
 
   useEffect(() => {
-    if (state.success) {
+    if (state.success && state.newDuel) {
+      addDuel(state.newDuel);
       toast({
         title: '¡Éxito!',
         description: state.message,
@@ -33,7 +37,7 @@ export default function CreateDuelPage() {
         description: state.message,
       });
     }
-  }, [state, toast, router]);
+  }, [state, toast, router, addDuel]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -46,7 +50,7 @@ export default function CreateDuelPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <CreateDuelForm state={state} formAction={formAction} />
+            <CreateDuelForm state={state} formAction={formAction} isPending={isPending} />
           </CardContent>
         </Card>
       </div>
