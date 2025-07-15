@@ -78,10 +78,10 @@ export async function createDuelAction(
   const { title, options, description, type } = validatedFields.data;
 
   try {
-    const moderationResult = await runModeration({ title, options });
-    if (!moderationResult.success) {
-      return { ...moderationResult, message: moderationResult.message! };
-    }
+    // const moderationResult = await runModeration({ title, options });
+    // if (!moderationResult.success) {
+    //   return { ...moderationResult, message: moderationResult.message! };
+    // }
     
     revalidatePath('/');
     revalidatePath('/panel/mis-duelos');
@@ -144,10 +144,10 @@ export async function updateDuelAction(
   const { title, options, description } = validatedFields.data;
 
   try {
-    const moderationResult = await runModeration({ title, options });
-    if (!moderationResult.success) {
-      return { ...moderationResult, message: moderationResult.message! };
-    }
+    // const moderationResult = await runModeration({ title, options });
+    // if (!moderationResult.success) {
+    //   return { ...moderationResult, message: moderationResult.message! };
+    // }
 
     revalidatePath('/admin/duels');
     revalidatePath(`/admin/duels/${rawFormData.id}/edit`);
