@@ -4,7 +4,7 @@ import { useState, useTransition, useMemo } from 'react';
 import { ArrowRight, Key } from 'lucide-react';
 
 import DuelCard from './duel-card';
-import ResultsChart from './dashboard/results-chart';
+import ResultsChart from './panel/results-chart';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';

@@ -13,7 +13,7 @@ import { useAppContext } from '@/context/app-context';
 const navLinks = [
   { href: '/', label: 'Feed', icon: Swords },
   { href: '/create', label: 'Crear Duelo', icon: Flame },
-  { href: '/dashboard', label: 'Panel', icon: Key },
+  { href: '/panel', label: 'Panel', icon: Key },
 ];
 
 export default function Header() {
@@ -27,7 +27,7 @@ export default function Header() {
           <Link href="/" className="mr-6 flex items-center space-x-2">
             <Swords className="h-6 w-6 text-primary" />
             <span className="hidden font-bold font-headline sm:inline-block">
-              Dueliax
+              DuelDash
             </span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
@@ -58,7 +58,7 @@ export default function Header() {
             <SheetContent side="left">
               <Link href="/" className="mr-6 flex items-center space-x-2 mb-6">
                 <Swords className="h-6 w-6 text-primary" />
-                <span className="font-bold font-headline">Dueliax</span>
+                <span className="font-bold font-headline">DuelDash</span>
               </Link>
               <nav className="flex flex-col space-y-4">
                 {navLinks.map((link) => (
@@ -83,7 +83,7 @@ export default function Header() {
                 <Key className="h-5 w-5 text-yellow-500" />
                 <span className="font-bold text-lg text-foreground/80">{user.keys}</span>
             </div>
-            <Link href="/dashboard/profile">
+            <Link href="/panel/perfil">
               <Avatar>
                   <AvatarImage src={user.avatarUrl} alt={user.name} />
                   <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>

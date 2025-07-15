@@ -19,9 +19,7 @@ const nextConfig: NextConfig = {
   // Allow cross-origin requests in development, which is common in cloud IDEs.
   // This can be removed when deploying to production.
   ...(process.env.NODE_ENV === 'development' && {
-    experimental: {
       allowedDevOrigins: ['https://*.cloudworkstations.dev'],
-    },
   }),
 };
 

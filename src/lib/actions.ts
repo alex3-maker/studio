@@ -70,7 +70,7 @@ export async function createDuelAction(
     }
     
     revalidatePath('/');
-    revalidatePath('/dashboard');
+    revalidatePath('/panel');
     
     return {
       message: '¡Duelo creado con éxito!',
