@@ -13,6 +13,7 @@ export type DuelOption = {
   title: string;
   imageUrl: string;
   votes: number;
+  "data-ai-hint"?: string;
 };
 
 export type Duel = {

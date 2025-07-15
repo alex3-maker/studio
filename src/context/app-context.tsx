@@ -1,9 +1,11 @@
 
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import type { User, Duel, DuelOption } from '@/lib/types';
 import { mockUser, mockDuels } from '@/lib/data';
+import { useActionState } from 'react';
+import { createDuelAction } from '@/lib/actions';
 
 interface AppContextType {
   user: User;
@@ -21,7 +23,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User>(mockUser);
   const [duels, setDuels] = useState<Duel[]>(mockDuels);
 
-  const castVote = (duelId: string, optionId: string) => {
+  const castVote = useCallback((duelId: string, optionId: string) => {
     setDuels(prevDuels =>
       prevDuels.map(duel => {
         if (duel.id === duelId) {
@@ -42,32 +44,34 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       keys: prevUser.keys + 1,
       votesCast: prevUser.votesCast + 1,
     }));
-  };
+  }, []);
 
-  const addDuel = (newDuel: Duel) => {
+  const addDuel = useCallback((newDuel: Duel) => {
     setDuels(prevDuels => [newDuel, ...prevDuels]);
     setUser(prevUser => ({
       ...prevUser,
       duelsCreated: prevUser.duelsCreated + 1,
     }));
-  };
+  }, []);
 
-  const updateDuel = (updatedDuel: Duel) => {
+  const updateDuel = useCallback((updatedDuel: Duel) => {
     setDuels(prevDuels => prevDuels.map(d => (d.id === updatedDuel.id ? updatedDuel : d)));
-  };
+  }, []);
 
-  const toggleDuelStatus = (duelId: string) => {
+  const toggleDuelStatus = useCallback((duelId: string) => {
     setDuels(prevDuels => prevDuels.map(duel => 
       duel.id === duelId ? { ...duel, status: duel.status === 'active' ? 'closed' : 'active' } : duel
     ));
-  };
+  }, []);
 
-  const deleteDuel = (duelId: string) => {
+  const deleteDuel = useCallback((duelId: string) => {
     setDuels(prevDuels => prevDuels.filter(duel => duel.id !== duelId));
-  };
+  }, []);
   
+  const value = { user, duels, castVote, addDuel, updateDuel, toggleDuelStatus, deleteDuel };
+
   return (
-    <AppContext.Provider value={{ user, duels, castVote, addDuel, updateDuel, toggleDuelStatus, deleteDuel }}>
+    <AppContext.Provider value={value}>
       {children}
     </AppContext.Provider>
   );
