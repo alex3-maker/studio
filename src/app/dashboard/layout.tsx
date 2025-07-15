@@ -2,14 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { User, Grip } from 'lucide-react';
+import { User, Grip, Bell } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 const dashboardNavLinks = [
-  { href: '/dashboard', label: 'Overview', icon: Grip },
-  { href: '/dashboard/profile', label: 'Profile', icon: User },
+  { href: '/dashboard', label: 'Mis Duelos', icon: Grip },
+  { href: '/dashboard/profile', label: 'Perfil', icon: User },
+  { href: '/dashboard/notifications', label: 'Notificaciones', icon: Bell },
 ];
 
 export default function DashboardLayout({
@@ -23,7 +24,7 @@ export default function DashboardLayout({
     <div className="container mx-auto px-4 py-8">
        <div className="flex flex-col md:flex-row gap-8">
          <aside className="w-full md:w-1/4 lg:w-1/5">
-          <h2 className="text-2xl font-headline mb-4">Dashboard</h2>
+          <h2 className="text-2xl font-headline mb-4">Panel</h2>
           <nav className="flex flex-col space-y-2">
             {dashboardNavLinks.map((link) => (
               <Button

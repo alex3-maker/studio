@@ -14,8 +14,8 @@ export default function SignupPage() {
 
   const handleSignUp = () => {
      toast({
-      title: "Account Created!",
-      description: "Welcome! We're logging you in...",
+      title: "¡Cuenta Creada!",
+      description: "¡Bienvenido! Estamos iniciando tu sesión...",
     });
     // In a real app, you'd handle user creation and auth state.
     // For this demo, we'll just redirect.
@@ -28,29 +28,29 @@ export default function SignupPage() {
     <div className="flex items-center justify-center min-h-screen bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>
-          <CardDescription>Enter your information to get started.</CardDescription>
+          <CardTitle className="text-2xl font-headline">Crear una Cuenta</CardTitle>
+          <CardDescription>Introduce tus datos para empezar.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
            <div className="grid gap-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">Nombre</Label>
             <Input id="name" placeholder="Alex Doe" />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="m@example.com" />
+            <Input id="email" type="email" placeholder="m@ejemplo.com" />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Contraseña</Label>
             <Input id="password" type="password" />
           </div>
         </CardContent>
         <CardFooter className="flex flex-col">
-          <Button className="w-full" onClick={handleSignUp}>Sign Up</Button>
+          <Button className="w-full" onClick={handleSignUp}>Registrarse</Button>
            <p className="mt-4 text-xs text-center text-muted-foreground">
-            Already have an account?{' '}
+            ¿Ya tienes una cuenta?{' '}
             <Link href="/login" className="underline underline-offset-4 hover:text-primary">
-              Login
+              Inicia sesión
             </Link>
           </p>
         </CardFooter>

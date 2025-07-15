@@ -10,9 +10,9 @@ export default function DashboardOverviewPage() {
     const userDuels = duels.filter(duel => duel.creator.id === user.id);
     
     const stats = [
-        { label: "Keys Earned", value: user.keys, icon: Key, color: "text-yellow-500" },
-        { label: "Duels Created", value: user.duelsCreated, icon: Flame, color: "text-red-500" },
-        { label: "Votes Cast", value: user.votesCast, icon: Vote, color: "text-blue-500" },
+        { label: "Llaves Ganadas", value: user.keys, icon: Key, color: "text-yellow-500" },
+        { label: "Duelos Creados", value: user.duelsCreated, icon: Flame, color: "text-red-500" },
+        { label: "Votos Emitidos", value: user.votesCast, icon: Vote, color: "text-blue-500" },
     ];
 
     return (

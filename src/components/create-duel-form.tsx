@@ -33,7 +33,7 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} className="w-full">
-      {pending ? 'Creating Duel...' : 'Create Duel'}
+      {pending ? 'Creando Duelo...' : 'Crear Duelo'}
     </Button>
   );
 }
@@ -45,7 +45,7 @@ type FormState = {
     title?: string[];
     description?: string[];
     type?: string[];
-    options?: string[];
+    options?: (string | undefined)[] | string;
     moderation?: string;
     _form?: string[];
   };
@@ -86,11 +86,11 @@ export default function CreateDuelForm({ state, formAction }: CreateDuelFormProp
           name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Duel Title</FormLabel>
+              <FormLabel>Título del Duelo</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Best Sci-Fi Movie of All Time" {...field} />
+                <Input placeholder="Ej: ¿Mejor película de ciencia ficción?" {...field} />
               </FormControl>
-              <FormDescription>A catchy title for your duel.</FormDescription>
+              <FormDescription>Un título atractivo para tu duelo.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -101,9 +101,9 @@ export default function CreateDuelForm({ state, formAction }: CreateDuelFormProp
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
+              <FormLabel>Descripción</FormLabel>
               <FormControl>
-                <Textarea placeholder="Add a short description for context." {...field} />
+                <Textarea placeholder="Añade una breve descripción para dar contexto." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -115,20 +115,20 @@ export default function CreateDuelForm({ state, formAction }: CreateDuelFormProp
           name="type"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Duel Type</FormLabel>
+              <FormLabel>Tipo de Duelo</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a duel format" />
+                    <SelectValue placeholder="Selecciona un formato de duelo" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   <SelectItem value="A_VS_B">A vs B</SelectItem>
-                  <SelectItem value="LIST" disabled>List (Coming Soon)</SelectItem>
-                  <SelectItem value="KING_OF_THE_HILL" disabled>King of the Hill (Coming Soon)</SelectItem>
+                  <SelectItem value="LIST" disabled>Lista (Próximamente)</SelectItem>
+                  <SelectItem value="KING_OF_THE_HILL" disabled>Rey de la Colina (Próximamente)</SelectItem>
                 </SelectContent>
               </Select>
-              <FormDescription>Currently, only A vs B is available.</FormDescription>
+              <FormDescription>Actualmente, solo el formato A vs B está disponible.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -140,7 +140,7 @@ export default function CreateDuelForm({ state, formAction }: CreateDuelFormProp
             {fields.map((field, index) => (
                 <Card key={field.id}>
                     <CardHeader>
-                        <CardTitle>Option {index + 1}</CardTitle>
+                        <CardTitle>Opción {index + 1}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <FormField
@@ -148,8 +148,8 @@ export default function CreateDuelForm({ state, formAction }: CreateDuelFormProp
                             name={`options.${index}.title`}
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Option Title</FormLabel>
-                                    <FormControl><Input placeholder={`Title for option ${index + 1}`} {...field} /></FormControl>
+                                    <FormLabel>Título de la Opción</FormLabel>
+                                    <FormControl><Input placeholder={`Título para la opción ${index + 1}`} {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -159,7 +159,7 @@ export default function CreateDuelForm({ state, formAction }: CreateDuelFormProp
                             name={`options.${index}.imageUrl`}
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Image URL</FormLabel>
+                                    <FormLabel>URL de la Imagen</FormLabel>
                                     <FormControl><Input placeholder="https://..." {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -173,7 +173,7 @@ export default function CreateDuelForm({ state, formAction }: CreateDuelFormProp
         {state.errors?.moderation && (
              <Alert variant="destructive">
                 <Terminal className="h-4 w-4" />
-                <AlertTitle>Content Moderation Error</AlertTitle>
+                <AlertTitle>Error de Moderación de Contenido</AlertTitle>
                 <AlertDescription>{state.errors.moderation}</AlertDescription>
             </Alert>
         )}

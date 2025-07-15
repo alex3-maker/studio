@@ -12,7 +12,7 @@ export type FormState = {
     title?: string[];
     description?: string[];
     type?: string[];
-    options?: string[];
+    options?: (string | undefined)[] | string;
     moderation?: string;
     _form?: string[];
   };
@@ -38,7 +38,7 @@ export async function createDuelAction(
   
   if (!validatedFields.success) {
     return {
-      message: 'Validation failed. Please check your inputs.',
+      message: 'Validación fallida. Por favor, revisa tus datos.',
       success: false,
       errors: validatedFields.error.flatten().fieldErrors,
     };
@@ -51,9 +51,9 @@ export async function createDuelAction(
     const titleModeration = await moderateContent({ content: title, contentType: 'text' });
     if (!titleModeration.isSafe) {
       return {
-        message: `The duel title was flagged as unsafe. Reasons: ${titleModeration.reasons.join(', ')}`,
+        message: `El título del duelo fue marcado como inapropiado. Razones: ${titleModeration.reasons.join(', ')}`,
         success: false,
-        errors: { moderation: `The duel title was flagged as unsafe.` },
+        errors: { moderation: `El título del duelo fue marcado como inapropiado.` },
       };
     }
 
@@ -62,27 +62,18 @@ export async function createDuelAction(
       const optionTitleModeration = await moderateContent({ content: option.title, contentType: 'text' });
       if (!optionTitleModeration.isSafe) {
         return {
-          message: `The option title "${option.title}" was flagged as unsafe. Reasons: ${optionTitleModeration.reasons.join(', ')}`,
+          message: `El título de la opción "${option.title}" fue marcado como inapropiado. Razones: ${optionTitleModeration.reasons.join(', ')}`,
           success: false,
-          errors: { moderation: `Option title "${option.title}" was flagged.` },
+          errors: { moderation: `El título de la opción "${option.title}" es inapropiado.` },
         };
       }
-      // Temporarily disable image moderation as it requires a data URI
-      // const optionImageModeration = await moderateContent({ content: option.imageUrl, contentType: 'image' });
-      // if (!optionImageModeration.isSafe) {
-      //   return {
-      //     message: `The image for "${option.title}" was flagged as unsafe. Reasons: ${optionImageModeration.reasons.join(', ')}`,
-      //     success: false,
-      //     errors: { moderation: `Image for "${option.title}" was flagged.` },
-      //   };
-      // }
     }
     
     revalidatePath('/');
     revalidatePath('/dashboard');
     
     return {
-      message: 'Duel created successfully!',
+      message: '¡Duelo creado con éxito!',
       success: true,
       newDuel: validatedFields.data,
     };
@@ -90,9 +81,9 @@ export async function createDuelAction(
   } catch (error) {
     console.error('Error creating duel:', error);
     return {
-      message: 'An unexpected error occurred. Please try again.',
+      message: 'Ocurrió un error inesperado. Por favor, inténtalo de nuevo.',
       success: false,
-      errors: { _form: ['Server error.'] },
+      errors: { _form: ['Error del servidor.'] },
     };
   }
 }

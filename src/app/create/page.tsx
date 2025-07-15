@@ -22,7 +22,7 @@ export default function CreateDuelPage() {
   useEffect(() => {
     if (state.success) {
       toast({
-        title: 'Success!',
+        title: '¡Éxito!',
         description: state.message,
       });
       // Redirect to dashboard on successful creation
@@ -41,9 +41,9 @@ export default function CreateDuelPage() {
       <div className="max-w-2xl mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle className="text-3xl font-headline">Create a New Duel</CardTitle>
+            <CardTitle className="text-3xl font-headline">Crear un Nuevo Duelo</CardTitle>
             <CardDescription>
-              Fill out the form below to launch your duel. Your content will be automatically checked for safety.
+              Rellena el formulario para lanzar tu duelo. Tu contenido será revisado automáticamente.
             </CardDescription>
           </CardHeader>
           <CardContent>
