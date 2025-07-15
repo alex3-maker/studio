@@ -45,18 +45,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (storedDuels) {
         setDuels(JSON.parse(storedDuels));
       } else {
-        // Si no hay duelos en localStorage, inicializa con los de ejemplo y guárdalos
         setDuels(mockDuels);
         localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(mockDuels));
       }
 
     } catch (error) {
       console.error("Error reading from localStorage", error);
-      // Si hay error, asegúrate de que la app tenga datos iniciales
       if(duels.length === 0) setDuels(mockDuels);
     }
     setIsLoaded(true);
   }, []);
+
+  const persistDuels = (newDuels: Duel[]) => {
+    try {
+      localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
+    } catch (error) {
+      console.error("Error saving duels to localStorage", error);
+    }
+  };
 
   const castVote = useCallback((duelId: string, optionId: string) => {
     setDuels(prevDuels => {
@@ -72,11 +78,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
         return duel;
       });
-       try {
-        localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
-      } catch (error) {
-        console.error("Error saving duels to localStorage", error);
-      }
+      persistDuels(newDuels);
       return newDuels;
     });
 
@@ -109,11 +111,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const addDuel = useCallback((newDuel: Duel) => {
     setDuels(prevDuels => {
       const newDuels = [newDuel, ...prevDuels];
-       try {
-        localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
-      } catch (error) {
-        console.error("Error saving duels to localStorage", error);
-      }
+      persistDuels(newDuels);
       return newDuels;
     });
     setUser(prevUser => ({
@@ -126,8 +124,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setDuels(prevDuels => {
         const newDuels = prevDuels.map(duel => {
           if (duel.id === updatedDuelData.id) {
-            const updatedOptions = updatedDuelData.options?.map((opt, index) => {
-                const originalOption = duel.options[index];
+            const updatedOptions = updatedDuelData.options?.map((opt) => {
+                const originalOption = duel.options.find(o => o.id === opt.id) || opt;
                 return { ...originalOption, ...opt };
             }) as [DuelOption, DuelOption] | undefined;
 
@@ -140,11 +138,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           return duel;
         });
 
-        try {
-            localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
-        } catch (error) {
-            console.error("Error saving duels to localStorage", error);
-        }
+        persistDuels(newDuels);
         return newDuels;
       }
     );
@@ -155,11 +149,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const newDuels = prevDuels.map(duel => 
         duel.id === duelId ? { ...duel, status: duel.status === 'active' ? 'closed' : 'active' } : duel
       );
-      try {
-        localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
-      } catch (error) {
-        console.error("Error saving duels to localStorage", error);
-      }
+      persistDuels(newDuels);
       return newDuels;
     });
   }, []);
@@ -167,11 +157,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const deleteDuel = useCallback((duelId: string) => {
     setDuels(prevDuels => {
         const newDuels = prevDuels.filter(duel => duel.id !== duelId)
-        try {
-            localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
-        } catch (error) {
-            console.error("Error saving duels to localStorage", error);
-        }
+        persistDuels(newDuels);
         return newDuels;
     });
   }, []);
@@ -185,11 +171,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
         return duel;
       });
-      try {
-        localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
-      } catch (error) {
-        console.error("Error saving duels to localStorage", error);
-      }
+      persistDuels(newDuels);
       return newDuels;
     });
   }, []);

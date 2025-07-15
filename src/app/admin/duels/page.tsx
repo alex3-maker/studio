@@ -34,11 +34,12 @@ export default function AdminDuelsPage() {
     setSelectedDuel(duel);
   };
 
-  const handleResetVotes = (duelId: string) => {
+  const handleResetVotes = (e: React.MouseEvent, duelId: string) => {
+    e.stopPropagation();
     resetDuelVotes(duelId);
     toast({
       title: "Votos Reiniciados",
-      description: `Los votos para el duelo han sido reseteados. Se ha notificado a los votantes.`,
+      description: `Los votos para el duelo han sido reseteados.`,
     });
   }
 
@@ -57,9 +58,9 @@ export default function AdminDuelsPage() {
                 onClick={() => handleRowClick(duel)}
                 className="flex flex-col md:flex-row items-start md:items-center gap-4 p-4 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
               >
-                {/* Chart & Status (Mobile + Desktop) */}
-                <div className="flex-shrink-0 flex md:flex-col items-center gap-2 w-full md:w-20">
-                  <div className="w-12 h-12 md:w-16 md:h-16">
+                {/* Chart & Status */}
+                 <div className="flex-shrink-0 flex md:flex-col items-center justify-center gap-2 w-full md:w-20">
+                  <div className="w-16 h-16">
                     <ResultsChart duel={duel} />
                   </div>
                    <Badge variant={duel.status === 'active' ? 'default' : 'secondary'} className="w-fit">
@@ -67,23 +68,19 @@ export default function AdminDuelsPage() {
                   </Badge>
                 </div>
 
-                <Separator className="md:hidden" />
-                 <Separator orientation="vertical" className="hidden md:block h-16" />
-
+                <Separator orientation="vertical" className="hidden md:block h-16 mx-4" />
+                <Separator className="md:hidden my-2" />
 
                 {/* Title & Meta */}
-                <div className="flex-grow">
+                <div className="flex-grow text-center md:text-left">
                   <p className="font-bold text-lg">{duel.title}</p>
                   <p className="text-sm text-muted-foreground">
                     Creado por: {duel.creator.name}
                   </p>
                 </div>
-                
-                 <Separator className="md:hidden" />
-
 
                 {/* Actions */}
-                <div className="flex items-center justify-end space-x-2 w-full md:w-auto">
+                <div className="flex items-center justify-center md:justify-end space-x-2 w-full md:w-auto pt-4 md:pt-0 mt-4 md:mt-0 border-t md:border-none">
                   <Button asChild variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
                     <Link href={`/admin/duels/${duel.id}/edit`}>
                       <Edit className="h-4 w-4" />
@@ -94,14 +91,14 @@ export default function AdminDuelsPage() {
                     {duel.status === 'active' ? <PowerOff className="h-4 w-4 text-orange-500" /> : <Power className="h-4 w-4 text-green-500" />}
                     <span className="sr-only">{duel.status === 'active' ? 'Cerrar Duelo' : 'Activar Duelo'}</span>
                   </Button>
-                   <AlertDialog onOpenChange={(open) => !open && e.stopPropagation()}>
+                   <AlertDialog onOpenChange={(open) => !open && event.stopPropagation()}>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
                         <RotateCcw className="h-4 w-4 text-blue-500" />
                         <span className="sr-only">Resetear Votos</span>
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent>
+                    <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                       <AlertDialogHeader>
                         <AlertDialogTitle>¿Resetear votación?</AlertDialogTitle>
                         <AlertDialogDescription>
@@ -110,18 +107,18 @@ export default function AdminDuelsPage() {
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleResetVotes(duel.id)}>Resetear</AlertDialogAction>
+                        <AlertDialogAction onClick={(e) => handleResetVotes(e, duel.id)}>Resetear</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                  <AlertDialog onOpenChange={(open) => !open && e.stopPropagation()}>
+                  <AlertDialog onOpenChange={(open) => !open && event.stopPropagation()}>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                         <span className="sr-only">Eliminar Duelo</span>
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent>
+                    <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                       <AlertDialogHeader>
                         <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
                         <AlertDialogDescription>
@@ -130,7 +127,7 @@ export default function AdminDuelsPage() {
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteDuel(duel.id)}>Eliminar</AlertDialogAction>
+                        <AlertDialogAction onClick={(e) => {e.stopPropagation(); deleteDuel(duel.id)}}>Eliminar</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
