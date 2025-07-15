@@ -3,7 +3,7 @@
 
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 
@@ -61,22 +61,21 @@ interface CreateDuelFormProps {
   duelData?: Duel;
   isEditing?: boolean;
   isPending: boolean;
+  duelDataFromAI?: Partial<CreateDuelFormValues> | null;
 }
 
-export default function CreateDuelForm({ user, state, formAction, duelData, isEditing = false, isPending }: CreateDuelFormProps) {
+export default function CreateDuelForm({ user, state, formAction, duelData, isEditing = false, isPending, duelDataFromAI }: CreateDuelFormProps) {
   const { toast } = useToast();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   
-  const form = useForm<CreateDuelFormValues>({
-    resolver: zodResolver(createDuelSchema),
-    defaultValues: duelData ? {
+  const defaultValues = duelData ? {
       title: duelData.title,
       description: duelData.description,
       type: duelData.type,
       options: duelData.options.map(opt => ({ title: opt.title, imageUrl: opt.imageUrl || '' })),
       startsAt: new Date(duelData.startsAt),
       endsAt: new Date(duelData.endsAt),
-    } : {
+  } : {
       title: '',
       description: '',
       type: 'A_VS_B',
@@ -86,13 +85,30 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
       ],
       startsAt: new Date(),
       endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-    },
+  };
+
+  const form = useForm<CreateDuelFormValues>({
+    resolver: zodResolver(createDuelSchema),
+    defaultValues: duelDataFromAI ? { ...defaultValues, ...duelDataFromAI } : defaultValues,
   });
 
   const { fields } = useFieldArray({
     control: form.control,
     name: 'options',
   });
+
+  useEffect(() => {
+    if (duelDataFromAI) {
+      form.reset({
+        ...defaultValues,
+        ...duelDataFromAI,
+        // Ensure dates are not overwritten by AI if they are part of defaultValues logic
+        startsAt: defaultValues.startsAt,
+        endsAt: defaultValues.endsAt,
+        type: defaultValues.type,
+      });
+    }
+  }, [duelDataFromAI, form, defaultValues]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const file = e.target.files?.[0];
