@@ -215,7 +215,7 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
                                             variant="outline" 
                                             onClick={() => fileInputRefs.current[index]?.click()}
                                         >
-                                            <Upload className="mr-2" /> Subir
+                                            <Upload className="mr-2 h-4 w-4" /> Subir
                                         </Button>
                                     </div>
                                     <input 
