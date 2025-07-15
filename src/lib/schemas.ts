@@ -1,9 +1,12 @@
 import { z } from "zod";
 
+const imageRegex = /\.(jpeg|jpg|png|gif|webp|svg)$/i;
+
 export const duelOptionSchema = z.object({
   title: z.string().min(1, { message: "Option title is required." }).max(50),
-  // In a real app, this would be a file or a URL. For now, we'll just validate the URL string.
-  imageUrl: z.string().url({ message: "Please enter a valid image URL." }),
+  imageUrl: z.string()
+    .url({ message: "Please enter a valid URL." })
+    .regex(imageRegex, { message: "URL must end with a valid image extension (e.g., .jpg, .png, .svg)." }),
 });
 
 export const createDuelSchema = z.object({
