@@ -132,7 +132,7 @@ export async function createDuelAction(
 
   } catch (error) {
     console.error('Error creando duelo:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido del servidor.';
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return {
       message: `Ocurrió un error inesperado: ${errorMessage}`,
       success: false,
@@ -196,7 +196,7 @@ export async function updateDuelAction(
 
   } catch (error) {
     console.error('Error actualizando duelo:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido del servidor.';
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return {
       message: `Ocurrió un error inesperado al actualizar: ${errorMessage}`,
       success: false,

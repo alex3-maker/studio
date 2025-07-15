@@ -62,10 +62,12 @@ export default function CreateDuelPage() {
       });
     } catch (error) {
       console.error("Error generating duel idea:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       toast({
         variant: 'destructive',
         title: 'Error de IA',
-        description: 'No se pudo generar la idea para el duelo. Por favor, inténtalo de nuevo.',
+        description: `No se pudo generar la idea. Detalle: ${errorMessage}`,
+        duration: 8000
       });
     } finally {
       setIsGenerating(false);
