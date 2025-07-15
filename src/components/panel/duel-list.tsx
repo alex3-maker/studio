@@ -48,6 +48,8 @@ export default function DuelList({ duels }: DuelListProps) {
     });
   }
 
+  const getTotalVotes = (duel: Duel) => duel.options.reduce((sum, option) => sum + option.votes, 0);
+
   if (duels.length === 0) {
     return (
         <Card>
@@ -77,78 +79,80 @@ export default function DuelList({ duels }: DuelListProps) {
              <div
                 key={duel.id}
                 onClick={() => handleRowClick(duel)}
-                className="flex flex-col md:flex-row items-start md:items-center gap-4 p-4 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                className="flex flex-col md:flex-row items-start gap-4 p-4 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
               >
-                {/* Chart & Status */}
-                <div className="flex-shrink-0 flex md:flex-col items-center justify-center gap-2 w-full md:w-20">
-                  <div className="w-16 h-16">
+                {/* Control Column */}
+                 <div className="flex-shrink-0 flex flex-col items-center gap-2 w-full md:w-28">
+                  <div className="w-20 h-20">
                     <ResultsChart duel={duel} />
                   </div>
-                  <Badge variant={duel.status === 'active' ? 'default' : 'secondary'} className="w-fit">
+                  <Badge variant={duel.status === 'active' ? 'default' : 'secondary'} className="w-fit mb-2">
                     {duel.status === 'active' ? 'Activo' : 'Cerrado'}
                   </Badge>
+                  <Separator className="md:hidden my-2" />
+                  {/* Actions */}
+                   <div className="flex justify-center items-center space-x-2 md:flex-col md:space-x-0 md:space-y-2 w-full">
+                    <Button asChild variant="outline" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                      <Link href={`/panel/mis-duelos/${duel.id}/edit`}>
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">Editar Duelo</span>
+                      </Link>
+                    </Button>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); toggleDuelStatus(duel.id); }}>
+                      {duel.status === 'active' ? <PowerOff className="h-4 w-4 text-orange-500" /> : <Power className="h-4 w-4 text-green-500" />}
+                      <span className="sr-only">{duel.status === 'active' ? 'Cerrar Duelo' : 'Activar Duelo'}</span>
+                    </Button>
+                    <AlertDialog onOpenChange={(open) => !open && event.stopPropagation()}>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                          <RotateCcw className="h-4 w-4 text-blue-500" />
+                          <span className="sr-only">Resetear Votos</span>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>¿Resetear votación?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta acción pondrá a cero todos los votos para este duelo. No se puede deshacer.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={(e) => handleResetVotes(e, duel.id)}>Resetear</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    <AlertDialog onOpenChange={(open) => !open && event.stopPropagation()}>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <span className="sr-only">Eliminar Duelo</span>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Esto eliminará permanentemente tu duelo.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={(e) => {e.stopPropagation(); deleteDuel(duel.id)}}>Eliminar</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
 
-                <Separator orientation="vertical" className="hidden md:block h-16 mx-4" />
-                <Separator className="md:hidden my-2" />
+                <Separator orientation="vertical" className="hidden md:block h-auto mx-2" />
 
-                {/* Title & Meta */}
-                <div className="flex-grow text-center md:text-left">
-                  <p className="font-bold text-lg">{duel.title}</p>
-                </div>
-
-                {/* Actions */}
-                 <div className="flex items-center justify-center md:justify-end space-x-2 w-full md:w-auto pt-4 md:pt-0 mt-4 md:mt-0 border-t md:border-none">
-                  <Button asChild variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
-                    <Link href={`/panel/mis-duelos/${duel.id}/edit`}>
-                      <Edit className="h-4 w-4" />
-                      <span className="sr-only">Editar Duelo</span>
-                    </Link>
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); toggleDuelStatus(duel.id); }}>
-                    {duel.status === 'active' ? <PowerOff className="h-4 w-4 text-orange-500" /> : <Power className="h-4 w-4 text-green-500" />}
-                    <span className="sr-only">{duel.status === 'active' ? 'Cerrar Duelo' : 'Activar Duelo'}</span>
-                  </Button>
-                  <AlertDialog onOpenChange={(open) => !open && event.stopPropagation()}>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
-                        <RotateCcw className="h-4 w-4 text-blue-500" />
-                        <span className="sr-only">Resetear Votos</span>
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>¿Resetear votación?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Esta acción pondrá a cero todos los votos para este duelo. No se puede deshacer.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={(e) => handleResetVotes(e, duel.id)}>Resetear</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                  <AlertDialog onOpenChange={(open) => !open && event.stopPropagation()}>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                        <span className="sr-only">Eliminar Duelo</span>
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Esta acción no se puede deshacer. Esto eliminará permanentemente tu duelo.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={(e) => {e.stopPropagation(); deleteDuel(duel.id)}}>Eliminar</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                {/* Content Column */}
+                <div className="flex-grow text-center md:text-left pt-4 md:pt-0 border-t md:border-none w-full">
+                  <p className="font-bold text-xl leading-tight">{duel.title}</p>
+                   <p className="text-sm text-muted-foreground mt-2">
+                    Votos totales: {getTotalVotes(duel)}
+                  </p>
                 </div>
               </div>
           ))}
