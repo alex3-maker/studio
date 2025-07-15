@@ -37,4 +37,12 @@ export type Notification = {
     link: string | null;
     timestamp: string; // ISO 8601 string
     read: boolean;
+};
+
+export type KeyTransaction = {
+    id: string;
+    type: 'earned' | 'spent';
+    amount: number;
+    description: string;
+    timestamp: string; // ISO 8601 string
 }

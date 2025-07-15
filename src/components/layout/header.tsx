@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Flame, Key, Menu, Swords, ShieldCheck, Bell, CheckCheck, X, Trash2 } from 'lucide-react';
+import { Flame, Key, Menu, Swords, ShieldCheck, Bell, CheckCheck, X, Trash2, PlusCircle, MinusCircle } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
@@ -12,9 +12,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useAppContext } from '@/context/app-context';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Separator } from '../ui/separator';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import type { Notification } from '@/lib/types';
+import type { Notification, KeyTransaction } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 
 const navLinks = [
@@ -26,7 +26,15 @@ const navLinks = [
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, notifications, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, clearAllNotifications } = useAppContext();
+  const { 
+    user, 
+    notifications, 
+    markNotificationAsRead, 
+    markAllNotificationsAsRead, 
+    deleteNotification, 
+    clearAllNotifications,
+    keyHistory
+  } = useAppContext();
   const unreadNotifications = notifications.filter(n => !n.read);
 
   const handleNotificationClick = (notification: Notification) => {
@@ -118,7 +126,7 @@ export default function Header() {
           </Sheet>
         </div>
 
-        <div className="flex flex-1 items-center justify-end space-x-4">
+        <div className="flex flex-1 items-center justify-end space-x-2">
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
@@ -165,7 +173,7 @@ export default function Header() {
                     )}
                  </div>
                  <Separator />
-                 <div className="mt-2 flex flex-col gap-1 max-h-80 overflow-y-auto">
+                 <div className="mt-2 flex flex-col gap-1 max-h-80 overflow-y-auto p-1">
                     {notifications.length === 0 ? (
                         <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-4 space-y-2">
                             <Bell className="w-8 h-8" />
@@ -211,10 +219,47 @@ export default function Header() {
               </PopoverContent>
             </Popover>
 
-            <div className="flex items-center gap-2">
-                <Key className="h-5 w-5 text-yellow-500" />
-                <span className="font-bold text-lg text-foreground/80">{user.keys}</span>
-            </div>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="ghost" className="flex items-center gap-2 px-2">
+                        <Key className="h-5 w-5 text-yellow-500" />
+                        <span className="font-bold text-lg text-foreground/80">{user.keys}</span>
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                    <div className="flex justify-between items-center mb-2">
+                        <h4 className="font-medium">Historial de Llaves</h4>
+                        <Key className="h-4 w-4" />
+                    </div>
+                    <Separator />
+                     <div className="mt-2 flex flex-col gap-1 max-h-80 overflow-y-auto p-1">
+                        {keyHistory.length === 0 ? (
+                            <div className="text-center text-sm text-muted-foreground py-4">
+                                No hay transacciones.
+                            </div>
+                        ) : (
+                            keyHistory.map((item) => (
+                                <div key={item.id} className="flex justify-between items-center p-2 rounded-md">
+                                    <div className="flex items-center gap-3">
+                                       {item.type === 'earned' ? <PlusCircle className="h-5 w-5 text-green-500" /> : <MinusCircle className="h-5 w-5 text-red-500" />}
+                                        <div>
+                                            <p className="text-sm font-medium">{item.description}</p>
+                                            <p className="text-xs text-muted-foreground">{format(new Date(item.timestamp), "dd MMM yyyy 'a las' HH:mm", { locale: es })}</p>
+                                        </div>
+                                    </div>
+                                    <span className={cn(
+                                        "font-bold text-sm",
+                                        item.type === 'earned' ? 'text-green-500' : 'text-red-500'
+                                    )}>
+                                       {item.type === 'earned' ? '+' : '-'}{item.amount}
+                                    </span>
+                                </div>
+                            ))
+                        )}
+                     </div>
+                </PopoverContent>
+            </Popover>
+
             <Link href="/panel/perfil">
               <Avatar>
                   <AvatarImage src={user.avatarUrl} alt={user.name} />

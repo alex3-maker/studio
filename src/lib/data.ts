@@ -8,7 +8,7 @@ export const mockUser: User = {
   id: 'user-1',
   name: 'Alex Doe',
   avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop',
-  keys: 6,
+  keys: 5,
   duelsCreated: 3,
   votesCast: 42,
   role: 'admin',
