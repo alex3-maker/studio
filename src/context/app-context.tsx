@@ -27,6 +27,8 @@ interface AppContextType {
   getDuelStatus: (duel: Duel) => Duel['status'];
   markNotificationAsRead: (notificationId: string) => void;
   markAllNotificationsAsRead: () => void;
+  deleteNotification: (notificationId: string) => void;
+  clearAllNotifications: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -354,7 +356,36 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
-  const value = { user, duels, castVote, addDuel, updateDuel, toggleDuelStatus, deleteDuel, resetDuelVotes, votedDuelIds, getDuelStatus, notifications, markNotificationAsRead, markAllNotificationsAsRead };
+  const deleteNotification = useCallback((notificationId: string) => {
+    setNotifications(prev => {
+        const newNotifications = prev.filter(n => n.id !== notificationId);
+        persistNotifications(newNotifications);
+        return newNotifications;
+    });
+  }, []);
+
+  const clearAllNotifications = useCallback(() => {
+    setNotifications([]);
+    persistNotifications([]);
+  }, []);
+
+  const value = { 
+    user, 
+    duels, 
+    castVote, 
+    addDuel, 
+    updateDuel, 
+    toggleDuelStatus, 
+    deleteDuel, 
+    resetDuelVotes, 
+    votedDuelIds, 
+    getDuelStatus, 
+    notifications, 
+    markNotificationAsRead, 
+    markAllNotificationsAsRead,
+    deleteNotification,
+    clearAllNotifications
+  };
 
   if (!isLoaded) {
     return null; 

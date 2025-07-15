@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Flame, Key, Menu, Swords, ShieldCheck, Bell, CheckCheck } from 'lucide-react';
+import { Flame, Key, Menu, Swords, ShieldCheck, Bell, CheckCheck, X, Trash2 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { Separator } from '../ui/separator';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Notification } from '@/lib/types';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 
 const navLinks = [
   { href: '/', label: 'Inicio', icon: Swords },
@@ -25,7 +26,7 @@ const navLinks = [
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, notifications, markNotificationAsRead, markAllNotificationsAsRead } = useAppContext();
+  const { user, notifications, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, clearAllNotifications } = useAppContext();
   const unreadNotifications = notifications.filter(n => !n.read);
 
   const handleNotificationClick = (notification: Notification) => {
@@ -135,33 +136,68 @@ export default function Header() {
                  <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium leading-none">Notificaciones</h4>
                     {notifications.length > 0 && (
-                        <Button variant="link" size="sm" className="h-auto p-0" onClick={markAllNotificationsAsRead}>
-                            <CheckCheck className="mr-1 h-3 w-3" />
-                            Marcar como leídas
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={markAllNotificationsAsRead}>
+                              <CheckCheck className="mr-1 h-3 w-3" />
+                              Marcar leídas
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                               <Button variant="link" size="sm" className="h-auto p-0 text-xs text-destructive hover:text-destructive/80">
+                                  <Trash2 className="mr-1 h-3 w-3" />
+                                  Limpiar
+                               </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>¿Limpiar todas las notificaciones?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta acción no se puede deshacer. Se eliminarán todas tus notificaciones permanentemente.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={clearAllNotifications}>Limpiar</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                     )}
                  </div>
                  <Separator />
-                 <div className="mt-2 flex flex-col gap-2 max-h-96 overflow-y-auto">
+                 <div className="mt-2 flex flex-col gap-1 max-h-80 overflow-y-auto">
                     {notifications.length === 0 ? (
                         <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-4 space-y-2">
                             <Bell className="w-8 h-8" />
-                            <p className="text-sm">No tienes notificaciones nuevas</p>
+                            <p className="text-sm">No tienes notificaciones</p>
                         </div>
                     ) : (
                         notifications.map(n => (
                            <div 
                               key={n.id} 
-                              onClick={() => handleNotificationClick(n)}
                               className={cn(
-                                "block p-2 rounded-md transition-colors hover:bg-muted cursor-pointer",
+                                "group relative block p-2 rounded-md transition-colors",
                                 !n.read && "bg-secondary"
                               )}
                             >
-                                <p className="text-sm">{n.message}</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    {formatDistanceToNow(new Date(n.timestamp), { locale: es, addSuffix: true })}
-                                </p>
+                                <div 
+                                  onClick={() => handleNotificationClick(n)}
+                                  className="cursor-pointer"
+                                >
+                                  <p className="text-sm pr-4">{n.message}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                      {formatDistanceToNow(new Date(n.timestamp), { locale: es, addSuffix: true })}
+                                  </p>
+                                </div>
+                               <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => deleteNotification(n.id)}
+                                >
+                                  <X className="h-4 w-4" />
+                                  <span className="sr-only">Eliminar notificación</span>
+                                </Button>
                            </div>
                         ))
                     )}
