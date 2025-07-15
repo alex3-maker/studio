@@ -130,7 +130,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setNotifications(prev => [
         {
             ...notification,
-            id: `notif-${Date.now()}`,
+            id: `notif-${Date.now()}-${Math.random()}`,
             timestamp: new Date().toISOString(),
             read: false,
         },
@@ -210,22 +210,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [duels, duelVotingHistory, addKeyTransaction]);
 
   const addDuel = useCallback((newDuelData: Duel) => {
-      const hasEnoughKeys = user.keys >= DUEL_CREATION_COST;
-      const status = getStatus({ ...newDuelData, status: hasEnoughKeys ? 'active' : 'draft'});
-      
-      const duelWithStatus: Duel = {
-          ...newDuelData,
-          status: status
-      };
+    setUser(prevUser => {
+        const hasEnoughKeys = prevUser.keys >= DUEL_CREATION_COST;
+        const status = getStatus({ ...newDuelData, status: hasEnoughKeys ? 'active' : 'draft'});
+        
+        const duelWithStatus: Duel = {
+            ...newDuelData,
+            status: status
+        };
 
-      setDuels(prevDuels => [duelWithStatus, ...prevDuels]);
-      
-      setUser(prevUser => ({ ...prevUser, duelsCreated: prevUser.duelsCreated + 1 }));
-      
-      if (status !== 'draft') {
-          spendKeys(DUEL_CREATION_COST, `Creación de "${newDuelData.title}"`);
-      }
-  }, [user.keys, spendKeys]);
+        setDuels(prevDuels => [duelWithStatus, ...prevDuels]);
+
+        if (status !== 'draft') {
+            spendKeys(DUEL_CREATION_COST, `Creación de "${newDuelData.title}"`);
+        }
+        
+        return { ...prevUser, duelsCreated: prevUser.duelsCreated + 1 };
+    });
+  }, [spendKeys]);
 
   const activateDraftDuel = useCallback((duelId: string): boolean => {
     const duel = duels.find(d => d.id === duelId);
@@ -239,7 +241,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     setDuels(prevDuels => prevDuels.map(d => {
       if (d.id === duelId) {
-        // Change status from draft and let getStatus determine the new state
         return { ...d, status: getStatus({ ...d, status: 'scheduled' }) };
       }
       return d;
@@ -258,12 +259,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 return { ...originalOption, ...opt };
             }) as [DuelOption, DuelOption] | undefined;
 
-            const newDuel = {
+            return {
               ...duel,
               ...updatedDuelData,
               options: updatedOptions || duel.options,
             };
-            return newDuel;
           }
           return duel;
         })
@@ -272,7 +272,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const toggleDuelStatus = useCallback((duelId: string) => {
     setDuels(prevDuels => {
-      const newDuels = prevDuels.map(duel => {
+      return prevDuels.map(duel => {
         if (duel.id === duelId) {
           const currentStatus = getStatus(duel);
           let newStatus: Duel['status'];
@@ -282,8 +282,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             newStatus = 'inactive';
             notificationMessage = `El duelo "${duel.title}" ha sido desactivado.`;
           } else {
-            // This will handle inactive, scheduled, closed -> active
-            // We let getStatus figure out the correct resulting state (scheduled or active)
             newStatus = getStatus({ ...duel, status: 'active' }); 
             notificationMessage = `El duelo "${duel.title}" ha sido activado.`;
           }
@@ -300,7 +298,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
         return duel;
       });
-      return newDuels;
     });
   }, [addNotification]);
 
@@ -397,3 +394,5 @@ export const useAppContext = () => {
   }
   return context;
 };
+
+    
