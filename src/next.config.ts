@@ -17,6 +17,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'placehold.co',
       },
+      {
+        protocol: 'https',
+        hostname: 'images.contentstack.io',
+      }
     ],
   },
   // Allow cross-origin requests in development, which is common in cloud IDEs.

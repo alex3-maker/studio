@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const imageRegex = /^(https|http):\/\/[^\s/$.?#].[^\s]*\.(jpeg|jpg|png|gif|webp|svg)$/i;
+const imageRegex = /^(https|http):\/\/[^\s/$.?#].[^\s]*\.(jpeg|jpg|png|gif|webp|svg)(?:\?.*)?$/i;
 const dataUriRegex = /^data:image\/(png|jpeg|gif|webp);base64,([A-Za-z0-9+/]+={0,2})$/;
 
 
