@@ -4,7 +4,7 @@ export const mockUser: User = {
   id: 'user-1',
   name: 'Alex Doe',
   avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop',
-  keys: 5,
+  keys: 6,
   duelsCreated: 3,
   votesCast: 42,
 };
@@ -27,7 +27,7 @@ export const mockDuels: Duel[] = [
     title: 'Criatura Fantástica Favorita',
     description: '¿Qué bestia mágica reina suprema?',
     options: [
-      { id: 'opt-2a', title: 'Dragón', imageUrl: 'https://images.unsplash.com/photo-1627803680284-9a3b64d1845b?q=80&w=1974&auto=format&fit=crop', votes: 250, "data-ai-hint": "fantasy dragon" },
+      { id: 'opt-2a', title: 'Dragón', imageUrl: 'https://images.unsplash.com/photo-1577493845280-03a4039b83e7?q=80&w=1974&auto=format&fit=crop', votes: 250, "data-ai-hint": "fantasy dragon" },
       { id: 'opt-2b', title: 'Grifo', imageUrl: 'https://images.unsplash.com/photo-1632599793189-9430c79b9404?q=80&w=1964&auto=format&fit=crop', votes: 180, "data-ai-hint": "mythical griffin" },
     ],
     creator: { id: 'user-3', name: 'MythMaster', avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1974&auto=format&fit=crop' },
