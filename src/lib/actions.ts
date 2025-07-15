@@ -151,15 +151,12 @@ export async function updateDuelAction(
     revalidatePath('/admin/duels');
     revalidatePath(`/admin/duels/${rawFormData.id}/edit`);
 
-    // This is where you would update the duel in your database.
-    // For this demo, we'll just construct the updated duel object.
-    // The votes will be merged in the context, not handled here.
     const updatedDuel: Partial<Duel> = {
       id: rawFormData.id,
       title,
       description: description || '',
       options: [
-        { id: `opt-${rawFormData.id}-a`, title: options[0].title, imageUrl: options[0].imageUrl, votes: 0 }, // Votes are preserved in context
+        { id: `opt-${rawFormData.id}-a`, title: options[0].title, imageUrl: options[0].imageUrl, votes: 0 },
         { id: `opt-${rawFormData.id}-b`, title: options[1].title, imageUrl: options[1].imageUrl, votes: 0 },
       ],
     };

@@ -52,23 +52,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }));
   }, []);
 
-  const updateDuel = useCallback((updatedDuel: Partial<Duel>) => {
-    if (!updatedDuel.id) return;
+  const updateDuel = useCallback((updatedDuelData: Partial<Duel>) => {
+    if (!updatedDuelData.id) return;
     
     setDuels(prevDuels =>
       prevDuels.map(duel => {
-        if (duel.id === updatedDuel.id) {
+        if (duel.id === updatedDuelData.id) {
           // Preserve original votes while updating other details
-          const newOptions = updatedDuel.options?.map((opt, index) => ({
-            ...opt,
-            id: duel.options[index].id, // Keep original option ID
-            votes: duel.options[index].votes, // PRESERVE ORIGINAL VOTES
-          })) as [DuelOption, DuelOption] | undefined;
+          const newOptions = updatedDuelData.options?.map((updatedOpt, index) => {
+            const originalOption = duel.options[index];
+            return {
+              ...originalOption, // Start with original to preserve votes and id
+              title: updatedOpt.title, // Update title
+              imageUrl: updatedOpt.imageUrl, // Update image
+            };
+          }) as [DuelOption, DuelOption] | undefined;
 
           return {
-            ...duel, // Start with the original duel
-            ...updatedDuel, // Override with new data
-            options: newOptions || duel.options, // Use new options if they exist
+            ...duel,
+            ...updatedDuelData,
+            options: newOptions || duel.options,
           };
         }
         return duel;
