@@ -1,3 +1,4 @@
+
 export type User = {
   id: string;
   name: string;
@@ -28,3 +29,12 @@ export type Duel = {
   startsAt: string; // ISO 8601 string
   endsAt: string; // ISO 8601 string
 };
+
+export type Notification = {
+    id: string;
+    type: 'duel-closed' | 'duel-edited' | 'duel-reset' | 'winner-changed';
+    message: string;
+    link: string;
+    timestamp: string; // ISO 8601 string
+    read: boolean;
+}

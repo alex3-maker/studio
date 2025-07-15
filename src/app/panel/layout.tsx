@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { User, Grip } from 'lucide-react';
+import { User, Grip, Settings, Bell } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 const panelNavLinks = [
   { href: '/panel/mis-duelos', label: 'Mis Duelos', icon: Grip },
   { href: '/panel/perfil', label: 'Perfil', icon: User },
+  { href: '/panel/notificaciones', label: 'Notificaciones', icon: Bell },
 ];
 
 export default function PanelLayout({

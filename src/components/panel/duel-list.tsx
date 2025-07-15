@@ -49,7 +49,7 @@ export default function DuelList({ duels }: DuelListProps) {
   
   const handleResetVotes = (e: React.MouseEvent, duelId: string) => {
     e.stopPropagation();
-    resetDuelVotes(duelId);
+    resetDuelVotes(duelId, true); // true to indicate it's the owner resetting
     toast({
       title: "Votos Reiniciados",
       description: `Los votos para tu duelo han sido reseteados.`,
