@@ -10,7 +10,7 @@ interface AppContextType {
   duels: Duel[];
   castVote: (duelId: string, optionId: string) => void;
   addDuel: (newDuel: Duel) => void;
-  updateDuel: (updatedDuel: Partial<Duel>) => void;
+  updateDuel: (updatedDuel: Partial<Duel> & { id: string }) => void;
   toggleDuelStatus: (duelId: string) => void;
   deleteDuel: (duelId: string) => void;
 }
@@ -52,26 +52,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }));
   }, []);
 
-  const updateDuel = useCallback((updatedDuelData: Partial<Duel>) => {
-    if (!updatedDuelData.id) return;
-    
+  const updateDuel = useCallback((updatedDuelData: Partial<Duel> & { id: string }) => {
     setDuels(prevDuels =>
       prevDuels.map(duel => {
         if (duel.id === updatedDuelData.id) {
-          // Preserve original votes while updating other details
-          const newOptions = updatedDuelData.options?.map((updatedOpt, index) => {
-            const originalOption = duel.options[index];
-            return {
-              ...originalOption, // Start with original to preserve votes and id
-              title: updatedOpt.title, // Update title
-              imageUrl: updatedOpt.imageUrl, // Update image
-            };
-          }) as [DuelOption, DuelOption] | undefined;
+          // Merge new data with existing data, preserving votes
+          const updatedOptions = updatedDuelData.options?.map((opt, index) => ({
+            ...duel.options[index], // Preserve original id and votes
+            ...opt, // Apply new title and imageUrl
+          })) as [DuelOption, DuelOption] | undefined;
 
           return {
             ...duel,
             ...updatedDuelData,
-            options: newOptions || duel.options,
+            options: updatedOptions || duel.options,
           };
         }
         return duel;

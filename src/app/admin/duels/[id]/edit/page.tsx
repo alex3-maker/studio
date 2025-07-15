@@ -1,17 +1,17 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useActionState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { updateDuelAction } from '@/lib/actions';
+import { updateDuelAction, type FormState } from '@/lib/actions';
 import { useAppContext } from '@/context/app-context';
 import CreateDuelForm from '@/components/create-duel-form';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const initialState = {
+const initialState: FormState = {
   message: '',
   success: false,
   errors: {},

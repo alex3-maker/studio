@@ -18,18 +18,18 @@ export type FormState = {
     _form?: string[];
   };
   newDuel?: Duel;
-  updatedDuel?: Partial<Duel>; // Can be partial as we merge it in the context
+  updatedDuel?: Partial<Duel> & { id: string };
 };
 
 function getFormData(formData: FormData) {
   return {
     id: formData.get('id') as string | undefined,
-    title: formData.get('title'),
-    description: formData.get('description'),
-    type: formData.get('type'),
+    title: formData.get('title') as string,
+    description: formData.get('description') as string,
+    type: formData.get('type') as "A_VS_B" | "LIST" | "KING_OF_THE_HILL",
     options: [
-      { title: formData.get('options.0.title'), imageUrl: formData.get('options.0.imageUrl') },
-      { title: formData.get('options.1.title'), imageUrl: formData.get('options.1.imageUrl') }
+      { id: formData.get('options.0.id') as string | undefined, title: formData.get('options.0.title') as string, imageUrl: formData.get('options.0.imageUrl') as string },
+      { id: formData.get('options.1.id') as string | undefined, title: formData.get('options.1.title') as string, imageUrl: formData.get('options.1.imageUrl') as string }
     ]
   };
 }
@@ -127,7 +127,7 @@ export async function updateDuelAction(
   const rawFormData = getFormData(formData);
   
   if (!rawFormData.id) {
-    return { success: false, message: "ID del duelo no encontrado." };
+    return { success: false, message: "ID del duelo no encontrado.", errors: { _form: ["ID del duelo no encontrado."] } };
   }
 
   const validatedFields = createDuelSchema.safeParse(rawFormData);
@@ -151,13 +151,13 @@ export async function updateDuelAction(
     revalidatePath('/admin/duels');
     revalidatePath(`/admin/duels/${rawFormData.id}/edit`);
 
-    const updatedDuel: Partial<Duel> = {
+    const updatedDuel: Partial<Duel> & { id: string } = {
       id: rawFormData.id,
       title,
       description: description || '',
       options: [
-        { id: `opt-${rawFormData.id}-a`, title: options[0].title, imageUrl: options[0].imageUrl, votes: 0 },
-        { id: `opt-${rawFormData.id}-b`, title: options[1].title, imageUrl: options[1].imageUrl, votes: 0 },
+        { id: rawFormData.options[0].id!, title: options[0].title, imageUrl: options[0].imageUrl, votes: 0 }, // votes is ignored in context
+        { id: rawFormData.options[1].id!, title: options[1].title, imageUrl: options[1].imageUrl, votes: 0 }, // votes is ignored in context
       ],
     };
 

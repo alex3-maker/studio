@@ -114,6 +114,10 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
     data.options.forEach((option, index) => {
         formData.append(`options.${index}.title`, option.title);
         formData.append(`options.${index}.imageUrl`, option.imageUrl);
+        // Include original IDs for editing context
+        if (isEditing && duelData?.options[index]?.id) {
+          formData.append(`options.${index}.id`, duelData.options[index].id);
+        }
     });
     formAction(formData);
   };
@@ -229,10 +233,10 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
                                 </FormItem>
                             )}
                         />
-                         {field.imageUrl && (
-                          <div className="relative w-full h-48 mt-2 rounded-md overflow-hidden border">
-                              <img src={field.imageUrl} alt="Vista previa" className="w-full h-full object-cover" />
-                          </div>
+                         {form.watch(`options.${index}.imageUrl`) && (
+                            <div className="relative w-full h-48 mt-2 rounded-md overflow-hidden border">
+                                <img src={form.watch(`options.${index}.imageUrl`)} alt="Vista previa" className="w-full h-full object-cover" />
+                            </div>
                         )}
                     </CardContent>
                 </Card>
