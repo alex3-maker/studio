@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 import type { DuelOption } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/app-context';
@@ -23,7 +23,6 @@ export default function VotingFeed() {
   const [voted, setVoted] = useState<DuelOption | null>(null);
   const [animationClass, setAnimationClass] = useState('');
   const [isPending, startTransition] = useTransition();
-  const { toast } = useToast();
   const [showHint, setShowHint] = useState(false);
 
   useEffect(() => {
@@ -54,6 +53,7 @@ export default function VotingFeed() {
       startTransition(() => {
         castVote(currentDuel.id, selectedOption.id);
         toast({
+          duration: 3000, // La notificación desaparecerá después de 3 segundos
           title: '¡Voto registrado!',
           description: (
             <div className="flex items-center">
