@@ -1,8 +1,9 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { User, Grip, Bell } from 'lucide-react';
+import { User, Grip } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,6 @@ import { Button } from '@/components/ui/button';
 const dashboardNavLinks = [
   { href: '/dashboard/mis-duelos', label: 'Mis Duelos', icon: Grip },
   { href: '/dashboard/perfil', label: 'Perfil', icon: User },
-  { href: '/dashboard/notificaciones', label: 'Notificaciones', icon: Bell },
 ];
 
 export default function DashboardLayout({

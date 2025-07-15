@@ -1,7 +1,8 @@
+
 'use client';
 
 import Link from 'next/link';
-import { Flame, Key, Menu, Swords, ShieldCheck } from 'lucide-react';
+import { Flame, Key, Menu, Swords, ShieldCheck, Bell } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,8 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useAppContext } from '@/context/app-context';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Separator } from '../ui/separator';
 
 const navLinks = [
   { href: '/', label: 'Inicio', icon: Swords },
@@ -27,7 +30,7 @@ export default function Header() {
           <Link href="/" className="mr-6 flex items-center space-x-2">
             <Swords className="h-6 w-6 text-primary" />
             <span className="hidden font-bold font-headline sm:inline-block">
-              Dueliax
+              DuelDash
             </span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
@@ -70,7 +73,7 @@ export default function Header() {
             <SheetContent side="left">
               <Link href="/" className="mr-6 flex items-center space-x-2 mb-6">
                 <Swords className="h-6 w-6 text-primary" />
-                <span className="font-bold font-headline">Dueliax</span>
+                <span className="font-bold font-headline">DuelDash</span>
               </Link>
               <nav className="flex flex-col space-y-4">
                 {navLinks.map((link) => (
@@ -103,6 +106,30 @@ export default function Header() {
         </div>
 
         <div className="flex flex-1 items-center justify-end space-x-4">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Bell className="h-5 w-5" />
+                  <span className="sr-only">Abrir notificaciones</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80">
+                 <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <h4 className="font-medium leading-none">Notificaciones</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Aquí verás las actualizaciones de tus duelos.
+                      </p>
+                    </div>
+                    <Separator />
+                     <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-4 space-y-2">
+                        <Bell className="w-8 h-8" />
+                        <p className="text-sm">No tienes notificaciones nuevas</p>
+                    </div>
+                 </div>
+              </PopoverContent>
+            </Popover>
+
             <div className="flex items-center gap-2">
                 <Key className="h-5 w-5 text-yellow-500" />
                 <span className="font-bold text-lg text-foreground/80">{user.keys}</span>
