@@ -5,6 +5,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useFormStatus } from 'react-dom';
 import { useRef } from 'react';
+import { useActionState } from 'react';
 
 import { createDuelSchema, type CreateDuelFormValues } from '@/lib/schemas';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Terminal, Upload } from 'lucide-react';
 import type { Duel } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import type { FormState } from '@/lib/actions';
 
 interface SubmitButtonProps {
   isEditing?: boolean;
@@ -49,19 +51,6 @@ function SubmitButton({ isEditing = false }: SubmitButtonProps) {
   );
 }
 
-type FormState = {
-  message: string;
-  success: boolean;
-  errors?: {
-    title?: string[];
-    description?: string[];
-    type?: string[];
-    options?: (string | undefined)[] | string;
-    moderation?: string;
-    _form?: string[];
-  };
-};
-
 interface CreateDuelFormProps {
   state: FormState;
   formAction: (payload: FormData) => void;
@@ -72,7 +61,8 @@ interface CreateDuelFormProps {
 export default function CreateDuelForm({ state, formAction, duelData, isEditing = false }: CreateDuelFormProps) {
   const { toast } = useToast();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  
+  const formRef = useRef<HTMLFormElement>(null);
+
   const form = useForm<CreateDuelFormValues>({
     resolver: zodResolver(createDuelSchema),
     defaultValues: duelData ? {
@@ -115,16 +105,28 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
     }
   };
 
+  const onSubmit = (data: CreateDuelFormValues) => {
+    const formData = new FormData();
+    if (isEditing && duelData?.id) {
+        formData.append('id', duelData.id);
+    }
+    formData.append('title', data.title);
+    formData.append('description', data.description || '');
+    formData.append('type', data.type);
+    data.options.forEach((option, index) => {
+        formData.append(`options.${index}.title`, option.title);
+        formData.append(`options.${index}.imageUrl`, option.imageUrl);
+    });
+    formAction(formData);
+  };
 
   return (
     <Form {...form}>
       <form
-        action={formAction}
+        ref={formRef}
+        onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-8"
       >
-        {isEditing && duelData?.id && (
-          <input type="hidden" name="id" value={duelData.id} />
-        )}
         <FormField
           control={form.control}
           name="title"
