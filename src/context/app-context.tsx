@@ -210,16 +210,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [duels, duelVotingHistory, addKeyTransaction]);
 
   const addDuel = useCallback((newDuelData: Duel) => {
+    let newDuelWithStatus: Duel | null = null;
+    
     setUser(prevUser => {
         const hasEnoughKeys = prevUser.keys >= DUEL_CREATION_COST;
         const status = getStatus({ ...newDuelData, status: hasEnoughKeys ? 'active' : 'draft'});
         
-        const duelWithStatus: Duel = {
+        newDuelWithStatus = {
             ...newDuelData,
             status: status
         };
-
-        setDuels(prevDuels => [duelWithStatus, ...prevDuels]);
 
         if (status !== 'draft') {
             spendKeys(DUEL_CREATION_COST, `Creación de "${newDuelData.title}"`);
@@ -227,6 +227,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         
         return { ...prevUser, duelsCreated: prevUser.duelsCreated + 1 };
     });
+
+    if (newDuelWithStatus) {
+        setDuels(prevDuels => [newDuelWithStatus!, ...prevDuels]);
+    }
   }, [spendKeys]);
 
   const activateDraftDuel = useCallback((duelId: string): boolean => {
@@ -268,36 +272,42 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           return duel;
         })
     );
-  }, []);
+    addNotification({
+      type: 'duel-edited',
+      message: `El duelo "${updatedDuelData.title}" ha sido actualizado.`,
+      link: null,
+    });
+  }, [addNotification]);
 
   const toggleDuelStatus = useCallback((duelId: string) => {
     setDuels(prevDuels => {
-      return prevDuels.map(duel => {
-        if (duel.id === duelId) {
-          const currentStatus = getStatus(duel);
-          let newStatus: Duel['status'];
-          let notificationMessage = '';
+        return prevDuels.map(duel => {
+            if (duel.id === duelId) {
+                const currentStatus = getStatus(duel);
+                let newStatus: Duel['status'];
+                let notificationMessage = '';
 
-          if (currentStatus === 'active') {
-            newStatus = 'inactive';
-            notificationMessage = `El duelo "${duel.title}" ha sido desactivado.`;
-          } else {
-            newStatus = getStatus({ ...duel, status: 'active' }); 
-            notificationMessage = `El duelo "${duel.title}" ha sido activado.`;
-          }
-          
-          if(notificationMessage) {
-            addNotification({
-                type: 'duel-edited',
-                message: notificationMessage,
-                link: `/`
-            });
-          }
+                if (currentStatus === 'active') {
+                    newStatus = 'inactive';
+                    notificationMessage = `El duelo "${duel.title}" ha sido desactivado.`;
+                } else {
+                    // This handles reactivating from 'inactive' or 'closed' if within dates
+                    newStatus = getStatus({ ...duel, status: 'active' }); 
+                    notificationMessage = `El duelo "${duel.title}" ha sido activado.`;
+                }
+                
+                if (notificationMessage) {
+                    addNotification({
+                        type: 'duel-edited',
+                        message: notificationMessage,
+                        link: `/`
+                    });
+                }
 
-          return { ...duel, status: newStatus };
-        }
-        return duel;
-      });
+                return { ...duel, status: newStatus };
+            }
+            return duel;
+        });
     });
   }, [addNotification]);
 
@@ -394,5 +404,3 @@ export const useAppContext = () => {
   }
   return context;
 };
-
-    
