@@ -4,12 +4,14 @@ import { cn } from '@/lib/utils';
 import type { DuelOption } from '@/lib/types';
 
 interface DuelCardProps {
-  option: DuelOption & { 'data-ai-hint'?: string };
+  option: DuelOption;
   onClick: () => void;
   className?: string;
 }
 
 export default function DuelCard({ option, onClick, className }: DuelCardProps) {
+  const { 'data-ai-hint': aiHint, ...restOfOption } = option;
+
   return (
     <Card
       className={cn(
@@ -23,16 +25,16 @@ export default function DuelCard({ option, onClick, className }: DuelCardProps) 
     >
       <CardContent className="p-0 relative aspect-square">
         <Image
-          src={option.imageUrl}
-          alt={option.title}
+          src={restOfOption.imageUrl}
+          alt={restOfOption.title}
           fill
           className="object-cover transition-transform duration-300 group-hover:scale-110"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          data-ai-hint={option['data-ai-hint']}
+          {...(aiHint && { 'data-ai-hint': aiHint })}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
         <h3 className="absolute bottom-4 left-4 right-4 text-2xl font-bold font-headline text-white drop-shadow-lg">
-          {option.title}
+          {restOfOption.title}
         </h3>
       </CardContent>
     </Card>
