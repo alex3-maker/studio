@@ -105,13 +105,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             };
           }
           return d;
-        }).map(d => ({
-            ...d,
-            status: getStatus(d) // Pre-calculate status
-        }));
+        });
         duelsToLoad = repairedDuels;
-      } else {
-         duelsToLoad = mockDuels.map(d => ({...d, status: getStatus(d)}));
       }
       
       setDuels(duelsToLoad);
@@ -121,10 +116,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     } catch (error) {
       console.error("Error reading from localStorage, resetting data.", error);
-      const duelsWithStatus = mockDuels.map(d => ({...d, status: getStatus(d)}));
-      setDuels(duelsWithStatus);
-      localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(duelsWithStatus));
       localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.removeItem(DUELS_STORAGE_KEY);
       localStorage.removeItem(VOTED_DUELS_STORAGE_KEY);
       localStorage.removeItem(NOTIFICATIONS_STORAGE_KEY);
       localStorage.removeItem(DUEL_VOTING_HISTORY_STORAGE_KEY);
@@ -263,8 +256,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     
     if (!hasVotedBefore) {
         awardedKey = true;
-        const newUserState = { ...user, keys: user.keys + 1 };
-        persistUser(newUserState);
         addKeyTransaction('earned', 1, `Voto en "${duel.title}"`);
         
         setDuelVotingHistory(prevHistory => {
