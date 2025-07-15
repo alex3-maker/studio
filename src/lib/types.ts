@@ -5,6 +5,7 @@ export type User = {
   keys: number;
   duelsCreated: number;
   votesCast: number;
+  role: 'admin' | 'user';
 };
 
 export type DuelOption = {
@@ -12,7 +13,6 @@ export type DuelOption = {
   title: string;
   imageUrl: string;
   votes: number;
-  'data-ai-hint'?: string;
 };
 
 export type Duel = {

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Flame, Key, Menu, Swords } from 'lucide-react';
+import { Flame, Key, Menu, Swords, ShieldCheck } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
@@ -43,6 +43,18 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
+             {user.role === 'admin' && (
+              <Link
+                href="/admin/duels"
+                className={cn(
+                  'transition-colors hover:text-foreground/80 flex items-center',
+                  pathname.startsWith('/admin') ? 'text-foreground' : 'text-foreground/60'
+                )}
+              >
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                Admin
+              </Link>
+            )}
           </nav>
         </div>
 
@@ -73,6 +85,18 @@ export default function Header() {
                     {link.label}
                   </Link>
                 ))}
+                 {user.role === 'admin' && (
+                    <Link
+                      href="/admin/duels"
+                      className={cn(
+                        'transition-colors hover:text-primary flex items-center',
+                        pathname.startsWith('/admin') ? 'text-foreground font-semibold' : 'text-muted-foreground'
+                      )}
+                    >
+                       <ShieldCheck className="mr-2 h-4 w-4" />
+                      Admin
+                    </Link>
+                  )}
               </nav>
             </SheetContent>
           </Sheet>

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 import type { User, Duel, DuelOption } from '@/lib/types';
 import { mockUser, mockDuels } from '@/lib/data';
 
@@ -8,7 +8,9 @@ interface AppContextType {
   user: User;
   duels: Duel[];
   castVote: (duelId: string, optionId: string) => void;
-  addDuel: (newDuel: Duel) => void; 
+  addDuel: (newDuel: Duel) => void;
+  toggleDuelStatus: (duelId: string) => void;
+  deleteDuel: (duelId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -27,7 +29,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             }
             return option;
           }) as [DuelOption, DuelOption];
-          return { ...duel, options: newOptions };
+          return { ...duel, options: newOptions, votes: (duel.options[0].votes + duel.options[1].votes + 1) };
         }
         return duel;
       })
@@ -47,9 +49,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       duelsCreated: prevUser.duelsCreated + 1,
     }));
   };
+
+  const toggleDuelStatus = (duelId: string) => {
+    setDuels(prevDuels => prevDuels.map(duel => 
+      duel.id === duelId ? { ...duel, status: duel.status === 'active' ? 'closed' : 'active' } : duel
+    ));
+  };
+
+  const deleteDuel = (duelId: string) => {
+    setDuels(prevDuels => prevDuels.filter(duel => duel.id !== duelId));
+  };
   
   return (
-    <AppContext.Provider value={{ user, duels, castVote, addDuel }}>
+    <AppContext.Provider value={{ user, duels, castVote, addDuel, toggleDuelStatus, deleteDuel }}>
       {children}
     </AppContext.Provider>
   );
