@@ -34,9 +34,10 @@ export default function EditDuelPage({ params }: { params: { id: string } }) {
       });
       router.push('/admin/duels');
     } else if (state.message && !state.success) {
+      // The form itself will now display detailed errors, so the toast can be more general.
       toast({
         variant: 'destructive',
-        title: 'Error',
+        title: 'Error al guardar',
         description: state.message,
       });
     }

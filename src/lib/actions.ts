@@ -112,10 +112,11 @@ export async function createDuelAction(
 
   } catch (error) {
     console.error('Error creando duelo:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido del servidor.';
     return {
-      message: 'Ocurrió un error inesperado. Por favor, inténtalo de nuevo.',
+      message: `Ocurrió un error inesperado: ${errorMessage}`,
       success: false,
-      errors: { _form: ['Error del servidor.'] },
+      errors: { _form: [`Ocurrió un error inesperado. Por favor, inténtalo de nuevo. Detalle: ${errorMessage}`] },
     };
   }
 }
@@ -169,10 +170,11 @@ export async function updateDuelAction(
 
   } catch (error) {
     console.error('Error actualizando duelo:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido del servidor.';
     return {
-      message: 'Ocurrió un error inesperado. Por favor, inténtalo de nuevo.',
+      message: `Ocurrió un error inesperado al actualizar: ${errorMessage}`,
       success: false,
-      errors: { _form: ['Error del servidor.'] },
+      errors: { _form: [`Error del servidor al actualizar. Detalle: ${errorMessage}`] },
     };
   }
 }

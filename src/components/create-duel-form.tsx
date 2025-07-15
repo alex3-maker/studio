@@ -251,11 +251,15 @@ export default function CreateDuelForm({ state, formAction, duelData, isEditing 
             </Alert>
         )}
 
-        {state.errors?._form && (
+        {state.errors?._form && !state.success && (
              <Alert variant="destructive">
                 <Terminal className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{state.errors._form.join(', ')}</AlertDescription>
+                <AlertTitle>Error al Procesar el Formulario</AlertTitle>
+                <AlertDescription>
+                    <pre className="mt-2 whitespace-pre-wrap font-mono text-xs">
+                        {state.errors._form.join('\n')}
+                    </pre>
+                </AlertDescription>
             </Alert>
         )}
 
