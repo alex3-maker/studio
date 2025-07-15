@@ -64,6 +64,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [duelVotingHistory, setDuelVotingHistory] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Load from localStorage on initial render
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem(USER_STORAGE_KEY);
@@ -101,6 +102,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setIsLoaded(true);
   }, []);
   
+  // Persist state changes to localStorage
   useEffect(() => {
     if (isLoaded) localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
   }, [user, isLoaded]);
@@ -125,19 +127,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (isLoaded) localStorage.setItem(DUEL_VOTING_HISTORY_STORAGE_KEY, JSON.stringify(duelVotingHistory));
   }, [duelVotingHistory, isLoaded]);
 
-
   const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
-    setNotifications(prev => [
-        {
-            ...notification,
-            id: `notif-${Date.now()}-${Math.random()}`,
-            timestamp: new Date().toISOString(),
-            read: false,
-        },
-        ...prev
-    ].slice(0, 50));
+    const newNotif = {
+        ...notification,
+        id: `notif-${Date.now()}-${Math.random()}`,
+        timestamp: new Date().toISOString(),
+        read: false,
+    };
+
+    setNotifications(prev => {
+        // De-duplication logic
+        const now = Date.now();
+        const isDuplicate = prev.some(n => 
+            n.message === newNotif.message && (now - parseISO(n.timestamp).getTime()) < 2000 // 2 second window
+        );
+
+        if (isDuplicate) {
+            return prev; // Don't add the notification
+        }
+
+        return [newNotif, ...prev].slice(0, 50);
+    });
   }, []);
-  
+
   const addKeyTransaction = useCallback((type: 'earned' | 'spent', amount: number, description: string) => {
     setKeyHistory(prev => [
         {
@@ -210,27 +222,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [duels, duelVotingHistory, addKeyTransaction]);
 
   const addDuel = useCallback((newDuelData: Duel) => {
-    let newDuelWithStatus: Duel | null = null;
-    
     setUser(prevUser => {
         const hasEnoughKeys = prevUser.keys >= DUEL_CREATION_COST;
-        const status = getStatus({ ...newDuelData, status: hasEnoughKeys ? 'active' : 'draft'});
+        const status = hasEnoughKeys ? getStatus({ ...newDuelData, status: 'active' }) : 'draft';
         
-        newDuelWithStatus = {
+        const newDuelWithStatus = {
             ...newDuelData,
             status: status
         };
 
+        setDuels(prevDuels => [newDuelWithStatus, ...prevDuels]);
+        
         if (status !== 'draft') {
             spendKeys(DUEL_CREATION_COST, `Creación de "${newDuelData.title}"`);
         }
         
         return { ...prevUser, duelsCreated: prevUser.duelsCreated + 1 };
     });
-
-    if (newDuelWithStatus) {
-        setDuels(prevDuels => [newDuelWithStatus!, ...prevDuels]);
-    }
   }, [spendKeys]);
 
   const activateDraftDuel = useCallback((duelId: string): boolean => {
@@ -245,7 +253,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     setDuels(prevDuels => prevDuels.map(d => {
       if (d.id === duelId) {
-        return { ...d, status: getStatus({ ...d, status: 'scheduled' }) };
+        // Force status re-evaluation
+        return { ...d, status: getStatus({ ...d, status: 'active' }) };
       }
       return d;
     }));
@@ -272,18 +281,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           return duel;
         })
     );
-    addNotification({
-      type: 'duel-edited',
-      message: `El duelo "${updatedDuelData.title}" ha sido actualizado.`,
-      link: null,
-    });
-  }, [addNotification]);
+  }, []);
 
   const toggleDuelStatus = useCallback((duelId: string) => {
     setDuels(prevDuels => {
         return prevDuels.map(duel => {
             if (duel.id === duelId) {
-                const currentStatus = getStatus(duel);
+                const currentStatus = getDuelStatus(duel);
                 let newStatus: Duel['status'];
                 let notificationMessage = '';
 
@@ -291,9 +295,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                     newStatus = 'inactive';
                     notificationMessage = `El duelo "${duel.title}" ha sido desactivado.`;
                 } else {
-                    // This handles reactivating from 'inactive' or 'closed' if within dates
                     newStatus = getStatus({ ...duel, status: 'active' }); 
-                    notificationMessage = `El duelo "${duel.title}" ha sido activado.`;
+                    notificationMessage = `El duelo "${duel.title}" ha sido activado de nuevo.`;
                 }
                 
                 if (notificationMessage) {
@@ -303,13 +306,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                         link: `/`
                     });
                 }
-
+                
                 return { ...duel, status: newStatus };
             }
             return duel;
         });
     });
   }, [addNotification]);
+
 
   const deleteDuel = useCallback((duelId: string) => {
     const duelToDelete = duels.find(d => d.id === duelId);
