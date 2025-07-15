@@ -16,6 +16,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Notification, KeyTransaction } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
+import Logo from '../logo';
 
 const navLinks = [
   { href: '/', label: 'Inicio', icon: Swords },
@@ -49,9 +50,9 @@ export default function Header() {
       <div className="container flex h-16 items-center">
         <div className="mr-4 hidden md:flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <Swords className="h-6 w-6 text-primary" />
+            <Logo className="h-6 w-auto" />
             <span className="hidden font-bold font-headline sm:inline-block">
-              DuelDash
+              DueliaX
             </span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
@@ -93,8 +94,8 @@ export default function Header() {
             </SheetTrigger>
             <SheetContent side="left">
               <Link href="/" className="mr-6 flex items-center space-x-2 mb-6">
-                <Swords className="h-6 w-6 text-primary" />
-                <span className="font-bold font-headline">DuelDash</span>
+                <Logo className="h-6 w-auto" />
+                <span className="font-bold font-headline">DueliaX</span>
               </Link>
               <nav className="flex flex-col space-y-4">
                 {navLinks.map((link) => (
