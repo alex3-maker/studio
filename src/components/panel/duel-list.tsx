@@ -107,11 +107,11 @@ export default function DuelList({ duels }: DuelListProps) {
               const statusInfo = statusConfig[currentStatus];
 
               return (
-                 <Card key={duel.id} className="overflow-hidden">
+                 <Card key={duel.id} className="overflow-hidden" onClick={() => handleRowClick(duel)}>
                   <div className="p-4 flex flex-col md:flex-row gap-4">
                     {/* Image & Status */}
                     <div className="flex-shrink-0 w-full md:w-24 flex md:flex-col items-center gap-4">
-                        <div className={cn("w-24 h-24 relative", currentStatus !== 'draft' && "cursor-pointer")} onClick={() => handleRowClick(duel)}>
+                        <div className={cn("w-24 h-24 relative", currentStatus !== 'draft' && "cursor-pointer")}>
                            <ResultsChart duel={duel} />
                            {currentStatus !== 'draft' && (
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity rounded-full">
@@ -145,26 +145,26 @@ export default function DuelList({ duels }: DuelListProps) {
                               <Edit className="h-4 w-4" />
                             </Link>
                           </Button>
-                           <AlertDialog>
+                           <AlertDialog onOpenChange={(open) => !open && event.stopPropagation()}>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()} disabled={currentStatus === 'draft'}>
                                 <RotateCcw className="h-4 w-4 text-blue-500" />
                               </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent>
+                            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                               <AlertDialogHeader><AlertDialogTitle>¿Resetear votación?</AlertDialogTitle><AlertDialogDescription>Esta acción pondrá a cero todos los votos para este duelo. No se puede deshacer.</AlertDialogDescription></AlertDialogHeader>
                               <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={(e) => handleResetVotes(e, duel.id)}>Resetear</AlertDialogAction></AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
-                           <AlertDialog>
+                           <AlertDialog onOpenChange={(open) => !open && event.stopPropagation()}>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent>
+                            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                               <AlertDialogHeader><AlertDialogTitle>¿Estás seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Esto eliminará permanentemente tu duelo.</AlertDialogDescription></AlertDialogHeader>
-                              <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => deleteDuel(duel.id)}>Eliminar</AlertDialogAction></AlertDialogFooter>
+                              <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={(e) => { e.stopPropagation(); deleteDuel(duel.id); }}>Eliminar</AlertDialogAction></AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
                         </div>
