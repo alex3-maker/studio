@@ -2,12 +2,9 @@
 
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useActionState, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
 
 import { createDuelSchema, type CreateDuelFormValues } from '@/lib/schemas';
-import { createDuelAction } from '@/lib/actions';
-import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -32,12 +29,6 @@ import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Terminal } from 'lucide-react';
 
-const initialState = {
-  message: '',
-  success: false,
-  errors: {},
-};
-
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
@@ -47,10 +38,25 @@ function SubmitButton() {
   );
 }
 
-export default function CreateDuelForm() {
-  const [state, formAction] = useActionState(createDuelAction, initialState);
-  const { toast } = useToast();
+type FormState = {
+  message: string;
+  success: boolean;
+  errors?: {
+    title?: string[];
+    description?: string[];
+    type?: string[];
+    options?: string[];
+    moderation?: string;
+    _form?: string[];
+  };
+};
 
+interface CreateDuelFormProps {
+  state: FormState;
+  formAction: (payload: FormData) => void;
+}
+
+export default function CreateDuelForm({ state, formAction }: CreateDuelFormProps) {
   const form = useForm<CreateDuelFormValues>({
     resolver: zodResolver(createDuelSchema),
     defaultValues: {
@@ -68,23 +74,6 @@ export default function CreateDuelForm() {
     control: form.control,
     name: 'options',
   });
-
-  useEffect(() => {
-    if (state.success) {
-      toast({
-        title: 'Success!',
-        description: state.message,
-      });
-      form.reset();
-    } else if (state.message && !state.success) {
-       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: state.message,
-      });
-    }
-  }, [state, toast, form]);
-
 
   return (
     <Form {...form}>

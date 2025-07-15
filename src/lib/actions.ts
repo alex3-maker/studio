@@ -1,10 +1,10 @@
 'use server';
 
-import { z } from 'zod';
-import { createDuelSchema } from '@/lib/schemas';
 import { moderateContent } from '@/ai/flows/moderate-content';
+import { createDuelSchema } from '@/lib/schemas';
+import { revalidatePath } from 'next/cache';
 
-type FormState = {
+export type FormState = {
   message: string;
   success: boolean;
   errors?: {
@@ -15,6 +15,7 @@ type FormState = {
     moderation?: string;
     _form?: string[];
   };
+  newDuel?: any;
 };
 
 export async function createDuelAction(
@@ -42,7 +43,7 @@ export async function createDuelAction(
     };
   }
   
-  const { title, options } = validatedFields.data;
+  const { title, options, description, type } = validatedFields.data;
 
   try {
     // Moderate duel title
@@ -65,8 +66,6 @@ export async function createDuelAction(
           errors: { moderation: `Option title "${option.title}" was flagged.` },
         };
       }
-      // Note: The current moderation flow can take image URLs.
-      // In a real scenario with file uploads, you'd convert the image to a data URI.
       const optionImageModeration = await moderateContent({ content: option.imageUrl, contentType: 'image' });
       if (!optionImageModeration.isSafe) {
         return {
@@ -76,14 +75,16 @@ export async function createDuelAction(
         };
       }
     }
-
-    // Here you would save the data to your database.
-    console.log('Duel created successfully:', validatedFields.data);
-
+    
+    revalidatePath('/');
+    revalidatePath('/dashboard');
+    
     return {
       message: 'Duel created successfully!',
       success: true,
+      newDuel: validatedFields.data
     };
+
   } catch (error) {
     console.error('Error creating duel:', error);
     return {

@@ -1,45 +1,39 @@
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useTransition, useMemo } from 'react';
 import { ArrowRight, Key } from 'lucide-react';
 
 import DuelCard from './duel-card';
 import ResultsChart from './dashboard/results-chart';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { mockDuels, mockUser } from '@/lib/data';
-import type { Duel, DuelOption } from '@/lib/types';
+import type { DuelOption } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { useAppContext } from '@/context/app-context';
 
 export default function VotingFeed() {
+  const { duels, castVote } = useAppContext();
   const [currentDuelIndex, setCurrentDuelIndex] = useState(0);
-  const [duels, setDuels] = useState<Duel[]>([]);
   const [voted, setVoted] = useState<DuelOption | null>(null);
-  const [keys, setKeys] = useState(mockUser.keys);
   const [animationClass, setAnimationClass] = useState('');
   const [isPending, startTransition] = useTransition();
-
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Simulate fetching duels
-    setDuels(mockDuels.filter(d => d.status === 'active'));
-  }, []);
-
-  const currentDuel = duels[currentDuelIndex];
+  const activeDuels = useMemo(() => duels.filter(d => d.status === 'active'), [duels]);
+  const currentDuel = activeDuels[currentDuelIndex];
 
   const handleVote = (selectedOption: DuelOption, direction: 'left' | 'right') => {
-    if (voted) return;
+    if (voted || !currentDuel) return;
 
     setVoted(selectedOption);
     setAnimationClass(direction === 'left' ? 'animate-card-select-left' : 'animate-card-select-right');
 
     setTimeout(() => {
       startTransition(() => {
-        setKeys((prevKeys) => prevKeys + 1);
+        castVote(currentDuel.id, selectedOption.id);
         toast({
           title: 'Vote Cast!',
           description: (
@@ -49,7 +43,6 @@ export default function VotingFeed() {
           ),
         });
         
-        // This opens the results dialog automatically
         document.getElementById(`results-trigger-${currentDuel.id}`)?.click();
       });
     }, 350);
@@ -58,11 +51,21 @@ export default function VotingFeed() {
   const handleNextDuel = () => {
     setAnimationClass('');
     setVoted(null);
-    setCurrentDuelIndex((prevIndex) => (prevIndex + 1) % duels.length);
+    setCurrentDuelIndex((prevIndex) => (prevIndex + 1) % activeDuels.length);
+    document.getElementById(`results-close-${currentDuel.id}`)?.click();
   };
 
 
-  if (duels.length === 0) {
+  if (activeDuels.length === 0) {
+    return (
+       <div className="text-center py-16">
+        <h2 className="text-2xl font-headline mb-4">No More Duels!</h2>
+        <p className="text-muted-foreground">You've voted on all available duels. Check back later or create your own!</p>
+      </div>
+    )
+  }
+
+  if (!currentDuel) {
     return <VotingFeedSkeleton />;
   }
 
@@ -84,9 +87,12 @@ export default function VotingFeed() {
       </div>
 
       <div className="text-center mt-8">
-        <Dialog>
+        <Dialog onOpenChange={(open) => {
+          if (!open) {
+            handleNextDuel();
+          }
+        }}>
           <DialogTrigger asChild>
-             {/* This button is hidden but can be triggered programmatically */}
              <Button id={`results-trigger-${currentDuel.id}`} className="hidden" variant="outline">
                 View Results
               </Button>
@@ -98,9 +104,11 @@ export default function VotingFeed() {
             <div className="h-64 w-full">
               <ResultsChart duel={currentDuel} />
             </div>
-            <Button onClick={handleNextDuel} className="w-full" size="lg">
-              Next Duel <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+            <DialogClose asChild>
+              <Button id={`results-close-${currentDuel.id}`} onClick={handleNextDuel} className="w-full" size="lg">
+                Next Duel <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </DialogClose>
           </DialogContent>
         </Dialog>
 

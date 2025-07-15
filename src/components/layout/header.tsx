@@ -7,8 +7,8 @@ import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import { mockUser } from '@/lib/data';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { useAppContext } from '@/context/app-context';
 
 const navLinks = [
   { href: '/', label: 'Feed', icon: Swords },
@@ -18,6 +18,7 @@ const navLinks = [
 
 export default function Header() {
   const pathname = usePathname();
+  const { user } = useAppContext();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -80,11 +81,11 @@ export default function Header() {
         <div className="flex flex-1 items-center justify-end space-x-4">
             <div className="flex items-center gap-2">
                 <Key className="h-5 w-5 text-yellow-500" />
-                <span className="font-bold text-lg text-foreground/80">{mockUser.keys}</span>
+                <span className="font-bold text-lg text-foreground/80">{user.keys}</span>
             </div>
             <Avatar>
-                <AvatarImage src={mockUser.avatarUrl} alt={mockUser.name} />
-                <AvatarFallback>{mockUser.name.charAt(0)}</AvatarFallback>
+                <AvatarImage src={user.avatarUrl} alt={user.name} />
+                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
             </Avatar>
         </div>
       </div>

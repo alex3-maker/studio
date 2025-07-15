@@ -12,6 +12,7 @@ export type DuelOption = {
   title: string;
   imageUrl: string;
   votes: number;
+  'data-ai-hint'?: string;
 };
 
 export type Duel = {
@@ -19,7 +20,7 @@ export type Duel = {
   title: string;
   description: string;
   options: [DuelOption, DuelOption];
-  creator: Pick<User, 'name' | 'avatarUrl'>;
+  creator: Pick<User, 'name' | 'avatarUrl' | 'id'>;
   type: 'A_VS_B' | 'LIST' | 'KING_OF_THE_HILL';
   status: 'active' | 'closed';
 };
