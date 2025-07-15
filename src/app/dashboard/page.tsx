@@ -1,24 +1,36 @@
 'use client';
 
-import ProfileCard from "@/components/dashboard/profile-card";
 import DuelList from "@/components/dashboard/duel-list";
 import { useAppContext } from "@/context/app-context";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Key, Flame, Vote } from "lucide-react";
 
-export default function DashboardPage() {
+export default function DashboardOverviewPage() {
     const { user, duels } = useAppContext();
     const userDuels = duels.filter(duel => duel.creator.id === user.id);
+    
+    const stats = [
+        { label: "Keys Earned", value: user.keys, icon: Key, color: "text-yellow-500" },
+        { label: "Duels Created", value: user.duelsCreated, icon: Flame, color: "text-red-500" },
+        { label: "Votes Cast", value: user.votesCast, icon: Vote, color: "text-blue-500" },
+    ];
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <h1 className="text-4xl font-bold font-headline mb-8">Your Dashboard</h1>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1">
-                    <ProfileCard user={user} />
-                </div>
-                <div className="lg:col-span-2">
-                    <DuelList duels={userDuels} />
-                </div>
+        <div className="space-y-8">
+            <div className="grid gap-4 md:grid-cols-3">
+                {stats.map(stat => (
+                    <Card key={stat.label}>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">{stat.label}</CardTitle>
+                            <stat.icon className={`h-4 w-4 text-muted-foreground ${stat.color}`} />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stat.value}</div>
+                        </CardContent>
+                    </Card>
+                ))}
             </div>
+            <DuelList duels={userDuels} />
         </div>
     );
 }
