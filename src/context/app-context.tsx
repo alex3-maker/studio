@@ -1,17 +1,13 @@
 
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
+import { createContext, useContext, useState, ReactNode, useCallback, useEffect, Dispatch, SetStateAction } from 'react';
 import type { User, Duel, DuelOption, Notification, KeyTransaction, UserVote } from '@/lib/types';
-import { getDb } from '@/lib/db';
 import { isAfter, isBefore, parseISO, formatISO } from 'date-fns';
 import { castVoteAction } from '@/lib/actions';
 
 const VOTED_DUELS_STORAGE_KEY = 'dueliax_voted_duels';
 const USER_VOTES_STORAGE_KEY = 'dueliax_user_votes';
-const DUEL_VOTING_HISTORY_STORAGE_KEY = 'dueliax_duel_voting_history';
-const USERS_STORAGE_KEY = 'dueliax_users_fallback'; 
-const DUELS_STORAGE_KEY = 'dueliax_duels_fallback';
 const NOTIFICATIONS_STORAGE_KEY = 'dueliax_notifications';
 const KEY_HISTORY_STORAGE_KEY = 'dueliax_key_history';
 const API_KEY_STORAGE_KEY = 'dueliax_api_key';
@@ -20,7 +16,9 @@ const DUEL_CREATION_COST = 5;
 
 interface AppContextType {
   duels: Duel[];
+  setDuels: Dispatch<SetStateAction<Duel[]>>;
   users: User[];
+  setUsers: Dispatch<SetStateAction<User[]>>;
   votedDuelIds: string[];
   userVotedOptions: Record<string, UserVote>;
   notifications: Notification[];
@@ -49,8 +47,6 @@ interface AppContextType {
   deleteUser: (userId: string) => void;
   adjustUserKeys: (userId: string, amount: number, reason: string) => void;
   getUserById: (userId: string) => User | undefined;
-  fetchInitialData: () => Promise<void>;
-  isDataLoaded: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -83,68 +79,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [keyHistory, setKeyHistory] = useState<KeyTransaction[]>([]);
   const [apiKey, setApiKeyState] = useState<string | null>(null);
   const [isAiEnabled, setAiEnabledState] = useState<boolean>(true);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
   
-  const fetchInitialData = useCallback(async () => {
-    // Only run on the client
-    if (typeof window === 'undefined') {
-        return;
-    }
-    
+  useEffect(() => {
     try {
-      // This is a client-side fetch, but we'll use an API route in a real scenario
-      // For now, we rely on hydration from server components or this localstorage fallback
-      const storedDuels = localStorage.getItem(DUELS_STORAGE_KEY);
-      if(storedDuels) setDuels(JSON.parse(storedDuels));
-      
-      const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-      if(storedUsers) setUsers(JSON.parse(storedUsers));
-      
       const storedVotedIds = localStorage.getItem(VOTED_DUELS_STORAGE_KEY);
       if (storedVotedIds) setVotedDuelIds(JSON.parse(storedVotedIds));
 
       const storedUserVotes = localStorage.getItem(USER_VOTES_STORAGE_KEY);
       if (storedUserVotes) setUserVotedOptions(JSON.parse(storedUserVotes));
-      
-    } catch (error) {
-      console.error("Error fetching initial data from localStorage.", error);
-    } finally {
-        setIsDataLoaded(true);
-    }
-  }, []);
-
-  const initFromDb = useCallback(async () => {
-    try {
-        const db = getDb();
-        const allUsers = await db.query.users.findMany();
-        const allDuelsFromDb = await db.query.duels.findMany();
-
-        const allDuels = allDuelsFromDb.map(d => {
-            const creator = allUsers.find(u => u.id === d.creatorId);
-            return {
-                ...d,
-                creator: creator ? { id: creator.id, name: creator.name || 'N/A', avatarUrl: creator.image || null } : { id: 'unknown', name: 'Usuario Desconocido', avatarUrl: null }
-            }
-        });
         
-        setUsers(allUsers.map(u => ({...u, avatarUrl: u.image || null})));
-        setDuels(allDuels);
-        localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(allDuels));
-        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(allUsers.map(u => ({...u, avatarUrl: u.image || null}))));
-
-    } catch (error) {
-        console.error("Failed to initialize from DB, will rely on cache.", error);
-        await fetchInitialData(); // fallback to cache
-    } finally {
-        setIsDataLoaded(true);
-    }
-  }, [fetchInitialData]);
-  
-  useEffect(() => {
-    // We fetch data from DB once on app load, then rely on cache/actions
-    initFromDb();
-    
-    try {
       const storedApiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
       if (storedApiKey) setApiKeyState(storedApiKey);
       
@@ -159,13 +102,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
         console.error("Error loading non-critical data from local storage", error);
     }
-  }, [initFromDb]);
+  }, []);
   
   // Persist state to localStorage
-  useEffect(() => { if (isDataLoaded) localStorage.setItem(VOTED_DUELS_STORAGE_KEY, JSON.stringify(votedDuelIds)); }, [votedDuelIds, isDataLoaded]);
-  useEffect(() => { if (isDataLoaded) localStorage.setItem(USER_VOTES_STORAGE_KEY, JSON.stringify(userVotedOptions)); }, [userVotedOptions, isDataLoaded]);
-  useEffect(() => { if (isDataLoaded) localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifications)); }, [notifications, isDataLoaded]);
-  useEffect(() => { if (isDataLoaded) localStorage.setItem(KEY_HISTORY_STORAGE_KEY, JSON.stringify(keyHistory)); }, [keyHistory, isDataLoaded]);
+  useEffect(() => { localStorage.setItem(VOTED_DUELS_STORAGE_KEY, JSON.stringify(votedDuelIds)); }, [votedDuelIds]);
+  useEffect(() => { localStorage.setItem(USER_VOTES_STORAGE_KEY, JSON.stringify(userVotedOptions)); }, [userVotedOptions]);
+  useEffect(() => { localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifications)); }, [notifications]);
+  useEffect(() => { localStorage.setItem(KEY_HISTORY_STORAGE_KEY, JSON.stringify(keyHistory)); }, [keyHistory]);
 
 
   const setApiKey = useCallback((key: string) => {
@@ -230,7 +173,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             }
             return u;
         })
-        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(newUsers));
         return newUsers;
     });
     return success;
@@ -246,7 +188,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (result.updatedDuel) {
         setDuels(prevDuels => {
            const newDuels = prevDuels.map(d => d.id === duelId ? result.updatedDuel! : d);
-           localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
            return newDuels;
         });
         setVotedDuelIds(prev => [...prev, duelId]);
@@ -260,7 +201,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                     }
                     return u;
                 })
-                localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(newUsers));
                 return newUsers;
             });
         }
@@ -295,7 +235,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     setDuels(prevDuels => {
       const newDuels = [newDuel, ...prevDuels];
-      localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
       return newDuels;
     });
     
@@ -305,7 +244,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     
     setUsers(prevUsers => {
       const newUsers = prevUsers.map(u => u.id === creator.id ? {...u, duelsCreated: u.duelsCreated + 1 } : u);
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(newUsers));
       return newUsers;
     });
 
@@ -322,7 +260,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (success) {
       setDuels(prevDuels => {
           const newDuels = prevDuels.map(d => d.id === duelId ? { ...d, status: getStatus({ ...d, status: 'ACTIVE' } as Duel) } : d);
-          localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
           return newDuels;
       });
     }
@@ -353,7 +290,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
         return duel;
       })
-      localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
       return newDuels;
     });
   }, []);
@@ -381,7 +317,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
         return duel;
       })
-      localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
       return newDuels;
     });
 
@@ -402,7 +337,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     
     setDuels(prevDuels => {
       const newDuels = prevDuels.filter(duel => duel.id !== duelId);
-      localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
       return newDuels;
     });
     
@@ -413,7 +347,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             }
             return u;
         })
-        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(newUsers));
         return newUsers;
     });
   }, [duels]);
@@ -425,7 +358,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     setDuels(prevDuels => {
       const newDuels = prevDuels.filter(duel => !duelIds.includes(duel.id));
-      localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
       return newDuels;
     });
 
@@ -441,7 +373,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             }
             return u;
         })
-        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(newUsers));
         return newUsers;
     });
   }, [duels]);
@@ -480,7 +411,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (keysSpent > 0) {
       setUsers(prevUsers => {
         const newUsers = prevUsers.map(u => u.id === userId ? { ...u, keys: u.keys - keysSpent } : u);
-        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(newUsers));
         return newUsers;
       });
     }
@@ -496,7 +426,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           }
           return d;
       });
-      localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
       return newDuels;
     });
   }, []);
@@ -514,7 +443,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           }
           return duel;
         })
-        localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
         return newDuels;
     });
     
@@ -563,7 +491,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     console.warn("updateUserRole should be a server action");
     setUsers(prevUsers => {
       const newUsers = prevUsers.map(u => u.id === userId ? { ...u, role: newRole } : u);
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(newUsers));
       return newUsers;
     });
   }, []);
@@ -572,12 +499,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     console.warn("deleteUser should be a server action");
     setUsers(prevUsers => {
       const newUsers = prevUsers.filter(u => u.id !== userId);
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(newUsers));
       return newUsers;
     });
     setDuels(prevDuels => {
       const newDuels = prevDuels.filter(d => d.creator.id !== userId);
-      localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(newDuels));
       return newDuels;
     });
   }, []);
@@ -594,14 +519,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
         return u;
       })
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(newUsers));
       return newUsers;
     })
   }, [addKeyTransaction]);
 
   const value = { 
-    duels, 
+    duels,
+    setDuels,
     users,
+    setUsers,
     castVote, 
     addDuel, 
     updateDuel, 
@@ -630,8 +556,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setApiKey,
     isAiEnabled,
     setIsAiEnabled,
-    fetchInitialData: initFromDb,
-    isDataLoaded,
   };
 
   return (

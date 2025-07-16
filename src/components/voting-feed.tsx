@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
-import type { Duel, DuelOption } from '@/lib/types';
+import type { Duel, DuelOption, User } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/app-context';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -91,10 +91,14 @@ function AutoAdvanceButton({ onComplete, hasMoreDuels }: { onComplete: () => voi
   );
 }
 
+interface VotingFeedProps {
+    initialDuels: Duel[];
+    initialUsers: User[];
+}
 
-export default function VotingFeed() {
+export default function VotingFeed({ initialDuels, initialUsers }: VotingFeedProps) {
   const { data: session } = useSession();
-  const { duels, castVote, votedDuelIds, getDuelStatus, isDataLoaded, fetchInitialData } = useAppContext();
+  const { duels, setDuels, users, setUsers, castVote, votedDuelIds, getDuelStatus } = useAppContext();
   const [currentDuelIndex, setCurrentDuelIndex] = useState(0);
   const [votedDuelDetails, setVotedDuelDetails] = useState<Duel | null>(null);
   const [animationClass, setAnimationClass] = useState('');
@@ -102,14 +106,24 @@ export default function VotingFeed() {
   const [showHint, setShowHint] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [guestVotedDuels, setGuestVotedDuels] = useState<string[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
+
 
   useEffect(() => {
-    fetchInitialData();
+    if (!isInitialized) {
+      setDuels(initialDuels);
+      setUsers(initialUsers);
+      setIsInitialized(true);
+    }
+  }, [initialDuels, initialUsers, setDuels, setUsers, isInitialized]);
+
+
+  useEffect(() => {
     const storedGuestVotes = localStorage.getItem(GUEST_VOTED_DUELS_STORAGE_KEY);
     if (storedGuestVotes) {
       setGuestVotedDuels(JSON.parse(storedGuestVotes));
     }
-  }, [fetchInitialData]);
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
@@ -213,7 +227,7 @@ export default function VotingFeed() {
 
   const duelToShow = votedDuelDetails || currentDuel;
   
-   if (!isDataLoaded || isPending) {
+   if (!isInitialized || isPending) {
      return <VotingFeedSkeleton />;
    }
 
