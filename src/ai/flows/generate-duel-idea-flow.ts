@@ -38,10 +38,8 @@ const promptText = `You are a creative assistant specialized in creating engagin
 
 
 export async function generateDuelIdea(apiKey: string): Promise<DuelIdeaOutput> {
-  const model = googleAI.model('gemini-pro');
-
   const { output } = await ai.generate({
-      model,
+      model: googleAI.model('gemini-pro'),
       prompt: promptText,
       output: {
           schema: DuelIdeaOutputSchema,

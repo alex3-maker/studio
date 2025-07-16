@@ -10,7 +10,7 @@ import { createDuelAction, type FormState } from '@/lib/actions';
 import { useActionState } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Key, Info, Sparkles, Loader } from 'lucide-react';
+import { Key, Info, Sparkles, Loader2 } from 'lucide-react';
 import { generateDuelIdea } from '@/ai/flows/generate-duel-idea-flow';
 import type { CreateDuelFormValues } from '@/lib/schemas';
 import { Button } from '@/components/ui/button';
@@ -111,7 +111,7 @@ export default function CreateDuelPage() {
                {user.role === 'admin' && (
                   <Button variant="outline" onClick={handleGenerate} disabled={isGenerating}>
                     {isGenerating ? (
-                        <Loader className="animate-spin" />
+                        <Loader2 className="animate-spin" />
                     ) : (
                         <Sparkles className="text-accent" />
                     )}

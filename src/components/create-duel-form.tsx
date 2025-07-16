@@ -30,7 +30,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Terminal, Upload, CalendarIcon, Link as LinkIcon, Loader2, Sparkles } from 'lucide-react';
+import { Terminal, Upload, CalendarIcon, Link as LinkIcon, Loader2 } from 'lucide-react';
 import type { Duel, User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import type { FormState } from '@/lib/actions';
@@ -168,8 +168,6 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
             }
             toast({ title: "Análisis Profundo", description: "No se encontraron metadatos. Usando IA para analizar la página. Esto puede tardar un momento..." });
             
-            // The 'generate' function for AI flows is not available in 'in-memory' Genkit, so we pass the key.
-            // This is a workaround specific to the playground environment.
             const aiResult = await analyzeProductPage({ htmlContent: result.htmlContent, url });
 
             form.setValue(`options.${index}.title`, aiResult.title, { shouldValidate: true });
