@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -184,17 +183,25 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
   }, [duelType, fields.length, remove]);
 
 
+  const [formSubmitted, setFormSubmitted] = useState(false);
+
   useEffect(() => {
-    if (duelDataFromAI) {
-      form.reset({
-        ...defaultValues,
-        ...duelDataFromAI,
-        type: 'A_VS_B',
-        startsAt: defaultValues.startsAt,
-        endsAt: defaultValues.endsAt,
-      });
+    if (state.success && state.newDuel && formSubmitted) {
+        addDuel(state.newDuel);
+        toast({
+            title: '¡Éxito!',
+            description: state.message,
+        });
+        setFormSubmitted(false);
+        // router.push('/panel/mis-duelos'); // This would be handled by AppContext now
     }
-  }, [duelDataFromAI, form, defaultValues]);
+  }, [state, addDuel, toast, formSubmitted]);
+
+  // Wrapper for the form action to set the submission flag
+  const handleFormAction = (payload: FormData) => {
+    setFormSubmitted(true);
+    formAction(payload);
+  };
   
   // Effect to show toast on server-side validation errors
   useEffect(() => {
@@ -286,7 +293,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
     } finally {
         setIsScraping(prev => {
             const newScraping = [...prev];
-            newScraping[index] = false;
+            newScraping[index] = true;
             return newScraping;
         });
     }
@@ -295,7 +302,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
   return (
     <Form {...form}>
       <form
-        action={formAction}
+        action={handleFormAction}
         className="space-y-8"
       >
         {isEditing && duelData?.id && <input type="hidden" name="id" value={duelData.id} />}
@@ -351,29 +358,29 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                 />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-                 <div className="md:col-span-2">
+            <div className="flex flex-col md:flex-row gap-6">
+                 <div className="w-full md:w-2/3">
                     <FormField
                       control={form.control}
                       name="description"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col h-full">
                           <FormLabel>Descripción (Opcional)</FormLabel>
-                          <div className="relative">
+                          <div className="relative flex-grow">
                               <FormControl>
-                                <Textarea placeholder="Añade una breve descripción para dar contexto." {...field} maxLength={MAX_DESC_LENGTH} className="min-h-[158px]" />
+                                <Textarea placeholder="Añade una breve descripción para dar contexto." {...field} maxLength={MAX_DESC_LENGTH} className="h-full resize-none" />
                               </FormControl>
                               <p className="absolute top-2.5 right-3 text-xs text-muted-foreground">
                                     {(descriptionValue || '').length} / {MAX_DESC_LENGTH}
                               </p>
                           </div>
-                          <FormMessage />
+                          <FormMessage className='pt-2'/>
                         </FormItem>
                       )}
                     />
                  </div>
 
-                <div className="space-y-6">
+                <div className="w-full md:w-1/3 space-y-6">
                    <FormField
                     control={form.control}
                     name="startsAt"
