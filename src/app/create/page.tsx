@@ -49,7 +49,7 @@ export default function CreateDuelPage() {
   }, [state, toast, router, addDuel, user.keys]);
 
   const handleGenerate = async () => {
-    if (!apiKey && user.role === 'admin') {
+    if (!apiKey) {
        toast({
         variant: 'destructive',
         title: 'Falta la Clave de API',
@@ -59,10 +59,8 @@ export default function CreateDuelPage() {
       return;
     }
     
-    console.log("Attempting to generate duel idea...");
     setIsGenerating(true);
     try {
-      // The API key is now handled on the server via environment variables
       const idea = await generateDuelIdea();
       setGeneratedData({
         title: idea.title,
