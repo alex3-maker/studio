@@ -22,8 +22,8 @@ export const createDuelSchema = z.object({
   title: z.string().min(3, { message: "El título debe tener al menos 3 caracteres." }).max(100),
   description: z.string().max(500).optional(),
   options: z.array(duelOptionSchema),
-  startsAt: z.date({ required_error: "La fecha de inicio es requerida." }),
-  endsAt: z.date({ required_error: "La fecha de fin es requerida." }),
+  startsAt: z.coerce.date({ required_error: "La fecha de inicio es requerida." }),
+  endsAt: z.coerce.date({ required_error: "La fecha de fin es requerida." }),
   userKeys: z.number().optional(), // Make this optional for updates
 }).superRefine((data, ctx) => {
     if (data.endsAt <= data.startsAt) {

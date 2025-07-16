@@ -524,7 +524,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
              <Alert variant="destructive">
                 <Terminal className="h-4 w-4" />
                 <AlertTitle>Error al Procesar el Formulario</AlertTitle>
-                <AlertDescription className="text-xs bg-muted text-destructive-foreground p-2 rounded-md font-mono whitespace-pre-wrap break-all max-h-60 overflow-y-auto">
+                <AlertDescription className="text-sm font-mono whitespace-pre-wrap break-all max-h-60 overflow-y-auto">
                     {state.errors._form.join('\n')}
                 </AlertDescription>
             </Alert>

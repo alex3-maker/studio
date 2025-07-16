@@ -28,19 +28,21 @@ const DUEL_CREATION_COST = 5;
 
 // Helper function to extract and construct structured data from FormData
 function getStructuredFormData(formData: FormData) {
-    const rawData: { [key: string]: any } = Object.fromEntries(formData);
+    const rawData: { [key: string]: any } = {};
     const options: any[] = [];
     
-    // A more robust way to gather options
+    // Iterate over all form entries
     for (const [key, value] of formData.entries()) {
-        const match = key.match(/options\[(\d+)\]\.(.+)/);
-        if (match) {
-            const index = parseInt(match[1], 10);
-            const property = match[2];
+        const optionMatch = key.match(/options\[(\d+)\]\.(.+)/);
+        if (optionMatch) {
+            const index = parseInt(optionMatch[1], 10);
+            const property = optionMatch[2];
             if (!options[index]) {
                 options[index] = {};
             }
             options[index][property] = value;
+        } else {
+            rawData[key] = value;
         }
     }
 
@@ -50,9 +52,9 @@ function getStructuredFormData(formData: FormData) {
         userKeys: Number(rawData.userKeys || '0'),
         title: rawData.title as string,
         description: rawData.description as string,
-        options: options,
-        startsAt: new Date(rawData.startsAt as string),
-        endsAt: new Date(rawData.endsAt as string),
+        options: options.filter(opt => opt), // Filter out empty slots if any
+        startsAt: rawData.startsAt as string,
+        endsAt: rawData.endsAt as string,
     };
 }
 
