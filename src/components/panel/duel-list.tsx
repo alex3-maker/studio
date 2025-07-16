@@ -108,9 +108,9 @@ export default function DuelList({ duels }: DuelListProps) {
 
               return (
                  <Card key={duel.id} className="overflow-hidden" onClick={() => handleRowClick(duel)}>
-                  <div className="flex items-center gap-4 p-4">
-                    {/* Chart & Status */}
-                    <div className="flex flex-col items-center justify-center gap-2 flex-shrink-0 w-24">
+                  <div className="flex flex-col md:flex-row items-center gap-4 p-4">
+                     {/* Chart & Status */}
+                    <div className="flex flex-row md:flex-col items-center justify-center gap-4 flex-shrink-0 w-full md:w-24">
                        <div className={cn("w-24 h-24 relative", currentStatus !== 'draft' && "cursor-pointer")}>
                            <ResultsChart duel={duel} />
                            {currentStatus !== 'draft' && (
@@ -119,14 +119,14 @@ export default function DuelList({ duels }: DuelListProps) {
                               </div>
                            )}
                         </div>
-                        <Badge className={cn("w-fit", statusInfo.className)}>
+                        <Badge className={cn("w-fit md:w-full text-center justify-center", statusInfo.className)}>
                            {statusInfo.text}
                         </Badge>
                     </div>
 
                     {/* Title & Details */}
-                    <div className="flex-grow min-w-0">
-                      <CardTitle className="text-xl font-headline mb-2 truncate">{duel.title}</CardTitle>
+                    <div className="flex-grow w-full min-w-0">
+                      <CardTitle className="text-xl font-headline mb-2 break-words">{duel.title}</CardTitle>
                        <div className="border-t mt-2 pt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                         {duel.createdAt && (
                           <div className="flex items-center gap-1">
@@ -150,7 +150,7 @@ export default function DuelList({ duels }: DuelListProps) {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex flex-col items-center justify-center gap-1">
+                    <div className="flex flex-row md:flex-col items-center justify-center gap-1 self-start md:self-center pt-2 md:pt-0">
                       {currentStatus === 'draft' ? (
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleActivateDuel(e, duel.id)}>
                               <CheckCircle className="h-4 w-4 text-green-500" />
