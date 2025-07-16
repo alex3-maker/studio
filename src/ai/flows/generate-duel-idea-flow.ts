@@ -4,11 +4,10 @@
 /**
  * @fileOverview A flow to generate a random duel idea.
  * - generateDuelIdea - A function that returns a duel idea.
- * - DuelIdeaOutput - The return type for the generateDuelIdea function.
+ * - DuelIdeaOutput - The return type for the generateDuelidea function.
  */
 import { z } from 'genkit';
 import { ai } from '@/ai/genkit';
-
 
 const DuelIdeaOutputSchema = z.object({
   title: z.string().describe('The title of the duel. Should be a question.'),
@@ -49,11 +48,19 @@ const generateDuelIdeaFlow = ai.defineFlow(
     outputSchema: DuelIdeaOutputSchema,
   },
   async () => {
+    // For debugging: This will log in the server console (visible in the terminal running the app)
+    // to confirm the API key is loaded from the environment.
+    if (!process.env.GEMINI_API_KEY) {
+      console.log('GEMINI_API_KEY is not available in the environment.');
+      throw new Error('GEMINI_API_KEY environment variable not set.');
+    } else {
+      console.log('GEMINI_API_KEY is loaded on the server.');
+    }
+
     const { output } = await generateDuelIdeaPrompt({});
     return output!;
   }
 );
-
 
 export async function generateDuelIdea(): Promise<DuelIdeaOutput> {
   return generateDuelIdeaFlow({});
