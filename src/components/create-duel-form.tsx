@@ -313,7 +313,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                           <FormLabel>Título del Duelo</FormLabel>
                            <div className="relative">
                               <FormControl>
-                                <Input placeholder="Ej: ¿Mejor película de ciencia ficción?" {...field} maxLength={MAX_TITLE_LENGTH} className="pr-16" />
+                                <Input placeholder="Ej: ¿Mejor película de ciencia ficción?" {...field} maxLength={MAX_TITLE_LENGTH} />
                               </FormControl>
                                <p className="absolute top-2.5 right-3 text-xs text-muted-foreground">
                                   {titleValue.length} / {MAX_TITLE_LENGTH}
@@ -351,25 +351,27 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                 />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Descripción (Opcional)</FormLabel>
-                      <div className="relative">
-                          <FormControl>
-                            <Textarea placeholder="Añade una breve descripción para dar contexto." {...field} maxLength={MAX_DESC_LENGTH} className="min-h-[158px] pr-16" />
-                          </FormControl>
-                          <p className="absolute top-2.5 right-3 text-xs text-muted-foreground">
-                                {(descriptionValue || '').length} / {MAX_DESC_LENGTH}
-                          </p>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                 <div className="md:col-span-2">
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Descripción (Opcional)</FormLabel>
+                          <div className="relative">
+                              <FormControl>
+                                <Textarea placeholder="Añade una breve descripción para dar contexto." {...field} maxLength={MAX_DESC_LENGTH} className="min-h-[158px]" />
+                              </FormControl>
+                              <p className="absolute top-2.5 right-3 text-xs text-muted-foreground">
+                                    {(descriptionValue || '').length} / {MAX_DESC_LENGTH}
+                              </p>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                 </div>
 
                 <div className="space-y-6">
                    <FormField
@@ -589,3 +591,5 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
     </Form>
   );
 }
+
+    
