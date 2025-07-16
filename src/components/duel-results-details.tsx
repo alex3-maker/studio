@@ -6,7 +6,7 @@ import type { Duel } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LabelList } from 'recharts';
 
-function A_VS_B_Results({ duel }: { duel: Duel }) {
+function TwoOptionResults({ duel }: { duel: Duel }) {
     const totalVotes = duel.options.reduce((sum, option) => sum + option.votes, 0);
 
     return (
@@ -62,9 +62,8 @@ function A_VS_B_Results({ duel }: { duel: Duel }) {
     );
 }
 
-function ListResults({ duel }: { duel: Duel }) {
+function MultiOptionResults({ duel }: { duel: Duel }) {
     const data = [...duel.options].sort((a, b) => b.votes - a.votes);
-    const totalVotes = data.reduce((sum, option) => sum + option.votes, 0);
 
     return (
          <div className="w-full h-80">
@@ -95,7 +94,7 @@ export default function DuelResultsDetails({ duel }: { duel: Duel }) {
 
     return (
         <div className="w-full space-y-4">
-            {duel.type === 'A_VS_B' ? <A_VS_B_Results duel={duel} /> : <ListResults duel={duel} />}
+            {duel.options.length === 2 ? <TwoOptionResults duel={duel} /> : <MultiOptionResults duel={duel} />}
             <div className="text-center text-sm text-muted-foreground pt-2">
                 Total de Votos: {totalVotes}
             </div>

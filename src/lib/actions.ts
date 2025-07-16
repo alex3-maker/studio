@@ -4,7 +4,7 @@
 import { moderateContent } from '@/ai/flows/moderate-content';
 import { createDuelSchema } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
-import type { Duel, DuelOption } from './types';
+import type { Duel } from './types';
 import { formatISO } from 'date-fns';
 
 export type FormState = {
@@ -13,7 +13,6 @@ export type FormState = {
   errors?: {
     title?: string[];
     description?: string[];
-    type?: string[];
     options?: (string | undefined)[] | string;
     startsAt?: string[];
     endsAt?: string[];
@@ -32,7 +31,7 @@ function getStructuredFormData(formData: FormData) {
 
     const options = [];
     let i = 0;
-    while (`options[${i}].title` in rawData) {
+    while (rawData.hasOwnProperty(`options[${i}].title`)) {
         options.push({
             id: rawData[`options[${i}].id`] as string | undefined,
             title: rawData[`options[${i}].title`] as string,
@@ -47,7 +46,6 @@ function getStructuredFormData(formData: FormData) {
         userKeys: Number(rawData.userKeys || '0'),
         title: rawData.title as string,
         description: rawData.description as string,
-        type: rawData.type as "A_VS_B" | "LIST" | "KING_OF_THE_HILL",
         options: options,
         startsAt: new Date(rawData.startsAt as string),
         endsAt: new Date(rawData.endsAt as string),
@@ -96,7 +94,7 @@ export async function createDuelAction(
     };
   }
   
-  const { title, options, description, type, startsAt, endsAt, userKeys } = validatedFields.data;
+  const { title, options, description, startsAt, endsAt, userKeys } = validatedFields.data;
 
   try {
     const moderationResult = await runModeration({ title, options });
@@ -114,7 +112,6 @@ export async function createDuelAction(
       id: `duel-${Date.now()}`,
       title,
       description: description || '',
-      type,
       status, // Will be re-evaluated in the context
       createdAt: formatISO(new Date()),
       startsAt: formatISO(startsAt),

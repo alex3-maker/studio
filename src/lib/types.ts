@@ -1,4 +1,3 @@
-
 import { z } from "zod";
 
 export type User = {
@@ -27,7 +26,6 @@ export type Duel = {
   description: string;
   options: DuelOption[];
   creator: Pick<User, 'name' | 'avatarUrl' | 'id'>;
-  type: 'A_VS_B' | 'LIST' | 'KING_OF_THE_HILL';
   status: 'active' | 'closed' | 'scheduled' | 'draft' | 'inactive';
   createdAt: string; // ISO 8601 string
   startsAt: string; // ISO 8601 string

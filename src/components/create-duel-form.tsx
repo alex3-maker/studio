@@ -20,13 +20,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -123,21 +116,19 @@ function ManualInputFields({ form, index, handleFileChange, fileInputRefs }: any
 export default function CreateDuelForm({ user, state, formAction, duelData, isEditing = false, isPending, duelDataFromAI }: CreateDuelFormProps) {
   const { toast } = useToast();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const [productUrls, setProductUrls] = useState<string[]>(['', '', '', '', '']);
-  const [isScraping, setIsScraping] = useState<boolean[]>([false, false, false, false, false]);
+  const [productUrls, setProductUrls] = useState<string[]>(['', '', '', '', '', '', '', '']);
+  const [isScraping, setIsScraping] = useState<boolean[]>([false, false, false, false, false, false, '', '']);
   const { apiKey, isAiEnabled } = useAppContext();
   
   const defaultValues = duelData ? {
       title: duelData.title,
       description: duelData.description,
-      type: duelData.type,
       options: duelData.options.map(opt => ({ title: opt.title, imageUrl: opt.imageUrl || '', affiliateUrl: opt.affiliateUrl || '' })),
       startsAt: new Date(duelData.startsAt),
       endsAt: new Date(duelData.endsAt),
   } : {
       title: '',
       description: '',
-      type: 'A_VS_B',
       options: [
         { title: '', imageUrl: '', affiliateUrl: '' },
         { title: '', imageUrl: '', affiliateUrl: '' },
@@ -151,26 +142,10 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
     defaultValues: duelDataFromAI ? { ...defaultValues, ...duelDataFromAI } : defaultValues,
   });
 
-  const { fields, append, remove, replace } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'options',
   });
-
-  const watchDuelType = form.watch('type');
-
-  useEffect(() => {
-    if (isEditing) return; // Don't change options layout when editing
-
-    if (watchDuelType === 'A_VS_B') {
-        if(fields.length !== 2) {
-            replace([
-                { title: '', imageUrl: '', affiliateUrl: '' },
-                { title: '', imageUrl: '', affiliateUrl: '' },
-            ]);
-        }
-    }
-  }, [watchDuelType, fields.length, replace, isEditing]);
-
 
   useEffect(() => {
     if (duelDataFromAI) {
@@ -179,7 +154,6 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
         ...duelDataFromAI,
         startsAt: defaultValues.startsAt,
         endsAt: defaultValues.endsAt,
-        type: defaultValues.type,
       });
     }
   }, [duelDataFromAI, form, defaultValues]);
@@ -272,10 +246,6 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
     <Form {...form}>
       <form
         action={formAction}
-        onSubmit={form.handleSubmit(() => {
-          // This function is now only used to trigger client-side validation
-          // The actual submission is handled by the `action` prop on the <form> element
-        })}
         className="space-y-8"
       >
         {isEditing && duelData?.id && <input type="hidden" {...form.register('id')} value={duelData.id} />}
@@ -400,32 +370,6 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
             )}
           />
         </div>
-
-        <FormField
-          control={form.control}
-          name="type"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tipo de Duelo</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isEditing}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un formato de duelo" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="A_VS_B">A vs B</SelectItem>
-                  <SelectItem value="LIST">Lista</SelectItem>
-                  <SelectItem value="KING_OF_THE_HILL" disabled>Rey de la Colina (Próximamente)</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormDescription>
-                {isEditing ? "El tipo de duelo no se puede cambiar una vez creado." : "Elige el formato para tu duelo."}
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         
         <Separator />
 
@@ -453,7 +397,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                             </div>
                         )}
                         
-                        {isAiEnabled && watchDuelType === 'A_VS_B' ? (
+                        {isAiEnabled && index < 2 ? (
                             <Tabs defaultValue="manual" className="w-full">
                                 <TabsList className="grid w-full grid-cols-2">
                                     <TabsTrigger value="manual">Entrada Manual</TabsTrigger>
@@ -495,7 +439,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                              <ManualInputFields form={form} index={index} handleFileChange={handleFileChange} fileInputRefs={fileInputRefs} />
                         )}
                     </CardContent>
-                     {watchDuelType === 'LIST' && fields.length > 2 && (
+                     {fields.length > 2 && (
                       <Button
                         type="button"
                         variant="ghost"
@@ -508,7 +452,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                     )}
                 </Card>
             ))}
-             {watchDuelType === 'LIST' && fields.length < 5 && (
+             {fields.length < 8 && (
                 <Button
                     type="button"
                     variant="outline"
@@ -519,7 +463,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                     Añadir Opción
                 </Button>
             )}
-            <FormMessage>{state.errors?.options}</FormMessage>
+            <FormMessage>{form.formState.errors.options?.message}</FormMessage>
         </div>
         
         {state.errors?.moderation && (

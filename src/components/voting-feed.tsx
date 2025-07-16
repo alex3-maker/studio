@@ -35,12 +35,12 @@ function A_VS_B_Duel({ duel, onVote }: { duel: Duel, onVote: (option: DuelOption
 // Component for "List" duel type
 function ListDuel({ duel, onVote }: { duel: Duel, onVote: (option: DuelOption) => void }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {duel.options.map((option) => (
-        <Card key={option.id} className="cursor-pointer hover:bg-muted" onClick={() => onVote(option)}>
+        <Card key={option.id} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onVote(option)}>
           <CardContent className="p-4 flex items-center gap-4">
             {option.imageUrl && (
-              <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
+              <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0 bg-muted">
                 <img src={option.imageUrl} alt={option.title} className="w-full h-full object-cover" />
               </div>
             )}
@@ -120,7 +120,7 @@ export default function VotingFeed() {
         
         document.getElementById(`results-trigger-${currentDuel.id}`)?.click();
       });
-    }, currentDuel.type === 'A_VS_B' ? 350 : 100);
+    }, currentDuel.options.length === 2 ? 350 : 100);
   };
   
   const onDialogClose = () => {
@@ -166,7 +166,7 @@ export default function VotingFeed() {
           <Smartphone className="h-4 w-4" />
           <AlertTitle>Mejor en horizontal</AlertTitle>
           <AlertDescription>
-            Para una mejor experiencia en duelos 'A vs B', gira tu dispositivo.
+            Para una mejor experiencia en duelos de 2 opciones, gira tu dispositivo.
           </AlertDescription>
           <Button
             variant="ghost"
@@ -189,8 +189,11 @@ export default function VotingFeed() {
       </Card>
       
       <div className={cn(animationClass)}>
-        {currentDuel.type === 'A_VS_B' && <A_VS_B_Duel duel={currentDuel} onVote={(option, direction) => handleVote(option, direction)} />}
-        {currentDuel.type === 'LIST' && <ListDuel duel={currentDuel} onVote={(option) => handleVote(option)} />}
+        {currentDuel.options.length === 2 ? (
+          <A_VS_B_Duel duel={currentDuel} onVote={(option, direction) => handleVote(option, direction)} />
+        ) : (
+          <ListDuel duel={currentDuel} onVote={(option) => handleVote(option)} />
+        )}
       </div>
 
 
