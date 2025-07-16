@@ -7,8 +7,7 @@
  * - DuelIdeaOutput - The return type for the generateDuelidea function.
  */
 import { z } from 'genkit';
-import { ai } from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/googleai';
+import { googleAI, generate } from '@genkit-ai/googleai';
 
 const DuelIdeaOutputSchema = z.object({
   title: z.string().describe('The title of the duel. Should be a question.'),
@@ -40,7 +39,7 @@ const promptText = `You are a creative assistant specialized in creating engagin
 export async function generateDuelIdea(apiKey: string): Promise<DuelIdeaOutput> {
   const model = googleAI.model('gemini-pro');
 
-  const { output } = await ai.generate({
+  const { output } = await generate({
       model,
       prompt: promptText,
       output: {
