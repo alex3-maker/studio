@@ -71,6 +71,11 @@ interface CreateDuelFormProps {
 }
 
 function ManualInputFields({ form, index, handleFileChange, fileInputRefs }: any) {
+    const { fields } = useFieldArray({
+        control: form.control,
+        name: "options"
+    });
+
     return (
         <div className="space-y-4 mt-4">
             <FormField
@@ -93,7 +98,11 @@ function ManualInputFields({ form, index, handleFileChange, fileInputRefs }: any
                         </div>
                         <input
                             type="file"
-                            ref={el => fileInputRefs.current[index] = el}
+                            ref={el => {
+                                if (el) {
+                                    fileInputRefs.current[index] = el;
+                                }
+                            }}
                             className="hidden"
                             accept="image/*"
                             onChange={(e) => handleFileChange(e, index)}
@@ -105,7 +114,7 @@ function ManualInputFields({ form, index, handleFileChange, fileInputRefs }: any
             />
              <FormField
                 control={form.control}
-                name={`options.${index}.affiliateUrl`}
+                name={`options[${index}].affiliateUrl`}
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>URL (Opcional)</FormLabel>
@@ -129,11 +138,11 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
   const { apiKey, isAiEnabled } = useAppContext();
   
   const defaultValues = duelData ? {
-      type: duelData.type,
+      type: duelData.type || 'A_VS_B',
       id: duelData.id,
       title: duelData.title,
       description: duelData.description,
-      options: duelData.options.map(opt => ({ title: opt.title, imageUrl: opt.imageUrl || '', affiliateUrl: opt.affiliateUrl || '' })),
+      options: duelData.options.map(opt => ({ id: opt.id, title: opt.title, imageUrl: opt.imageUrl || '', affiliateUrl: opt.affiliateUrl || '' })),
       startsAt: new Date(duelData.startsAt),
       endsAt: new Date(duelData.endsAt),
   } : {
@@ -162,6 +171,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
 
   useEffect(() => {
     if (duelType === 'A_VS_B' && fields.length > 2) {
+      // remove extra fields if type is A_VS_B
       for (let i = fields.length - 1; i > 1; i--) {
         remove(i);
       }
@@ -180,6 +190,18 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
       });
     }
   }, [duelDataFromAI, form, defaultValues]);
+  
+  // Effect to show toast on server-side validation errors
+  useEffect(() => {
+    if (state.message && !state.success) {
+      toast({
+        variant: 'destructive',
+        title: 'Error de validación',
+        description: state.message,
+      });
+    }
+  }, [state, toast]);
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const file = e.target.files?.[0];
@@ -333,7 +355,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Fecha de Inicio</FormLabel>
-                 {field.value && <input type="hidden" name="startsAt" value={formatISO(field.value)} />}
+                <input type="hidden" name="startsAt" value={field.value ? formatISO(field.value) : ''} />
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -378,7 +400,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Fecha de Fin</FormLabel>
-                {field.value && <input type="hidden" name="endsAt" value={formatISO(field.value)} />}
+                <input type="hidden" name="endsAt" value={field.value ? formatISO(field.value) : ''} />
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -428,9 +450,10 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                         <CardTitle>Opción {index + 1}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                       <input type="hidden" {...form.register(`options[${index}].id`)} />
                         <FormField
                             control={form.control}
-                            name={`options.${index}.title`}
+                            name={`options[${index}].title`}
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Título de la Opción</FormLabel>
@@ -511,7 +534,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                     Añadir Opción
                 </Button>
             )}
-            <FormMessage>{form.formState.errors.options?.message}</FormMessage>
+            <FormMessage>{form.formState.errors.options?.root?.message}</FormMessage>
         </div>
         
         {state.errors?.moderation && (
@@ -526,7 +549,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
              <Alert variant="destructive">
                 <Terminal className="h-4 w-4" />
                 <AlertTitle>Error al Procesar el Formulario</AlertTitle>
-                <AlertDescription className="text-sm font-mono whitespace-pre-wrap break-all max-h-60 overflow-y-auto text-destructive-foreground bg-destructive/20 p-2 rounded">
+                <AlertDescription className="text-sm font-mono whitespace-pre-wrap break-all max-h-60 overflow-y-auto text-destructive bg-destructive/10 p-2 rounded">
                     {state.errors._form.join('\n')}
                 </AlertDescription>
             </Alert>

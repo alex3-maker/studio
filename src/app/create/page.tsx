@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import CreateDuelForm from "@/components/create-duel-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,27 +26,13 @@ const initialState: FormState = {
 export default function CreateDuelPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { addDuel, user, apiKey, isAiEnabled } = useAppContext();
+  const { user, apiKey, isAiEnabled } = useAppContext();
   const [state, formAction, isPending] = useActionState(createDuelAction, initialState);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedData, setGeneratedData] = useState<Partial<CreateDuelFormValues> | null>(null);
 
-  useEffect(() => {
-    if (state.success && state.newDuel) {
-      addDuel(state.newDuel);
-      toast({
-        title: state.newDuel.status === 'draft' ? '¡Borrador Guardado!' : '¡Éxito!',
-        description: state.message,
-      });
-      router.push('/panel/mis-duelos');
-    } else if (state.message && !state.success) {
-       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: state.message,
-      });
-    }
-  }, [state, toast, router, addDuel, user.keys]);
+  // NOTE: The logic for redirection and toast is now handled inside the server action
+  // to prevent multiple submissions in React Strict Mode.
 
   const handleGenerate = async () => {
     if (!apiKey) {
@@ -69,6 +55,10 @@ export default function CreateDuelPage() {
           { title: idea.option1, imageUrl: '' },
           { title: idea.option2, imageUrl: '' },
         ]
+      });
+       toast({
+        title: '¡Idea Generada!',
+        description: 'Hemos rellenado el formulario por ti. ¡Puedes editarlo antes de crearlo!',
       });
     } catch (error) {
       console.error("Error generating duel idea:", error);

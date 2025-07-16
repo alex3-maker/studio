@@ -32,7 +32,7 @@ export const createDuelSchema = z.object({
       required_error: "La fecha de fin es requerida.",
       invalid_type_error: "Por favor, selecciona una fecha de fin válida."
   }),
-  userKeys: z.string().optional(),
+  userKeys: z.number().optional(),
 }).superRefine((data, ctx) => {
     if (data.endsAt <= data.startsAt) {
         ctx.addIssue({
