@@ -28,31 +28,27 @@ const DUEL_CREATION_COST = 5;
 
 // This helper function reconstructs the nested options array from the flat FormData
 function processFormDataWithOptions(formData: FormData) {
-  const data: Record<string, any> = {};
-  const options: { title: string; imageUrl?: string; affiliateUrl?: string, id?: string }[] = [];
-  const optionsMap: Record<number, any> = {};
+    const data: { [key: string]: any } = {};
+    const options: any[] = [];
 
-  formData.forEach((value, key) => {
-    const optionMatch = key.match(/^options\[(\d+)\]\.(.*)$/);
-    if (optionMatch) {
-      const [, indexStr, field] = optionMatch;
-      const index = parseInt(indexStr, 10);
-      if (!optionsMap[index]) {
-        optionsMap[index] = {};
-      }
-      optionsMap[index][field] = value;
-    } else {
-      data[key] = value;
+    for (const [key, value] of formData.entries()) {
+        const optionMatch = key.match(/^options\.(\d+)\.(.+)$/);
+
+        if (optionMatch) {
+            const [, indexStr, field] = optionMatch;
+            const index = parseInt(indexStr, 10);
+            
+            if (!options[index]) {
+                options[index] = {};
+            }
+            options[index][field] = value;
+        } else {
+            data[key] = value;
+        }
     }
-  });
-
-  // Convert the map to an array, ensuring order
-  Object.keys(optionsMap).sort((a,b) => parseInt(a) - parseInt(b)).forEach(index => {
-      options.push(optionsMap[parseInt(index)]);
-  });
-
-  data.options = options.filter(opt => opt.title); // Only include options that have a title
-  return data;
+    
+    data.options = options.filter(opt => opt && opt.title); // Filter out empty/undefined slots
+    return data;
 }
 
 
