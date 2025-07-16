@@ -268,37 +268,19 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
     }
   };
 
-  const onSubmit = (data: CreateDuelFormValues) => {
-    const formData = new FormData();
-    if (isEditing && duelData?.id) {
-        formData.append('id', duelData.id);
-    } else if (user) {
-        formData.append('userKeys', user.keys.toString());
-    }
-
-    formData.append('title', data.title);
-    formData.append('description', data.description || '');
-    formData.append('type', data.type);
-    formData.append('startsAt', data.startsAt.toISOString());
-    formData.append('endsAt', data.endsAt.toISOString());
-
-    data.options.forEach((option, index) => {
-        formData.append(`options.${index}.title`, option.title);
-        formData.append(`options.${index}.imageUrl`, option.imageUrl || '');
-        formData.append(`options.${index}.affiliateUrl`, option.affiliateUrl || '');
-        if (isEditing && duelData?.options[index]?.id) {
-          formData.append(`options.${index}.id`, duelData.options[index].id);
-        }
-    });
-    formAction(formData);
-  };
-
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit(onSubmit)}
+        action={formAction}
+        onSubmit={form.handleSubmit(() => {
+          // This function is now only used to trigger client-side validation
+          // The actual submission is handled by the `action` prop on the <form> element
+        })}
         className="space-y-8"
       >
+        {isEditing && duelData?.id && <input type="hidden" {...form.register('id')} value={duelData.id} />}
+        {!isEditing && user && <input type="hidden" {...form.register('userKeys')} value={user.keys} />}
+        
         <FormField
           control={form.control}
           name="title"

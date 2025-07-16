@@ -26,33 +26,34 @@ export type FormState = {
 
 const DUEL_CREATION_COST = 5;
 
-function getFormData(formData: FormData) {
-  const startsAt = formData.get('startsAt') as string;
-  const endsAt = formData.get('endsAt') as string;
+// Helper function to extract and construct structured data from FormData
+function getStructuredFormData(formData: FormData) {
+    const rawData = Object.fromEntries(formData.entries());
 
-  const options = [];
-  let i = 0;
-  while(formData.has(`options.${i}.title`)) {
-    options.push({
-        id: formData.get(`options.${i}.id`) as string | undefined,
-        title: formData.get(`options.${i}.title`) as string,
-        imageUrl: formData.get(`options.${i}.imageUrl`) as string,
-        affiliateUrl: formData.get(`options.${i}.affiliateUrl`) as string,
-    });
-    i++;
-  }
+    const options = [];
+    let i = 0;
+    while (`options[${i}].title` in rawData) {
+        options.push({
+            id: rawData[`options[${i}].id`] as string | undefined,
+            title: rawData[`options[${i}].title`] as string,
+            imageUrl: rawData[`options[${i}].imageUrl`] as string,
+            affiliateUrl: rawData[`options[${i}].affiliateUrl`] as string,
+        });
+        i++;
+    }
 
-  return {
-    id: formData.get('id') as string | undefined,
-    userKeys: Number(formData.get('userKeys') || '0'),
-    title: formData.get('title') as string,
-    description: formData.get('description') as string,
-    type: formData.get('type') as "A_VS_B" | "LIST" | "KING_OF_THE_HILL",
-    options: options,
-    startsAt: startsAt ? new Date(startsAt) : undefined,
-    endsAt: endsAt ? new Date(endsAt) : undefined,
-  };
+    return {
+        id: rawData.id as string | undefined,
+        userKeys: Number(rawData.userKeys || '0'),
+        title: rawData.title as string,
+        description: rawData.description as string,
+        type: rawData.type as "A_VS_B" | "LIST" | "KING_OF_THE_HILL",
+        options: options,
+        startsAt: new Date(rawData.startsAt as string),
+        endsAt: new Date(rawData.endsAt as string),
+    };
 }
+
 
 async function runModeration(data: { title: string; options: { title: string }[] }): Promise<{ success: boolean; message?: string; errors?: { moderation: string } }> {
   // const { title, options } = data;
@@ -84,7 +85,7 @@ export async function createDuelAction(
   formData: FormData
 ): Promise<FormState> {
   
-  const rawFormData = getFormData(formData);
+  const rawFormData = getStructuredFormData(formData);
   const validatedFields = createDuelSchema.safeParse(rawFormData);
   
   if (!validatedFields.success) {
@@ -157,7 +158,7 @@ export async function updateDuelAction(
   prevState: FormState,
   formData: FormData
 ): Promise<FormState> {
-  const rawFormData = getFormData(formData);
+  const rawFormData = getStructuredFormData(formData);
   
   if (!rawFormData.id) {
     return { success: false, message: "ID del duelo no encontrado.", errors: { _form: ["ID del duelo no encontrado."] } };
@@ -197,7 +198,6 @@ export async function updateDuelAction(
         title: options[index].title,
         imageUrl: options[index].imageUrl || undefined,
         affiliateUrl: options[index].affiliateUrl || undefined,
-        // Votes are preserved from the original state in the context, so no need to set them here
       }))
     };
 
