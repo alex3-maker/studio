@@ -34,6 +34,7 @@ interface AppContextType {
   updateDuel: (updatedDuel: Partial<Duel> & { id: string }) => void;
   toggleDuelStatus: (duelId: string) => void;
   deleteDuel: (duelId: string) => void;
+  deleteMultipleDuels: (duelIds: string[]) => void;
   resetDuelVotes: (duelId: string, isAdminReset?: boolean) => void;
   getDuelStatus: (duel: Duel) => Duel['status'];
   markNotificationAsRead: (notificationId: string) => void;
@@ -371,6 +372,35 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [duels, users, user.id]);
   
+  const deleteMultipleDuels = useCallback((duelIds: string[]) => {
+    const duelsToDelete = duels.filter(d => duelIds.includes(d.id));
+    if (duelsToDelete.length === 0) return;
+
+    setDuels(prevDuels => prevDuels.filter(duel => !duelIds.includes(duel.id)));
+
+    // Group deleted duels by creator to update their counts
+    const duelsByCreator = duelsToDelete.reduce((acc, duel) => {
+        acc[duel.creator.id] = (acc[duel.creator.id] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
+
+    // Update users state
+    setUsers(prevUsers => prevUsers.map(u => {
+        if (duelsByCreator[u.id]) {
+            return { ...u, duelsCreated: Math.max(0, u.duelsCreated - duelsByCreator[u.id]) };
+        }
+        return u;
+    }));
+    
+    // Update the current user if they are one of the creators
+    if (duelsByCreator[user.id]) {
+        setUser(prevUser => ({
+            ...prevUser,
+            duelsCreated: Math.max(0, prevUser.duelsCreated - duelsByCreator[user.id]),
+        }));
+    }
+  }, [duels, user.id]);
+
   const resetDuelVotes = useCallback((duelId: string, isOwnerReset: boolean = false) => {
     let duelTitle = '';
     setDuels(prevDuels => prevDuels.map(duel => {
@@ -446,6 +476,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     updateDuel, 
     toggleDuelStatus, 
     deleteDuel, 
+    deleteMultipleDuels,
     resetDuelVotes, 
     votedDuelIds, 
     userVotedOptions,

@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, Power, PowerOff, Edit, RotateCcw, Clock, CalendarDays, BarChart2, CheckCircle } from "lucide-react";
+import { Trash2, Power, PowerOff, Edit, RotateCcw, Clock, CalendarDays, BarChart2, CheckCircle, X } from "lucide-react";
 import type { Duel } from "@/lib/types";
 import ResultsChart from "./results-chart";
 import {
@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
+import { Checkbox } from "../ui/checkbox";
 
 interface DuelListProps {
   duels: Duel[];
@@ -40,8 +41,9 @@ const statusConfig = {
 };
 
 export default function DuelList({ duels }: DuelListProps) {
-  const { toggleDuelStatus, deleteDuel, resetDuelVotes, getDuelStatus, activateDraftDuel } = useAppContext();
+  const { toggleDuelStatus, deleteDuel, resetDuelVotes, getDuelStatus, activateDraftDuel, deleteMultipleDuels } = useAppContext();
   const [selectedDuel, setSelectedDuel] = useState<Duel | null>(null);
+  const [selectedDuelIds, setSelectedDuelIds] = useState<string[]>([]);
   const { toast } = useToast();
 
   const handleRowClick = (duel: Duel) => {
@@ -75,6 +77,32 @@ export default function DuelList({ duels }: DuelListProps) {
       }
   }
 
+  const handleSelectDuel = (duelId: string, isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedDuelIds(prev => [...prev, duelId]);
+    } else {
+      setSelectedDuelIds(prev => prev.filter(id => id !== duelId));
+    }
+  };
+
+  const handleSelectAll = (isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedDuelIds(duels.map(d => d.id));
+    } else {
+      setSelectedDuelIds([]);
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    const count = selectedDuelIds.length;
+    deleteMultipleDuels(selectedDuelIds);
+    setSelectedDuelIds([]);
+    toast({
+      title: "Duelos Eliminados",
+      description: `Se han eliminado ${count} duelo(s) correctamente.`,
+    });
+  };
+
   const getTotalVotes = (duel: Duel) => duel.options.reduce((sum, option) => sum + option.votes, 0);
 
   if (duels.length === 0) {
@@ -93,6 +121,8 @@ export default function DuelList({ duels }: DuelListProps) {
     )
   }
 
+  const areAllSelected = duels.length > 0 && selectedDuelIds.length === duels.length;
+
   return (
     <>
     <Card>
@@ -102,15 +132,62 @@ export default function DuelList({ duels }: DuelListProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+            {selectedDuelIds.length > 0 && (
+                <div className="flex items-center justify-between p-3 bg-secondary rounded-lg border">
+                    <div className="text-sm font-medium">
+                        {selectedDuelIds.length} duelo(s) seleccionado(s)
+                    </div>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Eliminar Seleccionados
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Esta acción eliminará permanentemente los {selectedDuelIds.length} duelos seleccionados y no se puede deshacer.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteSelected}>Sí, Eliminar</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+            )}
+            <div className="flex items-center px-4 py-2 border-b">
+                <Checkbox
+                    id="select-all"
+                    checked={areAllSelected}
+                    onCheckedChange={(checked) => handleSelectAll(Boolean(checked))}
+                    aria-label="Seleccionar todos los duelos"
+                    className="mr-4"
+                />
+                <label htmlFor="select-all" className="text-sm font-medium text-muted-foreground cursor-pointer">
+                    Seleccionar todos
+                </label>
+            </div>
           {duels.map((duel) => {
               const currentStatus = getDuelStatus(duel);
               const statusInfo = statusConfig[currentStatus];
 
               return (
-                 <Card key={duel.id} className="overflow-hidden" onClick={() => handleRowClick(duel)}>
-                  <div className="flex flex-col md:flex-row items-center gap-4 p-4">
+                 <Card key={duel.id} className="overflow-hidden">
+                  <div className="flex items-center gap-4 p-4">
+                    <Checkbox
+                        id={`select-${duel.id}`}
+                        checked={selectedDuelIds.includes(duel.id)}
+                        onCheckedChange={(checked) => handleSelectDuel(duel.id, Boolean(checked))}
+                        aria-label={`Seleccionar duelo ${duel.title}`}
+                        className="flex-shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                    />
                      {/* Chart & Status */}
-                    <div className="flex flex-row md:flex-col items-center justify-center gap-4 flex-shrink-0 w-full md:w-24">
+                    <div className="flex flex-row md:flex-col items-center justify-center gap-4 flex-shrink-0 w-full md:w-24 cursor-pointer" onClick={() => handleRowClick(duel)}>
                        <div className={cn("w-24 h-24 relative", currentStatus !== 'draft' && "cursor-pointer")}>
                            <ResultsChart duel={duel} />
                            {currentStatus !== 'draft' && (
@@ -125,7 +202,7 @@ export default function DuelList({ duels }: DuelListProps) {
                     </div>
 
                     {/* Title & Details */}
-                    <div className="flex-grow w-full min-w-0">
+                    <div className="flex-grow w-full min-w-0 cursor-pointer" onClick={() => handleRowClick(duel)}>
                       <CardTitle className="text-xl font-headline mb-2 break-words">{duel.title}</CardTitle>
                        <div className="border-t mt-2 pt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                         {duel.createdAt && (
