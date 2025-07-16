@@ -130,6 +130,9 @@ function ManualInputFields({ form, index, handleFileChange, fileInputRefs }: any
     );
 }
 
+const MAX_TITLE_LENGTH = 100;
+const MAX_DESC_LENGTH = 500;
+
 export default function CreateDuelForm({ user, state, formAction, duelData, isEditing = false, isPending, duelDataFromAI }: CreateDuelFormProps) {
   const { toast } = useToast();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -168,6 +171,8 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
   });
   
   const duelType = form.watch('type');
+  const titleValue = form.watch('title');
+  const descriptionValue = form.watch('description');
 
   useEffect(() => {
     if (duelType === 'A_VS_B' && fields.length > 2) {
@@ -297,45 +302,53 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
         {!isEditing && user && <input type="hidden" name="userKeys" value={user.keys} />}
         
         {/* Header Fields */}
-        <div className="space-y-8">
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo de Duelo</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} disabled={isEditing}>
-                      <FormControl>
-                        <SelectTrigger className="md:w-1/2">
-                          <SelectValue placeholder="Selecciona un tipo de duelo" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="A_VS_B">Duelo A vs B</SelectItem>
-                        <SelectItem value="LIST">Lista (Ranking)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  <FormDescription>Elige el formato de tu duelo. No se puede cambiar después de crearlo.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2">
+                    <FormField
+                      control={form.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Título del Duelo</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ej: ¿Mejor película de ciencia ficción?" {...field} maxLength={MAX_TITLE_LENGTH} />
+                          </FormControl>
+                          <FormDescription>
+                            Un título atractivo para tu duelo.
+                          </FormDescription>
+                           <div className="text-right text-xs text-muted-foreground">
+                                {titleValue.length} / {MAX_TITLE_LENGTH}
+                           </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                </div>
+                 <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo de Duelo</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} disabled={isEditing}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecciona un tipo de duelo" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="A_VS_B">Duelo A vs B</SelectItem>
+                            <SelectItem value="LIST">Lista (Ranking)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      <FormDescription>Elige el formato. No se puede cambiar después.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+            </div>
             
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Título del Duelo</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ej: ¿Mejor película de ciencia ficción?" {...field} />
-                  </FormControl>
-                  <FormDescription>Un título atractivo para tu duelo.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <FormField
               control={form.control}
               name="description"
@@ -343,14 +356,17 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                 <FormItem>
                   <FormLabel>Descripción (Opcional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Añade una breve descripción para dar contexto." {...field} />
+                    <Textarea placeholder="Añade una breve descripción para dar contexto." {...field} maxLength={MAX_DESC_LENGTH} />
                   </FormControl>
+                  <div className="text-right text-xs text-muted-foreground">
+                        {(descriptionValue || '').length} / {MAX_DESC_LENGTH}
+                   </div>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
                 name="startsAt"
@@ -364,16 +380,16 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full pl-3 text-left font-normal",
+                              "w-full justify-start text-left font-normal",
                               !field.value && "text-muted-foreground"
                             )}
                           >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
                             {field.value ? (
                               format(field.value, "PPP", { locale: es })
                             ) : (
                               <span>Elige una fecha</span>
                             )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
@@ -409,16 +425,16 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full pl-3 text-left font-normal",
+                              "w-full justify-start text-left font-normal",
                               !field.value && "text-muted-foreground"
                             )}
                           >
+                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {field.value ? (
                               format(field.value, "PPP", { locale: es })
                             ) : (
                               <span>Elige una fecha</span>
                             )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
