@@ -26,40 +26,37 @@ export type FormState = {
 
 const DUEL_CREATION_COST = 5;
 
-// Helper function to extract and construct structured data from FormData
-function getStructuredFormData(formData: FormData) {
-    const rawData: { [key: string]: any } = {};
-    const options: any[] = [];
-    
-    // Iterate over all form entries
-    for (const [key, value] of formData.entries()) {
-        const optionMatch = key.match(/options\[(\d+)\]\.(.+)/);
-        if (optionMatch) {
-            const index = parseInt(optionMatch[1], 10);
-            const property = optionMatch[2];
-            if (!options[index]) {
-                options[index] = {};
-            }
-            options[index][property] = value;
-        } else {
-            rawData[key] = value;
-        }
-    }
+// This helper function reconstructs the nested options array from the flat FormData
+function processFormData(formData: FormData) {
+  const data: Record<string, any> = Object.fromEntries(formData.entries());
+  const options: { title: string; imageUrl?: string; affiliateUrl?: string, id?: string }[] = [];
+  const optionKeys = Object.keys(data).filter(key => key.startsWith('options['));
 
-    return {
-        id: rawData.id as string | undefined,
-        type: rawData.type as 'A_VS_B' | 'LIST',
-        userKeys: Number(rawData.userKeys || '0'),
-        title: rawData.title as string,
-        description: rawData.description as string,
-        options: options.filter(opt => opt), // Filter out empty slots if any
-        startsAt: rawData.startsAt as string,
-        endsAt: rawData.endsAt as string,
-    };
+  // Determine the number of options based on the keys
+  const numOptions = optionKeys.reduce((max, key) => {
+    const match = key.match(/options\[(\d+)\]/);
+    return match ? Math.max(max, parseInt(match[1], 10)) : max;
+  }, -1) + 1;
+
+  for (let i = 0; i < numOptions; i++) {
+    const title = data[`options[${i}].title`];
+    // Only add the option if it has a title. This prevents empty entries.
+    if (title) {
+        options.push({
+            id: data[`options[${i}].id`], // Include id for updates
+            title: title,
+            imageUrl: data[`options[${i}].imageUrl`],
+            affiliateUrl: data[`options[${i}].affiliateUrl`],
+        });
+    }
+  }
+  
+  data.options = options;
+  return data;
 }
 
 
-async function runModeration(data: { title: string; options: { title: string }[] }): Promise<{ success: boolean; message?: string; errors?: { moderation: string } }> {
+async function runModeration(data: { title:string; options:{ title:string }[] }): Promise<{ success:boolean; message?:string; errors?:{ moderation:string } }> {
   // const { title, options } = data;
   // const titleModeration = await moderateContent({ content: title, contentType: 'text' });
   // if (!titleModeration.isSafe) {
@@ -89,7 +86,7 @@ export async function createDuelAction(
   formData: FormData
 ): Promise<FormState> {
   
-  const rawFormData = getStructuredFormData(formData);
+  const rawFormData = processFormData(formData);
   const validatedFields = createDuelSchema.safeParse(rawFormData);
   
   if (!validatedFields.success) {
@@ -115,7 +112,7 @@ export async function createDuelAction(
     revalidatePath('/');
     revalidatePath('/panel/mis-duelos');
 
-    const hasEnoughKeys = userKeys >= DUEL_CREATION_COST;
+    const hasEnoughKeys = (userKeys || 0) >= DUEL_CREATION_COST;
     const status: Duel['status'] = hasEnoughKeys ? 'scheduled' : 'draft'; // Let the context determine if it's active
 
     const newDuel: Duel = {
@@ -166,14 +163,12 @@ export async function updateDuelAction(
   prevState: FormState,
   formData: FormData
 ): Promise<FormState> {
-  const rawFormData = getStructuredFormData(formData);
+  const rawFormData = processFormData(formData);
   
   if (!rawFormData.id) {
     return { success: false, message: "ID del duelo no encontrado.", errors: { _form: ["ID del duelo no encontrado."] } };
   }
 
-  // For updates, we can use a slightly more lenient schema or just parse the parts we need.
-  // The type cannot be changed, so we don't need to validate it again.
   const validatedFields = createDuelSchema.safeParse(rawFormData);
 
   if (!validatedFields.success) {
@@ -188,7 +183,7 @@ export async function updateDuelAction(
     };
   }
 
-  const { title, options, description, startsAt, endsAt } = validatedFields.data;
+  const { title, options, description, startsAt, endsAt, type } = validatedFields.data;
 
   try {
     const moderationResult = await runModeration({ title, options });
@@ -203,15 +198,16 @@ export async function updateDuelAction(
 
     const updatedDuel: Partial<Duel> & { id: string } = {
       id: rawFormData.id,
+      type,
       title,
       description: description || '',
       startsAt: formatISO(startsAt),
       endsAt: formatISO(endsAt),
-      options: rawFormData.options.map((opt, index) => ({
+      options: options.map((opt, index) => ({
         id: opt.id || `opt-${rawFormData.id}-${index}`, // Ensure option has an id
-        title: options[index].title,
-        imageUrl: options[index].imageUrl || undefined,
-        affiliateUrl: options[index].affiliateUrl || undefined,
+        title: opt.title,
+        imageUrl: opt.imageUrl || undefined,
+        affiliateUrl: opt.affiliateUrl || undefined,
         votes: 0, // IMPORTANT: Votes preservation is handled in the context.
       }))
     };
