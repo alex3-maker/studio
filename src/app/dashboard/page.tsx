@@ -1,14 +1,15 @@
 'use client';
 
-import DuelList from "@/components/dashboard/duel-list";
+import DuelList from "@/components/panel/duel-list";
 import { useAppContext } from "@/context/app-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Key, Flame, Vote } from "lucide-react";
+import { useMemo } from "react";
 
 export default function DashboardOverviewPage() {
     const { user, duels } = useAppContext();
-    const userDuels = duels.filter(duel => duel.creator.id === user.id);
-    
+    const userDuels = useMemo(() => duels.filter(duel => duel.creator.id === user.id), [duels, user.id]);
+
     const stats = [
         { label: "Llaves Ganadas", value: user.keys, icon: Key, color: "text-yellow-500" },
         { label: "Duelos Creados", value: user.duelsCreated, icon: Flame, color: "text-red-500" },
