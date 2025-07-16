@@ -15,8 +15,44 @@ import type { Duel, DuelOption } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/app-context';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import DuelResultsDetails from './duel-results-details';
 
 const HINT_STORAGE_KEY = 'dueliax-landscape-hint-dismissed';
+
+
+// Component for "A vs B" duel type
+function A_VS_B_Duel({ duel, onVote }: { duel: Duel, onVote: (option: DuelOption, direction: 'left' | 'right') => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-4 md:gap-8 items-center justify-center relative perspective-1000">
+      <DuelCard option={duel.options[0]} onClick={() => onVote(duel.options[0], 'left')} />
+      <div className="flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background p-3 rounded-full shadow-lg z-10">
+        <span className="text-xl font-bold text-primary font-headline">VS</span>
+      </div>
+      <DuelCard option={duel.options[1]} onClick={() => onVote(duel.options[1], 'right')} />
+    </div>
+  )
+}
+
+// Component for "List" duel type
+function ListDuel({ duel, onVote }: { duel: Duel, onVote: (option: DuelOption) => void }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {duel.options.map((option) => (
+        <Card key={option.id} className="cursor-pointer hover:bg-muted" onClick={() => onVote(option)}>
+          <CardContent className="p-4 flex items-center gap-4">
+            {option.imageUrl && (
+              <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
+                <img src={option.imageUrl} alt={option.title} className="w-full h-full object-cover" />
+              </div>
+            )}
+            <h3 className="text-lg font-semibold">{option.title}</h3>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
 
 export default function VotingFeed() {
   const { duels, castVote, votedDuelIds } = useAppContext();
@@ -59,11 +95,13 @@ export default function VotingFeed() {
   }, [activeDuels, currentDuelIndex]);
 
 
-  const handleVote = (selectedOption: DuelOption, direction: 'left' | 'right') => {
+  const handleVote = (selectedOption: DuelOption, direction?: 'left' | 'right') => {
     if (voted || !currentDuel) return;
 
     setVoted(selectedOption);
-    setAnimationClass(direction === 'left' ? 'animate-card-select-left' : 'animate-card-select-right');
+    if(direction){
+        setAnimationClass(direction === 'left' ? 'animate-card-select-left' : 'animate-card-select-right');
+    }
 
     setTimeout(() => {
       startTransition(() => {
@@ -83,7 +121,7 @@ export default function VotingFeed() {
         
         document.getElementById(`results-trigger-${currentDuel.id}`)?.click();
       });
-    }, 350);
+    }, currentDuel.type === 'A_VS_B' ? 350 : 100);
   };
   
   const onDialogClose = () => {
@@ -129,7 +167,7 @@ export default function VotingFeed() {
           <Smartphone className="h-4 w-4" />
           <AlertTitle>Mejor en horizontal</AlertTitle>
           <AlertDescription>
-            Para una mejor experiencia, gira tu dispositivo.
+            Para una mejor experiencia en duelos 'A vs B', gira tu dispositivo.
           </AlertDescription>
           <Button
             variant="ghost"
@@ -149,13 +187,11 @@ export default function VotingFeed() {
         </CardHeader>
       </Card>
       
-      <div className={cn("grid grid-cols-2 gap-4 md:gap-8 items-center justify-center relative perspective-1000", animationClass)}>
-        <DuelCard option={currentDuel.options[0]} onClick={() => handleVote(currentDuel.options[0], 'left')} />
-        <div className="flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background p-3 rounded-full shadow-lg z-10">
-            <span className="text-xl font-bold text-primary font-headline">VS</span>
-        </div>
-        <DuelCard option={currentDuel.options[1]} onClick={() => handleVote(currentDuel.options[1], 'right')} />
+      <div className={cn(animationClass)}>
+        {currentDuel.type === 'A_VS_B' && <A_VS_B_Duel duel={currentDuel} onVote={(option, direction) => handleVote(option, direction)} />}
+        {currentDuel.type === 'LIST' && <ListDuel duel={currentDuel} onVote={(option) => handleVote(option)} />}
       </div>
+
 
       <div className="text-center mt-8">
         <Dialog onOpenChange={(open) => {
@@ -168,13 +204,11 @@ export default function VotingFeed() {
                 Ver Resultados
               </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Resultados: {currentDuel.title}</DialogTitle>
             </DialogHeader>
-            <div className="h-64 w-full">
-              <ResultsChart duel={currentDuel} />
-            </div>
+            <DuelResultsDetails duel={currentDuel} />
             <DialogClose asChild>
               <Button id={`results-close-${currentDuel.id}`} className="w-full" size="lg">
                 Siguiente Duelo <ArrowRight className="ml-2 h-4 w-4" />

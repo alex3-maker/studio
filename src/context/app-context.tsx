@@ -242,7 +242,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         if (d.id === duelId) {
           const newOptions = d.options.map(option => 
             option.id === optionId ? { ...option, votes: option.votes + 1 } : option
-          ) as [DuelOption, DuelOption];
+          );
           return { ...d, options: newOptions };
         }
         return d;
@@ -305,9 +305,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         if (duel.id === updatedDuelData.id) {
           const originalOptions = duel.options;
           const updatedOptions = updatedDuelData.options?.map((opt, index) => {
-              const originalOption = originalOptions.find(o => o.id === opt.id) || originalOptions[index];
+              const originalOption = originalOptions.find(o => o.id === opt.id) || originalOptions[index] || {};
               return { ...originalOption, ...opt };
-          }) as [DuelOption, DuelOption] | undefined;
+          });
 
           return { ...duel, ...updatedDuelData, options: updatedOptions || duel.options };
         }
@@ -364,7 +364,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setDuels(prevDuels => prevDuels.map(duel => {
         if (duel.id === duelId) {
           duelTitle = duel.title;
-          const resetOptions = duel.options.map(option => ({ ...option, votes: 0 })) as [DuelOption, DuelOption];
+          const resetOptions = duel.options.map(option => ({ ...option, votes: 0 }));
           return { ...duel, options: resetOptions };
         }
         return duel;

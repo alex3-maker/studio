@@ -30,7 +30,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Terminal, Upload, CalendarIcon, Link as LinkIcon, Loader2 } from 'lucide-react';
+import { Terminal, Upload, CalendarIcon, Link as LinkIcon, Loader2, PlusCircle, X } from 'lucide-react';
 import type { Duel, User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import type { FormState } from '@/lib/actions';
@@ -123,8 +123,8 @@ function ManualInputFields({ form, index, handleFileChange, fileInputRefs }: any
 export default function CreateDuelForm({ user, state, formAction, duelData, isEditing = false, isPending, duelDataFromAI }: CreateDuelFormProps) {
   const { toast } = useToast();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const [productUrls, setProductUrls] = useState<string[]>(['', '']);
-  const [isScraping, setIsScraping] = useState<boolean[]>([false, false]);
+  const [productUrls, setProductUrls] = useState<string[]>(['', '', '', '', '']);
+  const [isScraping, setIsScraping] = useState<boolean[]>([false, false, false, false, false]);
   const { apiKey, isAiEnabled } = useAppContext();
   
   const defaultValues = duelData ? {
@@ -151,10 +151,26 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
     defaultValues: duelDataFromAI ? { ...defaultValues, ...duelDataFromAI } : defaultValues,
   });
 
-  const { fields } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'options',
   });
+
+  const watchDuelType = form.watch('type');
+
+  useEffect(() => {
+    if (isEditing) return; // Don't change options layout when editing
+
+    if (watchDuelType === 'A_VS_B') {
+        if(fields.length !== 2) {
+            replace([
+                { title: '', imageUrl: '', affiliateUrl: '' },
+                { title: '', imageUrl: '', affiliateUrl: '' },
+            ]);
+        }
+    }
+  }, [watchDuelType, fields.length, replace, isEditing]);
+
 
   useEffect(() => {
     if (duelDataFromAI) {
@@ -417,12 +433,12 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                 </FormControl>
                 <SelectContent>
                   <SelectItem value="A_VS_B">A vs B</SelectItem>
-                  <SelectItem value="LIST" disabled>Lista (Próximamente)</SelectItem>
+                  <SelectItem value="LIST">Lista</SelectItem>
                   <SelectItem value="KING_OF_THE_HILL" disabled>Rey de la Colina (Próximamente)</SelectItem>
                 </SelectContent>
               </Select>
               <FormDescription>
-                {isEditing ? "El tipo de duelo no se puede cambiar una vez creado." : "Actualmente, solo el formato A vs B está disponible."}
+                {isEditing ? "El tipo de duelo no se puede cambiar una vez creado." : "Elige el formato para tu duelo."}
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -433,7 +449,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
 
         <div className="space-y-4">
             {fields.map((field, index) => (
-                <Card key={field.id}>
+                <Card key={field.id} className="relative">
                     <CardHeader>
                         <CardTitle>Opción {index + 1}</CardTitle>
                     </CardHeader>
@@ -455,7 +471,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                             </div>
                         )}
                         
-                        {isAiEnabled ? (
+                        {isAiEnabled && watchDuelType === 'A_VS_B' ? (
                             <Tabs defaultValue="manual" className="w-full">
                                 <TabsList className="grid w-full grid-cols-2">
                                     <TabsTrigger value="manual">Entrada Manual</TabsTrigger>
@@ -497,8 +513,31 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                              <ManualInputFields form={form} index={index} handleFileChange={handleFileChange} fileInputRefs={fileInputRefs} />
                         )}
                     </CardContent>
+                     {watchDuelType === 'LIST' && fields.length > 2 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 text-destructive"
+                        onClick={() => remove(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
                 </Card>
             ))}
+             {watchDuelType === 'LIST' && fields.length < 5 && (
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => append({ title: '', imageUrl: '', affiliateUrl: '' })}
+                >
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Añadir Opción
+                </Button>
+            )}
+            <FormMessage>{state.errors?.options}</FormMessage>
         </div>
         
         {state.errors?.moderation && (

@@ -4,7 +4,7 @@
 import { moderateContent } from '@/ai/flows/moderate-content';
 import { createDuelSchema } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
-import type { Duel } from './types';
+import type { Duel, DuelOption } from './types';
 import { formatISO } from 'date-fns';
 
 export type FormState = {
@@ -30,16 +30,25 @@ function getFormData(formData: FormData) {
   const startsAt = formData.get('startsAt') as string;
   const endsAt = formData.get('endsAt') as string;
 
+  const options = [];
+  let i = 0;
+  while(formData.has(`options.${i}.title`)) {
+    options.push({
+        id: formData.get(`options.${i}.id`) as string | undefined,
+        title: formData.get(`options.${i}.title`) as string,
+        imageUrl: formData.get(`options.${i}.imageUrl`) as string,
+        affiliateUrl: formData.get(`options.${i}.affiliateUrl`) as string,
+    });
+    i++;
+  }
+
   return {
     id: formData.get('id') as string | undefined,
     userKeys: Number(formData.get('userKeys') || '0'),
     title: formData.get('title') as string,
     description: formData.get('description') as string,
     type: formData.get('type') as "A_VS_B" | "LIST" | "KING_OF_THE_HILL",
-    options: [
-      { id: formData.get('options.0.id') as string | undefined, title: formData.get('options.0.title') as string, imageUrl: formData.get('options.0.imageUrl') as string, affiliateUrl: formData.get('options.0.affiliateUrl') as string },
-      { id: formData.get('options.1.id') as string | undefined, title: formData.get('options.1.title') as string, imageUrl: formData.get('options.1.imageUrl') as string, affiliateUrl: formData.get('options.1.affiliateUrl') as string }
-    ],
+    options: options,
     startsAt: startsAt ? new Date(startsAt) : undefined,
     endsAt: endsAt ? new Date(endsAt) : undefined,
   };
@@ -114,10 +123,13 @@ export async function createDuelAction(
         name: 'Alex Doe',
         avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop'
       },
-      options: [
-        { id: `opt-${Date.now()}-a`, title: options[0].title, imageUrl: options[0].imageUrl || undefined, affiliateUrl: options[0].affiliateUrl || undefined, votes: 0 },
-        { id: `opt-${Date.now()}-b`, title: options[1].title, imageUrl: options[1].imageUrl || undefined, affiliateUrl: options[1].affiliateUrl || undefined, votes: 0 },
-      ],
+      options: options.map((opt, i) => ({
+        id: `opt-${Date.now()}-${i}`,
+        title: opt.title,
+        imageUrl: opt.imageUrl || undefined,
+        affiliateUrl: opt.affiliateUrl || undefined,
+        votes: 0,
+      }))
     };
 
     const message = hasEnoughKeys
@@ -186,7 +198,7 @@ export async function updateDuelAction(
         imageUrl: options[index].imageUrl || undefined,
         affiliateUrl: options[index].affiliateUrl || undefined,
         // Votes are preserved from the original state in the context, so no need to set them here
-      })) as [any, any] // Type assertion to satisfy partial update
+      }))
     };
 
     return {

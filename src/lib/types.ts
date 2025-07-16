@@ -25,7 +25,7 @@ export type Duel = {
   id: string;
   title: string;
   description: string;
-  options: [DuelOption, DuelOption];
+  options: DuelOption[];
   creator: Pick<User, 'name' | 'avatarUrl' | 'id'>;
   type: 'A_VS_B' | 'LIST' | 'KING_OF_THE_HILL';
   status: 'active' | 'closed' | 'scheduled' | 'draft' | 'inactive';
