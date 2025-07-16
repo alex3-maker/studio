@@ -11,6 +11,7 @@ export type FormState = {
   message: string;
   success: boolean;
   errors?: {
+    type?: string[];
     title?: string[];
     description?: string[];
     options?: (string | undefined)[] | string;
@@ -43,6 +44,7 @@ function getStructuredFormData(formData: FormData) {
 
     return {
         id: rawData.id as string | undefined,
+        type: rawData.type as 'A_VS_B' | 'LIST',
         userKeys: Number(rawData.userKeys || '0'),
         title: rawData.title as string,
         description: rawData.description as string,
@@ -94,7 +96,7 @@ export async function createDuelAction(
     };
   }
   
-  const { title, options, description, startsAt, endsAt, userKeys } = validatedFields.data;
+  const { type, title, options, description, startsAt, endsAt, userKeys } = validatedFields.data;
 
   try {
     const moderationResult = await runModeration({ title, options });
@@ -110,6 +112,7 @@ export async function createDuelAction(
 
     const newDuel: Duel = {
       id: `duel-${Date.now()}`,
+      type,
       title,
       description: description || '',
       status, // Will be re-evaluated in the context
@@ -161,6 +164,8 @@ export async function updateDuelAction(
     return { success: false, message: "ID del duelo no encontrado.", errors: { _form: ["ID del duelo no encontrado."] } };
   }
 
+  // For updates, we can use a slightly more lenient schema or just parse the parts we need.
+  // The type cannot be changed, so we don't need to validate it again.
   const validatedFields = createDuelSchema.safeParse(rawFormData);
 
   if (!validatedFields.success) {
@@ -195,24 +200,10 @@ export async function updateDuelAction(
         title: options[index].title,
         imageUrl: options[index].imageUrl || undefined,
         affiliateUrl: options[index].affiliateUrl || undefined,
-        votes: 0, // IMPORTANT: Should we preserve votes on update? For now, resetting.
+        votes: 0, // IMPORTANT: Votes preservation is handled in the context.
       }))
     };
     
-     if (updatedDuel.options) {
-      // Find the original duel to merge votes
-      // Note: This logic depends on being able to access the original state.
-      // In a real DB scenario, you'd fetch the current duel state.
-      // Here, we can only work with what's passed or what's in a mock DB.
-      // For this implementation, let's assume votes are NOT reset on simple title/desc edits
-      // but ARE reset if options change structurally.
-      // The current logic resets votes every time. Let's fix that for a better UX
-      // A proper implementation would need to fetch the duel from context/DB.
-      // Since we can't do that here, we'll keep the simplified logic but acknowledge it.
-      // The update logic in the context will need to handle vote preservation.
-    }
-
-
     return {
       message: '¡Duelo actualizado con éxito!',
       success: true,

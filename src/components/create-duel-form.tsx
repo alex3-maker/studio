@@ -34,6 +34,7 @@ import { scrapeUrl } from '@/ai/flows/scrape-url-flow';
 import { analyzeProductPage } from '@/ai/flows/analyze-product-page-flow';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAppContext } from '@/context/app-context';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 
 interface SubmitButtonProps {
@@ -116,17 +117,19 @@ function ManualInputFields({ form, index, handleFileChange, fileInputRefs }: any
 export default function CreateDuelForm({ user, state, formAction, duelData, isEditing = false, isPending, duelDataFromAI }: CreateDuelFormProps) {
   const { toast } = useToast();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const [productUrls, setProductUrls] = useState<string[]>(['', '', '', '', '', '', '', '']);
-  const [isScraping, setIsScraping] = useState<boolean[]>([false, false, false, false, false, false, '', '']);
+  const [productUrls, setProductUrls] = useState<string[]>(['', '']);
+  const [isScraping, setIsScraping] = useState<boolean[]>([false, false]);
   const { apiKey, isAiEnabled } = useAppContext();
   
   const defaultValues = duelData ? {
+      type: duelData.type,
       title: duelData.title,
       description: duelData.description,
       options: duelData.options.map(opt => ({ title: opt.title, imageUrl: opt.imageUrl || '', affiliateUrl: opt.affiliateUrl || '' })),
       startsAt: new Date(duelData.startsAt),
       endsAt: new Date(duelData.endsAt),
   } : {
+      type: 'A_VS_B' as const,
       title: '',
       description: '',
       options: [
@@ -139,19 +142,32 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
 
   const form = useForm<CreateDuelFormValues>({
     resolver: zodResolver(createDuelSchema),
-    defaultValues: duelDataFromAI ? { ...defaultValues, ...duelDataFromAI } : defaultValues,
+    defaultValues: duelDataFromAI ? { ...defaultValues, ...duelDataFromAI, type: 'A_VS_B' } : defaultValues,
   });
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'options',
   });
+  
+  const duelType = form.watch('type');
+
+  useEffect(() => {
+    if (duelType === 'A_VS_B' && fields.length > 2) {
+      // If user switches back to A vs B, remove extra options
+      for (let i = fields.length - 1; i > 1; i--) {
+        remove(i);
+      }
+    }
+  }, [duelType, fields.length, remove]);
+
 
   useEffect(() => {
     if (duelDataFromAI) {
       form.reset({
         ...defaultValues,
         ...duelDataFromAI,
+        type: 'A_VS_B', // AI generation is always for A_VS_B
         startsAt: defaultValues.startsAt,
         endsAt: defaultValues.endsAt,
       });
@@ -248,8 +264,31 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
         action={formAction}
         className="space-y-8"
       >
-        {isEditing && duelData?.id && <input type="hidden" {...form.register('id')} value={duelData.id} />}
-        {!isEditing && user && <input type="hidden" {...form.register('userKeys')} value={user.keys} />}
+        {isEditing && duelData?.id && <input type="hidden" name="id" value={duelData.id} />}
+        {!isEditing && user && <input type="hidden" name="userKeys" value={user.keys} />}
+        
+        <FormField
+          control={form.control}
+          name="type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tipo de Duelo</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} disabled={isEditing}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un tipo de duelo" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="A_VS_B">Duelo A vs B</SelectItem>
+                    <SelectItem value="LIST">Lista (Ranking)</SelectItem>
+                  </SelectContent>
+                </Select>
+              <FormDescription>Elige el formato de tu duelo. No se puede cambiar después de crearlo.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         
         <FormField
           control={form.control}
@@ -397,7 +436,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                             </div>
                         )}
                         
-                        {isAiEnabled && index < 2 ? (
+                        {isAiEnabled && duelType === 'A_VS_B' && index < 2 ? (
                             <Tabs defaultValue="manual" className="w-full">
                                 <TabsList className="grid w-full grid-cols-2">
                                     <TabsTrigger value="manual">Entrada Manual</TabsTrigger>
@@ -413,7 +452,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                                           <Input 
                                               id={`product-url-${index}`}
                                               placeholder="Pega la URL de un producto (ej: Amazon)" 
-                                              value={productUrls[index]}
+                                              value={productUrls[index] || ''}
                                               onChange={(e) => {
                                                   const newUrls = [...productUrls];
                                                   newUrls[index] = e.target.value;
@@ -452,7 +491,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                     )}
                 </Card>
             ))}
-             {fields.length < 8 && (
+             {duelType === 'LIST' && fields.length < 5 && (
                 <Button
                     type="button"
                     variant="outline"
@@ -479,9 +518,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                 <Terminal className="h-4 w-4" />
                 <AlertTitle>Error al Procesar el Formulario</AlertTitle>
                 <AlertDescription>
-                    <div className="mt-2 whitespace-pre-wrap font-mono text-xs">
-                        {state.errors._form.join('\n')}
-                    </div>
+                    {state.errors._form.join(', ')}
                 </AlertDescription>
             </Alert>
         )}

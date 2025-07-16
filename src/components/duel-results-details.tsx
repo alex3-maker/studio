@@ -94,7 +94,7 @@ export default function DuelResultsDetails({ duel }: { duel: Duel }) {
 
     return (
         <div className="w-full space-y-4">
-            {duel.options.length === 2 ? <TwoOptionResults duel={duel} /> : <MultiOptionResults duel={duel} />}
+            {duel.type === 'A_VS_B' ? <TwoOptionResults duel={duel} /> : <MultiOptionResults duel={duel} />}
             <div className="text-center text-sm text-muted-foreground pt-2">
                 Total de Votos: {totalVotes}
             </div>

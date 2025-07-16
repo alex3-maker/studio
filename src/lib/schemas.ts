@@ -18,17 +18,35 @@ export const duelOptionSchema = z.object({
 });
 
 export const createDuelSchema = z.object({
+  type: z.enum(['A_VS_B', 'LIST']),
   title: z.string().min(3, { message: "El título debe tener al menos 3 caracteres." }).max(100),
   description: z.string().max(500).optional(),
-  options: z.array(duelOptionSchema)
-    .min(2, { message: "Debes tener al menos 2 opciones." })
-    .max(8, { message: "Puedes tener un máximo de 8 opciones." }),
+  options: z.array(duelOptionSchema),
   startsAt: z.date({ required_error: "La fecha de inicio es requerida." }),
   endsAt: z.date({ required_error: "La fecha de fin es requerida." }),
   userKeys: z.number().optional(), // Make this optional for updates
-}).refine(data => data.endsAt > data.startsAt, {
-    message: "La fecha de fin debe ser posterior a la fecha de inicio.",
-    path: ["endsAt"],
+}).superRefine((data, ctx) => {
+    if (data.endsAt <= data.startsAt) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "La fecha de fin debe ser posterior a la fecha de inicio.",
+            path: ["endsAt"],
+        });
+    }
+    if (data.type === 'A_VS_B' && data.options.length !== 2) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Los duelos 'A vs B' deben tener exactamente 2 opciones.",
+            path: ["options"],
+        });
+    }
+    if (data.type === 'LIST' && (data.options.length < 2 || data.options.length > 5)) {
+         ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Los duelos de tipo 'Lista' deben tener entre 2 y 5 opciones.",
+            path: ["options"],
+        });
+    }
 });
 
 

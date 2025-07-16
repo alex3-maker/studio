@@ -120,7 +120,7 @@ export default function VotingFeed() {
         
         document.getElementById(`results-trigger-${currentDuel.id}`)?.click();
       });
-    }, currentDuel.options.length === 2 ? 350 : 100);
+    }, currentDuel.type === 'A_VS_B' ? 350 : 100);
   };
   
   const onDialogClose = () => {
@@ -189,7 +189,7 @@ export default function VotingFeed() {
       </Card>
       
       <div className={cn(animationClass)}>
-        {currentDuel.options.length === 2 ? (
+        {currentDuel.type === 'A_VS_B' ? (
           <A_VS_B_Duel duel={currentDuel} onVote={(option, direction) => handleVote(option, direction)} />
         ) : (
           <ListDuel duel={currentDuel} onVote={(option) => handleVote(option)} />

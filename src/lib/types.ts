@@ -1,3 +1,4 @@
+
 import { z } from "zod";
 
 export type User = {
@@ -22,6 +23,7 @@ export type DuelOption = {
 
 export type Duel = {
   id: string;
+  type: 'A_VS_B' | 'LIST';
   title: string;
   description: string;
   options: DuelOption[];
