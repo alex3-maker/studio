@@ -1,4 +1,6 @@
 
+import { z } from "zod";
+
 export type User = {
   id: string;
   name: string;
@@ -47,3 +49,13 @@ export type KeyTransaction = {
     description: string;
     timestamp: string; // ISO 8601 string
 }
+
+// Schema for the scraping AI flow
+export const ScrapeUrlInputSchema = z.object({
+  url: z.string().url({ message: 'Por favor, introduce una URL válida.' }),
+});
+
+export const ScrapeUrlOutputSchema = z.object({
+  title: z.string().describe('The extracted product title.'),
+  imageUrl: z.string().url().describe('The URL of the main product image.'),
+});

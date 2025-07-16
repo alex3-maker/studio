@@ -3,7 +3,7 @@
 
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 
@@ -30,13 +30,15 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Terminal, Upload, CalendarIcon } from 'lucide-react';
+import { Terminal, Upload, CalendarIcon, Link, Loader2 } from 'lucide-react';
 import type { Duel, User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import type { FormState } from '@/lib/actions';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { cn } from '@/lib/utils';
+import { scrapeUrl } from '@/ai/flows/scrape-url-flow';
+
 
 interface SubmitButtonProps {
   isEditing?: boolean;
@@ -55,7 +57,7 @@ function SubmitButton({ isEditing = false, isPending }: SubmitButtonProps) {
 }
 
 interface CreateDuelFormProps {
-  user?: User; // Make user optional for editing from admin panel later
+  user?: User; 
   state: FormState;
   formAction: (payload: FormData) => void;
   duelData?: Duel;
@@ -67,6 +69,8 @@ interface CreateDuelFormProps {
 export default function CreateDuelForm({ user, state, formAction, duelData, isEditing = false, isPending, duelDataFromAI }: CreateDuelFormProps) {
   const { toast } = useToast();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [productUrls, setProductUrls] = useState<string[]>(['', '']);
+  const [isScraping, setIsScraping] = useState<boolean[]>([false, false]);
   
   const defaultValues = duelData ? {
       title: duelData.title,
@@ -102,7 +106,6 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
       form.reset({
         ...defaultValues,
         ...duelDataFromAI,
-        // Ensure dates are not overwritten by AI if they are part of defaultValues logic
         startsAt: defaultValues.startsAt,
         endsAt: defaultValues.endsAt,
         type: defaultValues.type,
@@ -126,6 +129,36 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
         form.setValue(`options.${index}.imageUrl`, reader.result as string, { shouldValidate: true });
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImportFromUrl = async (index: number) => {
+    const url = productUrls[index];
+    if (!url || !url.startsWith('http')) {
+        toast({ variant: "destructive", title: "URL Inválida", description: "Por favor, introduce una URL válida." });
+        return;
+    }
+
+    setIsScraping(prev => {
+        const newScraping = [...prev];
+        newScraping[index] = true;
+        return newScraping;
+    });
+
+    try {
+        const result = await scrapeUrl({ url });
+        form.setValue(`options.${index}.title`, result.title, { shouldValidate: true });
+        form.setValue(`options.${index}.imageUrl`, result.imageUrl, { shouldValidate: true });
+        toast({ title: "¡Éxito!", description: "Producto importado correctamente." });
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        toast({ variant: "destructive", title: "Error al Importar", description: `No se pudo obtener la información. Detalle: ${errorMessage}` });
+    } finally {
+        setIsScraping(prev => {
+            const newScraping = [...prev];
+            newScraping[index] = false;
+            return newScraping;
+        });
     }
   };
 
@@ -314,6 +347,34 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                         <CardTitle>Opción {index + 1}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                        <div className='space-y-2'>
+                          <FormLabel htmlFor={`product-url-${index}`}>URL del Producto (Opcional)</FormLabel>
+                          <div className="flex gap-2">
+                              <Input 
+                                  id={`product-url-${index}`}
+                                  placeholder="Pega la URL de un producto aquí (ej: Amazon)" 
+                                  value={productUrls[index]}
+                                  onChange={(e) => {
+                                      const newUrls = [...productUrls];
+                                      newUrls[index] = e.target.value;
+                                      setProductUrls(newUrls);
+                                  }}
+                                  disabled={isScraping[index]}
+                              />
+                              <Button 
+                                  type="button" 
+                                  variant="secondary" 
+                                  onClick={() => handleImportFromUrl(index)}
+                                  disabled={isScraping[index] || !productUrls[index]}
+                              >
+                                  {isScraping[index] ? <Loader2 className="animate-spin" /> : <Link className="mr-2" />}
+                                  Importar
+                              </Button>
+                          </div>
+                        </div>
+
+                        <Separator>O introduce los datos manualmente</Separator>
+
                         <FormField
                             control={form.control}
                             name={`options.${index}.title`}
