@@ -18,6 +18,9 @@ import { signup } from '@/lib/auth.actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { SubmitButton } from '@/components/submit-button';
+import { useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { signIn } from 'next-auth/react';
 
 const initialState = {
   message: '',
@@ -27,6 +30,39 @@ const initialState = {
 
 export default function SignupPage() {
   const [state, formAction] = useFormState(signup, initialState);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (state.success) {
+      toast({
+        title: '¡Registro Exitoso!',
+        description: 'Iniciando sesión...',
+      });
+      
+      // We get the form data again to sign in.
+      // In a real app, you might not need this if your state returned the email.
+      const form = document.querySelector('form');
+      if (form) {
+        const formData = new FormData(form);
+        const email = formData.get('email') as string;
+        const password = formData.get('password') as string;
+        
+        signIn('credentials', {
+          email,
+          password,
+          callbackUrl: '/',
+        });
+      }
+
+    } else if (state.message) {
+      toast({
+        variant: 'destructive',
+        title: 'Error de Registro',
+        description: state.message,
+      });
+    }
+  }, [state, toast]);
+
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
