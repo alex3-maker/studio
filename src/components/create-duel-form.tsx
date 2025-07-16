@@ -311,15 +311,17 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Título del Duelo</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ej: ¿Mejor película de ciencia ficción?" {...field} maxLength={MAX_TITLE_LENGTH} />
-                          </FormControl>
+                           <div className="relative">
+                              <FormControl>
+                                <Input placeholder="Ej: ¿Mejor película de ciencia ficción?" {...field} maxLength={MAX_TITLE_LENGTH} className="pr-16" />
+                              </FormControl>
+                               <p className="absolute top-2.5 right-3 text-xs text-muted-foreground">
+                                  {titleValue.length} / {MAX_TITLE_LENGTH}
+                               </p>
+                           </div>
                           <FormDescription>
                             Un título atractivo para tu duelo.
                           </FormDescription>
-                           <div className="text-right text-xs text-muted-foreground">
-                                {titleValue.length} / {MAX_TITLE_LENGTH}
-                           </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -349,114 +351,118 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                 />
             </div>
             
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descripción (Opcional)</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Añade una breve descripción para dar contexto." {...field} maxLength={MAX_DESC_LENGTH} />
-                  </FormControl>
-                  <div className="text-right text-xs text-muted-foreground">
-                        {(descriptionValue || '').length} / {MAX_DESC_LENGTH}
-                   </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="startsAt"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Fecha de Inicio</FormLabel>
-                    <input type="hidden" name="startsAt" value={field.value ? formatISO(field.value) : ''} />
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? (
-                              format(field.value, "PPP", { locale: es })
-                            ) : (
-                              <span>Elige una fecha</span>
-                            )}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date < new Date(new Date().setHours(0, 0, 0, 0))
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormDescription>
-                      Cuándo empezará a ser visible el duelo.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="endsAt"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Fecha de Fin</FormLabel>
-                    <input type="hidden" name="endsAt" value={field.value ? formatISO(field.value) : ''} />
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? (
-                              format(field.value, "PPP", { locale: es })
-                            ) : (
-                              <span>Elige una fecha</span>
-                            )}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date < (form.getValues("startsAt") || new Date())
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormDescription>
-                       Cuándo se cerrará el duelo a nuevas votaciones.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                 <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Descripción (Opcional)</FormLabel>
+                      <div className="relative">
+                          <FormControl>
+                            <Textarea placeholder="Añade una breve descripción para dar contexto." {...field} maxLength={MAX_DESC_LENGTH} className="min-h-[158px] pr-16" />
+                          </FormControl>
+                          <p className="absolute top-2.5 right-3 text-xs text-muted-foreground">
+                                {(descriptionValue || '').length} / {MAX_DESC_LENGTH}
+                          </p>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="space-y-6">
+                   <FormField
+                    control={form.control}
+                    name="startsAt"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Fecha de Inicio</FormLabel>
+                        <input type="hidden" name="startsAt" value={field.value ? formatISO(field.value) : ''} />
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value ? (
+                                  format(field.value, "PPP", { locale: es })
+                                ) : (
+                                  <span>Elige una fecha</span>
+                                )}
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) =>
+                                date < new Date(new Date().setHours(0, 0, 0, 0))
+                              }
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormDescription>
+                          Cuándo empezará a ser visible el duelo.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="endsAt"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Fecha de Fin</FormLabel>
+                        <input type="hidden" name="endsAt" value={field.value ? formatISO(field.value) : ''} />
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                 <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value ? (
+                                  format(field.value, "PPP", { locale: es })
+                                ) : (
+                                  <span>Elige una fecha</span>
+                                )}
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) =>
+                                date < (form.getValues("startsAt") || new Date())
+                              }
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormDescription>
+                           Cuándo se cerrará el duelo a nuevas votaciones.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
             </div>
         </div>
 
