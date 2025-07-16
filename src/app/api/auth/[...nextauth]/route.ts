@@ -4,12 +4,13 @@ import Credentials from 'next-auth/providers/credentials';
 import { z } from 'zod';
 import { authConfig } from '@/lib/auth.config';
 import bcrypt from 'bcryptjs';
-import { db } from '@/lib/db';
+import { getDb } from '@/lib/db';
 import { users } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import type { User as DbUser } from '@/lib/types'; // Using our extended User type
 
 async function getUser(email: string): Promise<(DbUser & { password?: string }) | undefined> {
+  const db = getDb();
   try {
     const user = await db.query.users.findFirst({
       where: eq(users.email, email),
