@@ -20,7 +20,7 @@ export async function login(prevState: any, formData: FormData) {
 
     if (!validatedFields.success) {
       return {
-        message: 'Datos inválidos.',
+        message: 'Datos de inicio de sesión inválidos. Por favor, comprueba los campos.',
         errors: validatedFields.error.flatten().fieldErrors,
         success: false,
       };
@@ -55,7 +55,7 @@ export async function signup(prevState: any, formData: FormData) {
 
     if (!validatedFields.success) {
       return {
-        message: 'Datos inválidos.',
+        message: 'Datos de registro inválidos. Por favor, revisa los errores.',
         errors: validatedFields.error.flatten().fieldErrors,
         success: false,
       };
@@ -67,7 +67,7 @@ export async function signup(prevState: any, formData: FormData) {
     const existingUser = mockUsers.find(u => u.email === email);
     if (existingUser) {
         return {
-            message: 'Ya existe un usuario con este email.',
+            message: 'Ya existe un usuario con este email. Por favor, inicia sesión.',
             success: false,
         }
     }
@@ -100,9 +100,9 @@ export async function signup(prevState: any, formData: FormData) {
         return { success: true, message: '¡Registro completado!' };
     } catch (error) {
         if (error instanceof AuthError) {
-            return { message: 'No se pudo iniciar sesión después del registro.', success: false };
+            return { message: `No se pudo iniciar sesión después del registro: ${error.cause?.err?.message}`, success: false };
         }
-        throw error;
+         return { message: `Un error inesperado ocurrió durante el inicio de sesión post-registro.`, success: false };
     }
 }
 
