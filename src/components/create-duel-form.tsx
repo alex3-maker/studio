@@ -379,7 +379,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                           <FormLabel>Descripción (Opcional)</FormLabel>
                           <div className="relative flex-grow">
                               <FormControl>
-                                <Textarea placeholder="Añade una breve descripción para dar contexto." {...field} maxLength={MAX_DESC_LENGTH} className="resize-none h-full" />
+                                <Textarea placeholder="Añade una breve descripción para dar contexto." {...field} maxLength={MAX_DESC_LENGTH} className="h-full" />
                               </FormControl>
                               <p className="absolute top-2.5 right-3 text-xs text-muted-foreground">
                                     {(descriptionValue || '').length} / {MAX_DESC_LENGTH}
@@ -609,4 +609,3 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
     </Form>
   );
 }
-
