@@ -1,28 +1,16 @@
+
 'use server';
 
 /**
  * @fileOverview An AI flow to analyze the HTML of a product page when standard scraping fails.
  *
  * - analyzeProductPage - A function that takes HTML content and extracts product info.
- * - AnalyzeProductPageInput - The input type for the analyzeProductPage function.
- * - AnalyzeProductPageOutput - The return type for the analyzeProductPage function.
  */
 
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/googleai';
-import { z } from 'zod';
-
-export const AnalyzeProductPageInputSchema = z.object({
-  htmlContent: z.string().describe('The full HTML content of the product page.'),
-  url: z.string().url().describe('The original URL of the product page for context.'),
-});
-export type AnalyzeProductPageInput = z.infer<typeof AnalyzeProductPageInputSchema>;
-
-export const AnalyzeProductPageOutputSchema = z.object({
-  title: z.string().describe('The main, concise title of the product.'),
-  imageUrl: z.string().url().describe('The absolute URL of the main product image.'),
-});
-export type AnalyzeProductPageOutput = z.infer<typeof AnalyzeProductPageOutputSchema>;
+import type { AnalyzeProductPageInput, AnalyzeProductPageOutput } from '@/lib/types';
+import { AnalyzeProductPageInputSchema, AnalyzeProductPageOutputSchema } from '@/lib/types';
 
 
 const analyzePrompt = ai.definePrompt({

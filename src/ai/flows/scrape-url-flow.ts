@@ -3,23 +3,10 @@
 /**
  * @fileOverview A flow to scrape product information from a URL.
  * - scrapeUrl - A function that takes a URL and returns the product title, image URL, and raw HTML content.
- * - ScrapeUrlInput - The input type for the scrapeUrl function.
- * - ScrapeUrlOutput - The return type for the scrapeUrl function.
  */
-
+import type { ScrapeUrlInput, ScrapeUrlOutput } from '@/lib/types';
+import { ScrapeUrlInputSchema } from '@/lib/types';
 import { z } from 'zod';
-
-export const ScrapeUrlInputSchema = z.object({
-  url: z.string().url({ message: 'Por favor, introduce una URL válida.' }),
-});
-export type ScrapeUrlInput = z.infer<typeof ScrapeUrlInputSchema>;
-
-export const ScrapeUrlOutputSchema = z.object({
-  title: z.string().nullable().describe('The extracted product title.'),
-  imageUrl: z.string().url().nullable().describe('The URL of the main product image.'),
-  htmlContent: z.string().describe('The full HTML content of the page.'),
-});
-export type ScrapeUrlOutput = z.infer<typeof ScrapeUrlOutputSchema>;
 
 
 // Helper function to parse meta tags from HTML
@@ -62,7 +49,9 @@ export async function scrapeUrl(input: ScrapeUrlInput): Promise<ScrapeUrlOutput>
 
     let validatedImageUrl = null;
     if (imageUrl) {
-        const validation = z.string().url().safeParse(imageUrl);
+        // Attempt to fix URLs that start with //
+        const absoluteImageUrl = imageUrl.startsWith('//') ? `https:${imageUrl}` : imageUrl;
+        const validation = z.string().url().safeParse(absoluteImageUrl);
         if (validation.success) {
             validatedImageUrl = validation.data;
         }

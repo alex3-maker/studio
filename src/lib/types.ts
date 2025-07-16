@@ -50,12 +50,29 @@ export type KeyTransaction = {
     timestamp: string; // ISO 8601 string
 }
 
-// Schema for the scraping AI flow
+// Schema for the scraping server action
 export const ScrapeUrlInputSchema = z.object({
   url: z.string().url({ message: 'Por favor, introduce una URL válida.' }),
 });
+export type ScrapeUrlInput = z.infer<typeof ScrapeUrlInputSchema>;
 
 export const ScrapeUrlOutputSchema = z.object({
-  title: z.string().describe('The extracted product title.'),
-  imageUrl: z.string().url().describe('The URL of the main product image.'),
+  title: z.string().nullable().describe('The extracted product title.'),
+  imageUrl: z.string().url().nullable().describe('The URL of the main product image.'),
+  htmlContent: z.string().describe('The full HTML content of the page.'),
 });
+export type ScrapeUrlOutput = z.infer<typeof ScrapeUrlOutputSchema>;
+
+
+// Schema for the AI analysis flow
+export const AnalyzeProductPageInputSchema = z.object({
+  htmlContent: z.string().describe('The full HTML content of the product page.'),
+  url: z.string().url().describe('The original URL of the product page for context.'),
+});
+export type AnalyzeProductPageInput = z.infer<typeof AnalyzeProductPageInputSchema>;
+
+export const AnalyzeProductPageOutputSchema = z.object({
+  title: z.string().describe('The main, concise title of the product.'),
+  imageUrl: z.string().url().describe('The absolute URL of the main product image.'),
+});
+export type AnalyzeProductPageOutput = z.infer<typeof AnalyzeProductPageOutputSchema>;
