@@ -1,0 +1,71 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          String    @default("USER") // 'USER' or 'ADMIN'
+  keys          Int       @default(0)
+  duelsCreated  Int       @default(0)
+  votesCast     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  duels         Duel[]
+  votes         Vote[]
+}
+
+model Duel {
+  id          String       @id @default(cuid())
+  type        String // 'A_VS_B' or 'LIST'
+  title       String
+  description String?
+  status      String       @default("DRAFT") // 'DRAFT', 'SCHEDULED', 'ACTIVE', 'CLOSED', 'INACTIVE'
+  createdAt   DateTime     @default(now())
+  startsAt    DateTime
+  endsAt      DateTime
+  creatorId   String
+  creator     User         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  options     Json         @default("[]")
+  votes       Vote[]
+  guestVotes  GuestVote[]
+
+  @@map("dueliax_duels")
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  userId    String
+  duelId    String
+  optionId  String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  duel      Duel     @relation(fields: [duelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, duelId])
+  @@map("dueliax_votes")
+}
+
+model GuestVote {
+  id        String   @id @default(cuid())
+  duelId    String
+  optionId  String
+  ipHash    String
+  createdAt DateTime @default(now())
+  duel      Duel     @relation(fields: [duelId], references: [id], onDelete: Cascade)
+
+  @@unique([duelId, ipHash])
+  @@map("dueliax_guest_votes")
+}
