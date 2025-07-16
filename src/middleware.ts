@@ -1,3 +1,9 @@
-// This file is intentionally blank for now.
-// It will be populated with the middleware logic to protect routes.
-// Please proceed with the other changes.
+import NextAuth from 'next-auth';
+import { authConfig } from '@/lib/auth.config';
+
+export default NextAuth(authConfig).auth;
+
+export const config = {
+  // https://nextjs.org/docs/app/building-your-application/routing/middleware#matcher
+  matcher: ['/((?!api|_next/static|_next/image|.*\\.png$).*)'],
+};
