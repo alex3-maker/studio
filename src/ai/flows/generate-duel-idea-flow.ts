@@ -8,7 +8,6 @@
  */
 import { z } from 'genkit';
 import { ai } from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/googleai';
 
 const DuelIdeaOutputSchema = z.object({
   title: z.string().describe('The title of the duel. Should be a question.'),
@@ -18,7 +17,10 @@ const DuelIdeaOutputSchema = z.object({
 });
 export type DuelIdeaOutput = z.infer<typeof DuelIdeaOutputSchema>;
 
-const promptText = `You are a creative assistant specialized in creating engaging "A vs B" style duel topics for a social voting app called DuelDash.
+const prompt = ai.definePrompt({
+    name: 'generateDuelIdeaPrompt',
+    output: { schema: DuelIdeaOutputSchema },
+    prompt: `You are a creative assistant specialized in creating engaging "A vs B" style duel topics for a social voting app called DuelDash.
 
   Generate a compelling and fun duel topic that people would have strong opinions about.
   The topic can be about anything: movies, food, technology, hypothetical scenarios, pop culture, etc.
@@ -34,18 +36,23 @@ const promptText = `You are a creative assistant specialized in creating engagin
   Option 2: Invisibilidad
 
   Return the output in the specified JSON format.
-  `;
+  `,
+});
 
+const generateDuelIdeaFlow = ai.defineFlow(
+  {
+    name: 'generateDuelIdeaFlow',
+    outputSchema: DuelIdeaOutputSchema,
+  },
+  async () => {
+    const { output } = await prompt();
+    if (!output) {
+      throw new Error('Could not generate a duel idea.');
+    }
+    return output;
+  }
+);
 
-export async function generateDuelIdea(apiKey: string): Promise<DuelIdeaOutput> {
-  const { output } = await ai.generate({
-      model: googleAI.model('gemini-pro'),
-      prompt: promptText,
-      output: {
-          schema: DuelIdeaOutputSchema,
-      },
-      config: { apiKey },
-  });
-  
-  return output!;
+export async function generateDuelIdea(): Promise<DuelIdeaOutput> {
+  return generateDuelIdeaFlow();
 }
