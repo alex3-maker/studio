@@ -8,7 +8,7 @@
  */
 import { z } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
-import genkit, { configureGenkit } from 'genkit';
+import { genkit, configureGenkit } from 'genkit';
 
 const DuelIdeaInputSchema = z.object({
   apiKey: z.string().optional(),
@@ -23,9 +23,8 @@ const DuelIdeaOutputSchema = z.object({
 export type DuelIdeaOutput = z.infer<typeof DuelIdeaOutputSchema>;
 
 
-const generateDuelIdeaFlow = genkit.defineFlow(
+const generateDuelIdeaFlow = genkit({name: 'generateDuelIdeaFlow'}).defineFlow(
   {
-    name: 'generateDuelIdeaFlow',
     inputSchema: DuelIdeaInputSchema,
     outputSchema: DuelIdeaOutputSchema,
   },
@@ -39,7 +38,7 @@ const generateDuelIdeaFlow = genkit.defineFlow(
       name: 'generateDuelIdeaDynamicPrompt', // Use a unique name to avoid conflicts
       input: { schema: z.object({}) },
       output: { schema: DuelIdeaOutputSchema },
-      prompt: `You are a creative assistant specialized in creating engaging "A vs B" style duel topics for a social voting app called DueliaX.
+      prompt: `You are a creative assistant specialized in creating engaging "A vs B" style duel topics for a social voting app called DuelDash.
 
       Generate a compelling and fun duel topic that people would have strong opinions about.
       The topic can be about anything: movies, food, technology, hypothetical scenarios, pop culture, etc.
