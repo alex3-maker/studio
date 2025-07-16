@@ -4,25 +4,11 @@
 /**
  * @fileOverview A flow to generate a random duel idea.
  * - generateDuelIdea - A function that returns a duel idea.
- * - DuelIdeaOutput - The return type for the generateDuelidea function.
  */
-import { z } from 'genkit';
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/googleai';
-
-export const GenerateDuelIdeaInputSchema = z.object({
-  apiKey: z.string().optional(),
-});
-export type GenerateDuelIdeaInput = z.infer<typeof GenerateDuelIdeaInputSchema>;
-
-
-const DuelIdeaOutputSchema = z.object({
-  title: z.string().describe('The title of the duel. Should be a question.'),
-  description: z.string().describe('A short, engaging description for the duel to provide context.'),
-  option1: z.string().describe('The title for the first option (e.g., Team A).'),
-  option2: z.string().describe('The title for the second option (e.g., Team B).'),
-});
-export type DuelIdeaOutput = z.infer<typeof DuelIdeaOutputSchema>;
+import type { GenerateDuelIdeaInput, DuelIdeaOutput } from '@/lib/types';
+import { GenerateDuelIdeaInputSchema, DuelIdeaOutputSchema } from '@/lib/types';
 
 const generateDuelIdeaFlow = ai.defineFlow(
   {

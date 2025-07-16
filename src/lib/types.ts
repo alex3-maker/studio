@@ -77,3 +77,39 @@ export const AnalyzeProductPageOutputSchema = z.object({
   imageUrl: z.string().url().describe('The absolute URL of the main product image.'),
 });
 export type AnalyzeProductPageOutput = z.infer<typeof AnalyzeProductPageOutputSchema>;
+
+
+// Schema for the Duel Idea Generation flow
+export const GenerateDuelIdeaInputSchema = z.object({
+  apiKey: z.string().optional(),
+});
+export type GenerateDuelIdeaInput = z.infer<typeof GenerateDuelIdeaInputSchema>;
+
+export const DuelIdeaOutputSchema = z.object({
+  title: z.string().describe('The title of the duel. Should be a question.'),
+  description: z.string().describe('A short, engaging description for the duel to provide context.'),
+  option1: z.string().describe('The title for the first option (e.g., Team A).'),
+  option2: z.string().describe('The title for the second option (e.g., Team B).'),
+});
+export type DuelIdeaOutput = z.infer<typeof DuelIdeaOutputSchema>;
+
+// Schema for the Content Moderation flow
+export const ModerateContentInputSchema = z.object({
+  content: z
+    .string()
+    .describe('The content to be moderated, such as text or an image data URI.'),
+  contentType: z
+    .enum(['text', 'image'])
+    .describe('The type of content being moderated.'),
+});
+export type ModerateContentInput = z.infer<typeof ModerateContentInputSchema>;
+
+export const ModerateContentOutputSchema = z.object({
+  isSafe: z
+    .boolean()
+    .describe('Whether the content is safe and does not violate any policies.'),
+  reasons: z
+    .array(z.string())
+    .describe('Reasons why the content was flagged as unsafe, if any.'),
+});
+export type ModerateContentOutput = z.infer<typeof ModerateContentOutputSchema>;

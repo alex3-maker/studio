@@ -1,35 +1,17 @@
+
 'use server';
 
 /**
  * @fileOverview Content moderation flow using OpenAI to filter out NSFW content.
  *
  * - moderateContent - A function that moderates content and returns a moderation result.
- * - ModerateContentInput - The input type for the moderateContent function.
- * - ModerateContentOutput - The return type for the moderateContent function.
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import Handlebars from 'handlebars';
+import type { ModerateContentInput, ModerateContentOutput } from '@/lib/types';
+import { ModerateContentInputSchema, ModerateContentOutputSchema } from '@/lib/types';
 
-const ModerateContentInputSchema = z.object({
-  content: z
-    .string()
-    .describe('The content to be moderated, such as text or an image data URI.'),
-  contentType: z
-    .enum(['text', 'image'])
-    .describe('The type of content being moderated.'),
-});
-export type ModerateContentInput = z.infer<typeof ModerateContentInputSchema>;
-
-const ModerateContentOutputSchema = z.object({
-  isSafe: z
-    .boolean()
-    .describe('Whether the content is safe and does not violate any policies.'),
-  reasons: z
-    .array(z.string())
-    .describe('Reasons why the content was flagged as unsafe, if any.'),
-});
-export type ModerateContentOutput = z.infer<typeof ModerateContentOutputSchema>;
 
 export async function moderateContent(input: ModerateContentInput): Promise<ModerateContentOutput> {
   return moderateContentFlow(input);
@@ -76,7 +58,6 @@ const moderateContentPrompt = ai.definePrompt({
 // Handlebars helper function to check equality (needed because Handlebars doesn't have built-in equality check)
 // Note: This should be defined outside the ai.defineFlow block and should be registered before the flow definition.
 
-import Handlebars from 'handlebars';
 Handlebars.registerHelper('ifEquals', function (arg1, arg2, options) {
   // @ts-expect-error
   return arg1 == arg2 ? options.fn(this) : options.inverse(this);
