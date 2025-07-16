@@ -12,6 +12,7 @@ const imageUrlSchema = z.string().refine(value => {
 });
 
 export const duelOptionSchema = z.object({
+  id: z.string().optional(),
   title: z.string().min(1, { message: "El título de la opción es requerido." }).max(50),
   imageUrl: imageUrlSchema.optional(),
   affiliateUrl: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal('')),
@@ -21,12 +22,15 @@ export const createDuelSchema = z.object({
   type: z.enum(['A_VS_B', 'LIST']),
   title: z.string().min(3, { message: "El título debe tener al menos 3 caracteres." }).max(100),
   description: z.string().max(500).optional(),
-  options: z.array(duelOptionSchema),
-  startsAt: z.coerce.date({ required_error: "La fecha de inicio es requerida." }),
-  endsAt: z.coerce.date({ required_error: "La fecha de fin es requerida." }),
+  options: z.array(duelOptionSchema).min(1),
+  startsAt: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Fecha de inicio inválida." }),
+  endsAt: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Fecha de fin inválida." }),
   userKeys: z.number().optional(), // Make this optional for updates
 }).superRefine((data, ctx) => {
-    if (data.endsAt <= data.startsAt) {
+    const startDate = new Date(data.startsAt);
+    const endDate = new Date(data.endsAt);
+
+    if (endDate <= startDate) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: "La fecha de fin debe ser posterior a la fecha de inicio.",

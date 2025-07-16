@@ -27,23 +27,22 @@ export type FormState = {
 const DUEL_CREATION_COST = 5;
 
 // This helper function reconstructs the nested options array from the flat FormData
-function processFormData(formData: FormData) {
+function processFormDataWithOptions(formData: FormData) {
   const data: Record<string, any> = Object.fromEntries(formData.entries());
   const options: { title: string; imageUrl?: string; affiliateUrl?: string, id?: string }[] = [];
-  const optionKeys = Object.keys(data).filter(key => key.startsWith('options['));
+  
+  // Find all keys that look like option titles
+  const titleKeys = Object.keys(data).filter(key => key.match(/^options\[\d+\]\.title$/));
 
-  // Determine the number of options based on the keys
-  const numOptions = optionKeys.reduce((max, key) => {
-    const match = key.match(/options\[(\d+)\]/);
-    return match ? Math.max(max, parseInt(match[1], 10)) : max;
-  }, -1) + 1;
-
-  for (let i = 0; i < numOptions; i++) {
+  for (const titleKey of titleKeys) {
+    const indexMatch = titleKey.match(/\[(\d+)\]/);
+    if (!indexMatch) continue;
+    const i = indexMatch[1];
+    
     const title = data[`options[${i}].title`];
-    // Only add the option if it has a title. This prevents empty entries.
-    if (title) {
+    if (title) { // Only add if title exists
         options.push({
-            id: data[`options[${i}].id`], // Include id for updates
+            id: data[`options[${i}].id`],
             title: title,
             imageUrl: data[`options[${i}].imageUrl`],
             affiliateUrl: data[`options[${i}].affiliateUrl`],
@@ -86,8 +85,15 @@ export async function createDuelAction(
   formData: FormData
 ): Promise<FormState> {
   
-  const rawFormData = processFormData(formData);
-  const validatedFields = createDuelSchema.safeParse(rawFormData);
+  const rawFormData = processFormDataWithOptions(formData);
+
+  // Explicitly convert types before validation
+  const dataToValidate = {
+    ...rawFormData,
+    userKeys: rawFormData.userKeys ? Number(rawFormData.userKeys) : undefined,
+  };
+  
+  const validatedFields = createDuelSchema.safeParse(dataToValidate);
   
   if (!validatedFields.success) {
     const errorDetails = JSON.stringify(validatedFields.error.flatten(), null, 2);
@@ -102,6 +108,10 @@ export async function createDuelAction(
   }
   
   const { type, title, options, description, startsAt, endsAt, userKeys } = validatedFields.data;
+  
+  // Convert dates after successful validation
+  const startDate = new Date(startsAt);
+  const endDate = new Date(endsAt);
 
   try {
     const moderationResult = await runModeration({ title, options });
@@ -113,17 +123,17 @@ export async function createDuelAction(
     revalidatePath('/panel/mis-duelos');
 
     const hasEnoughKeys = (userKeys || 0) >= DUEL_CREATION_COST;
-    const status: Duel['status'] = hasEnoughKeys ? 'scheduled' : 'draft'; // Let the context determine if it's active
+    const status: Duel['status'] = hasEnoughKeys ? 'scheduled' : 'draft'; 
 
     const newDuel: Duel = {
       id: `duel-${Date.now()}`,
       type,
       title,
       description: description || '',
-      status, // Will be re-evaluated in the context
+      status, 
       createdAt: formatISO(new Date()),
-      startsAt: formatISO(startsAt),
-      endsAt: formatISO(endsAt),
+      startsAt: formatISO(startDate),
+      endsAt: formatISO(endDate),
       creator: {
         id: 'user-1',
         name: 'Alex Doe',
@@ -163,7 +173,7 @@ export async function updateDuelAction(
   prevState: FormState,
   formData: FormData
 ): Promise<FormState> {
-  const rawFormData = processFormData(formData);
+  const rawFormData = processFormDataWithOptions(formData);
   
   if (!rawFormData.id) {
     return { success: false, message: "ID del duelo no encontrado.", errors: { _form: ["ID del duelo no encontrado."] } };
@@ -184,6 +194,10 @@ export async function updateDuelAction(
   }
 
   const { title, options, description, startsAt, endsAt, type } = validatedFields.data;
+  
+  // Convert dates after successful validation
+  const startDate = new Date(startsAt);
+  const endDate = new Date(endsAt);
 
   try {
     const moderationResult = await runModeration({ title, options });
@@ -201,14 +215,14 @@ export async function updateDuelAction(
       type,
       title,
       description: description || '',
-      startsAt: formatISO(startsAt),
-      endsAt: formatISO(endsAt),
+      startsAt: formatISO(startDate),
+      endsAt: formatISO(endDate),
       options: options.map((opt, index) => ({
-        id: opt.id || `opt-${rawFormData.id}-${index}`, // Ensure option has an id
+        id: opt.id || `opt-${rawFormData.id}-${index}`, 
         title: opt.title,
         imageUrl: opt.imageUrl || undefined,
         affiliateUrl: opt.affiliateUrl || undefined,
-        votes: 0, // IMPORTANT: Votes preservation is handled in the context.
+        votes: 0, 
       }))
     };
     
