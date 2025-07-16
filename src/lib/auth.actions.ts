@@ -4,6 +4,8 @@
 import { signIn, signOut } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
 import { AuthError } from 'next-auth';
+import { mockUsers } from './data';
+import bcrypt from 'bcryptjs';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
@@ -58,14 +60,50 @@ export async function signup(prevState: any, formData: FormData) {
         success: false,
       };
     }
+
+    const { name, email, password } = validatedFields.data;
+
+    // En una app real, esto consultaría la base de datos
+    const existingUser = mockUsers.find(u => u.email === email);
+    if (existingUser) {
+        return {
+            message: 'Ya existe un usuario con este email.',
+            success: false,
+        }
+    }
     
-    // Aquí iría la lógica para crear el usuario en tu base de datos PostgreSQL
-    // usando un ORM como Prisma o una librería como 'pg'.
-    // Por ahora, simularemos un error de implementación.
-     return {
-        message: 'La función de registro no está implementada todavía.',
-        success: false,
-     };
+    // Hash de la contraseña
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // En una app real, esto crearía el usuario en la BD.
+    // Aquí, lo añadimos al array de mockUsers (simulación)
+    const newUser = {
+        id: `user-${Date.now()}`,
+        name,
+        email,
+        password: hashedPassword, // Guardamos la contraseña hasheada
+        role: 'USER',
+        avatarUrl: `https://i.pravatar.cc/150?u=${email}`,
+        keys: 5, // Llaves iniciales
+        duelsCreated: 0,
+        votesCast: 0,
+        createdAt: new Date().toISOString(),
+    };
+    mockUsers.push(newUser as any);
+
+    try {
+        await signIn('credentials', {
+            email,
+            password,
+            redirectTo: '/',
+        });
+        return { success: true, message: '¡Registro completado!' };
+    } catch (error) {
+        if (error instanceof AuthError) {
+            return { message: 'No se pudo iniciar sesión después del registro.', success: false };
+        }
+        throw error;
+    }
 }
 
 
