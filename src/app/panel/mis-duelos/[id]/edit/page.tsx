@@ -97,7 +97,7 @@ export default function EditUserDuelPage({ params }: { params: { id: string } })
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <CreateDuelForm state={state} formAction={formAction} duelData={duel} isEditing={true} isPending={isPending} />
+          <CreateDuelForm user={user} state={state} formAction={formAction} duelData={duel} isEditing={true} isPending={isPending} />
         </CardContent>
       </Card>
     </div>

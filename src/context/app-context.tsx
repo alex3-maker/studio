@@ -302,18 +302,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const updateDuel = useCallback((updatedDuelData: Partial<Duel> & { id: string }) => {
     setDuels(prevDuels => prevDuels.map(duel => {
-        if (duel.id === updatedDuelData.id) {
-          const originalOptions = duel.options;
-          const updatedOptions = updatedDuelData.options?.map((opt, index) => {
-              const originalOption = originalOptions.find(o => o.id === opt.id) || originalOptions[index] || {};
-              return { ...originalOption, ...opt };
-          });
+      if (duel.id === updatedDuelData.id) {
+        const originalDuel = prevDuels.find(d => d.id === updatedDuelData.id);
+        if (!originalDuel) return duel;
 
-          return { ...duel, ...updatedDuelData, options: updatedOptions || duel.options };
-        }
-        return duel;
-      })
-    );
+        // Preserve original votes when updating options
+        const updatedOptions = updatedDuelData.options?.map(updatedOpt => {
+          const originalOpt = originalDuel.options.find(o => o.id === updatedOpt.id);
+          return {
+            ...updatedOpt,
+            votes: originalOpt ? originalOpt.votes : 0,
+          };
+        });
+
+        return { ...duel, ...updatedDuelData, options: updatedOptions || duel.options };
+      }
+      return duel;
+    }));
   }, []);
 
   const toggleDuelStatus = useCallback((duelId: string) => {
