@@ -40,11 +40,17 @@ Analyze the following HTML content:
             },
         });
         
-        const { output } = await analyzePrompt(input, { config: { apiKey: input.apiKey } });
-        if (!output) {
-            throw new Error('La IA no pudo analizar la página del producto.');
+        try {
+            const { output } = await analyzePrompt(input, { config: { apiKey: input.apiKey } });
+            if (!output) {
+                throw new Error('La IA no pudo analizar la página del producto.');
+            }
+            return output;
+        } catch (error) {
+            const originalMessage = error instanceof Error ? error.message : String(error);
+            const apiKeyForDebug = input.apiKey ? `...${input.apiKey.slice(-4)}` : 'No proporcionada';
+            throw new Error(`Error de IA: ${originalMessage}. (Clave usada: ${apiKeyForDebug})`);
         }
-        return output;
     }
 );
 
