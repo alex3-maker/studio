@@ -6,7 +6,7 @@
  * - generateDuelIdea - A function that returns a duel idea.
  * - DuelIdeaOutput - The return type for the generateDuelIdea function.
  */
-import { genkit, z } from 'genkit';
+import { z } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { ai } from '@/ai/genkit';
 
@@ -54,16 +54,9 @@ const generateDuelIdeaFlow = ai.defineFlow(
     outputSchema: DuelIdeaOutputSchema,
   },
   async ({ apiKey }) => {
-    
-    const configuredPrompt = ai.definePrompt(
-      {
-        ...generateDuelIdeaPrompt.config,
-        plugins: [googleAI({ apiKey })],
-      },
-      generateDuelIdeaPrompt.compile
-    );
-    
-    const { output } = await configuredPrompt({});
+    const { output } = await generateDuelIdeaPrompt({}, {
+        plugins: [googleAI({apiKey})]
+    });
     return output!;
   }
 );
