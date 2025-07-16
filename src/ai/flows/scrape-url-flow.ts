@@ -2,16 +2,25 @@
 'use server';
 /**
  * @fileOverview A flow to scrape product information from a URL.
- * - scrapeUrl - A function that takes a URL and returns the product title and image URL by parsing Open Graph meta tags.
+ * - scrapeUrl - A function that takes a URL and returns the product title, image URL, and raw HTML content.
  * - ScrapeUrlInput - The input type for the scrapeUrl function.
  * - ScrapeUrlOutput - The return type for the scrapeUrl function.
  */
 
 import { z } from 'zod';
-import { ScrapeUrlInputSchema, ScrapeUrlOutputSchema } from '@/lib/types';
 
+export const ScrapeUrlInputSchema = z.object({
+  url: z.string().url({ message: 'Por favor, introduce una URL válida.' }),
+});
 export type ScrapeUrlInput = z.infer<typeof ScrapeUrlInputSchema>;
+
+export const ScrapeUrlOutputSchema = z.object({
+  title: z.string().nullable().describe('The extracted product title.'),
+  imageUrl: z.string().url().nullable().describe('The URL of the main product image.'),
+  htmlContent: z.string().describe('The full HTML content of the page.'),
+});
 export type ScrapeUrlOutput = z.infer<typeof ScrapeUrlOutputSchema>;
+
 
 // Helper function to parse meta tags from HTML
 const parseMetaTags = (html: string): { title: string | null; imageUrl: string | null } => {
@@ -36,8 +45,6 @@ export async function scrapeUrl(input: ScrapeUrlInput): Promise<ScrapeUrlOutput>
   const { url } = validatedInput.data;
 
   try {
-    // Fetch the HTML content of the URL
-    // We add a common user-agent header to mimic a browser and avoid being blocked.
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -47,26 +54,21 @@ export async function scrapeUrl(input: ScrapeUrlInput): Promise<ScrapeUrlOutput>
     });
 
     if (!response.ok) {
-      throw new Error(`No se pudo acceder a la URL. Estado: ${response.status}`);
+        throw new Error(`No se pudo acceder a la URL. Estado: ${response.status}`);
     }
     const htmlContent = await response.text();
 
     const { title, imageUrl } = parseMetaTags(htmlContent);
 
-    if (!title || !imageUrl) {
-      let missing = [];
-      if (!title) missing.push('título');
-      if (!imageUrl) missing.push('imagen');
-      throw new Error(`No se pudo encontrar la información requerida (${missing.join(' y ')}). La página podría no tener metadatos de Open Graph.`);
+    let validatedImageUrl = null;
+    if (imageUrl) {
+        const validation = z.string().url().safeParse(imageUrl);
+        if (validation.success) {
+            validatedImageUrl = validation.data;
+        }
     }
 
-    // Validate the extracted image URL before returning
-    const validatedImageUrl = z.string().url().safeParse(imageUrl);
-    if (!validatedImageUrl.success) {
-        throw new Error(`La URL de la imagen extraída no es válida: ${imageUrl}`);
-    }
-    
-    return { title, imageUrl };
+    return { title, imageUrl: validatedImageUrl, htmlContent };
 
   } catch (error) {
     console.error('Error en scrapeUrl:', error);

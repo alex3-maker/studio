@@ -30,7 +30,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Terminal, Upload, CalendarIcon, Link as LinkIcon, Loader2 } from 'lucide-react';
+import { Terminal, Upload, CalendarIcon, Link as LinkIcon, Loader2, Sparkles } from 'lucide-react';
 import type { Duel, User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import type { FormState } from '@/lib/actions';
@@ -38,7 +38,9 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { cn } from '@/lib/utils';
 import { scrapeUrl } from '@/ai/flows/scrape-url-flow';
+import { analyzeProductPage } from '@/ai/flows/analyze-product-page-flow';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAppContext } from '@/context/app-context';
 
 
 interface SubmitButtonProps {
@@ -72,6 +74,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [productUrls, setProductUrls] = useState<string[]>(['', '']);
   const [isScraping, setIsScraping] = useState<boolean[]>([false, false]);
+  const { apiKey } = useAppContext();
   
   const defaultValues = duelData ? {
       title: duelData.title,
@@ -148,9 +151,31 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
 
     try {
         const result = await scrapeUrl({ url });
-        form.setValue(`options.${index}.title`, result.title, { shouldValidate: true });
-        form.setValue(`options.${index}.imageUrl`, result.imageUrl, { shouldValidate: true });
-        toast({ title: "¡Éxito!", description: "Producto importado correctamente." });
+
+        if (result.title && result.imageUrl) {
+            form.setValue(`options.${index}.title`, result.title, { shouldValidate: true });
+            form.setValue(`options.${index}.imageUrl`, result.imageUrl, { shouldValidate: true });
+            toast({ title: "¡Éxito!", description: "Producto importado directamente." });
+        } else {
+             if (!apiKey) {
+                toast({
+                    variant: "destructive",
+                    title: "Importación fallida",
+                    description: "No se encontraron metadatos. Se requiere una clave de API de Gemini para un análisis más profundo.",
+                    duration: 8000
+                });
+                return;
+            }
+            toast({ title: "Análisis Profundo", description: "No se encontraron metadatos. Usando IA para analizar la página. Esto puede tardar un momento..." });
+            
+            // The 'generate' function for AI flows is not available in 'in-memory' Genkit, so we pass the key.
+            // This is a workaround specific to the playground environment.
+            const aiResult = await analyzeProductPage({ htmlContent: result.htmlContent, url });
+
+            form.setValue(`options.${index}.title`, aiResult.title, { shouldValidate: true });
+            form.setValue(`options.${index}.imageUrl`, aiResult.imageUrl, { shouldValidate: true });
+            toast({ title: "¡Éxito con IA!", description: "Producto importado usando análisis de IA." });
+        }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         toast({ variant: "destructive", title: "Error al Importar", description: `No se pudo obtener la información. Detalle: ${errorMessage}` });
@@ -366,7 +391,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                         )}
                         <Tabs defaultValue="manual" className="w-full">
                             <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="manual">Imagen Manual</TabsTrigger>
+                                <TabsTrigger value="manual">Entrada Manual</TabsTrigger>
                                 <TabsTrigger value="url">Importar desde URL</TabsTrigger>
                             </TabsList>
                             <TabsContent value="manual" className="space-y-4 mt-4">
@@ -407,7 +432,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                                 <div className="flex gap-2">
                                     <Input 
                                         id={`product-url-${index}`}
-                                        placeholder="Pega la URL de un producto aquí (ej: Amazon)" 
+                                        placeholder="Pega la URL de un producto (ej: Amazon)" 
                                         value={productUrls[index]}
                                         onChange={(e) => {
                                             const newUrls = [...productUrls];
@@ -426,7 +451,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                                         Importar
                                     </Button>
                                 </div>
-                                <FormDescription>El sistema extraerá el título y la imagen del producto.</FormDescription>
+                                <FormDescription>El sistema intentará extraer el título y la imagen. Si falla, usará IA como respaldo (requiere clave de API).</FormDescription>
                               </div>
                             </TabsContent>
                         </Tabs>
