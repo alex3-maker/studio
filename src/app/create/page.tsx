@@ -26,7 +26,7 @@ const initialState: FormState = {
 export default function CreateDuelPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { addDuel, user, apiKey } = useAppContext();
+  const { addDuel, user, apiKey, isAiEnabled } = useAppContext();
   const [state, formAction, isPending] = useActionState(createDuelAction, initialState);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedData, setGeneratedData] = useState<Partial<CreateDuelFormValues> | null>(null);
@@ -108,7 +108,7 @@ export default function CreateDuelPage() {
                   </span>
                 </CardDescription>
               </div>
-               {user.role === 'admin' && (
+               {user.role === 'admin' && isAiEnabled && (
                   <Button variant="outline" onClick={handleGenerate} disabled={isGenerating}>
                     {isGenerating ? (
                         <Loader2 className="animate-spin" />

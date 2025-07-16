@@ -14,6 +14,7 @@ const DUELS_STORAGE_KEY = 'dueliax_duels';
 const NOTIFICATIONS_STORAGE_KEY = 'dueliax_notifications';
 const KEY_HISTORY_STORAGE_KEY = 'dueliax_key_history';
 const API_KEY_STORAGE_KEY = 'dueliax_api_key';
+const AI_ENABLED_STORAGE_KEY = 'dueliax_ai_enabled';
 const DUEL_CREATION_COST = 5;
 
 interface AppContextType {
@@ -24,6 +25,8 @@ interface AppContextType {
   keyHistory: KeyTransaction[];
   apiKey: string | null;
   setApiKey: (key: string) => void;
+  isAiEnabled: boolean;
+  setIsAiEnabled: (enabled: boolean) => void;
   castVote: (duelId: string, optionId: string) => boolean;
   addDuel: (newDuel: Duel) => void;
   updateDuel: (updatedDuel: Partial<Duel> & { id: string }) => void;
@@ -72,6 +75,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [keyHistory, setKeyHistory] = useState<KeyTransaction[]>([]);
   const [duelVotingHistory, setDuelVotingHistory] = useState<string[]>([]);
   const [apiKey, setApiKeyState] = useState<string | null>(null);
+  const [isAiEnabled, setAiEnabledState] = useState<boolean>(true);
   const [isLoaded, setIsLoaded] = useState(false);
   
   const persistUser = useCallback((updatedUser: User) => {
@@ -84,6 +88,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       const storedApiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
       if (storedApiKey) setApiKeyState(storedApiKey);
+      
+      const storedAiEnabled = localStorage.getItem(AI_ENABLED_STORAGE_KEY);
+      setAiEnabledState(storedAiEnabled ? JSON.parse(storedAiEnabled) : true);
 
       const storedDuels = localStorage.getItem(DUELS_STORAGE_KEY);
       if (storedDuels) {
@@ -160,6 +167,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setApiKeyState(key);
     localStorage.setItem(API_KEY_STORAGE_KEY, key);
   }, []);
+
+  const setIsAiEnabled = useCallback((enabled: boolean) => {
+    setAiEnabledState(enabled);
+    localStorage.setItem(AI_ENABLED_STORAGE_KEY, JSON.stringify(enabled));
+  }, []);
+
 
   const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
     const newNotif = {
@@ -416,7 +429,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     deleteUser,
     adjustUserKeys,
     apiKey,
-    setApiKey
+    setApiKey,
+    isAiEnabled,
+    setIsAiEnabled,
   };
 
   if (!isLoaded) {

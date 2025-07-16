@@ -74,7 +74,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [productUrls, setProductUrls] = useState<string[]>(['', '']);
   const [isScraping, setIsScraping] = useState<boolean[]>([false, false]);
-  const { apiKey } = useAppContext();
+  const { apiKey, isAiEnabled } = useAppContext();
   
   const defaultValues = duelData ? {
       title: duelData.title,
@@ -180,7 +180,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
             variant: "destructive", 
             title: "Error al Importar", 
             description: (
-                 <div className="space-y-2">
+                <div className="space-y-2">
                     <p>No se pudo obtener la información.</p>
                     <div className="text-xs bg-destructive-foreground/10 p-2 rounded-md whitespace-pre-wrap break-all max-h-40 overflow-y-auto font-mono">
                         {errorMessage}
@@ -402,7 +402,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                         <Tabs defaultValue="manual" className="w-full">
                             <TabsList className="grid w-full grid-cols-2">
                                 <TabsTrigger value="manual">Entrada Manual</TabsTrigger>
-                                <TabsTrigger value="url">Importar desde URL</TabsTrigger>
+                                {isAiEnabled && <TabsTrigger value="url">Importar desde URL</TabsTrigger>}
                             </TabsList>
                             <TabsContent value="manual" className="space-y-4 mt-4">
                                 <FormField
@@ -436,34 +436,36 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                                     )}
                                 />
                             </TabsContent>
-                            <TabsContent value="url" className="space-y-4 mt-4">
-                              <div className='space-y-2'>
-                                <FormLabel htmlFor={`product-url-${index}`}>URL del Producto</FormLabel>
-                                <div className="flex gap-2">
-                                    <Input 
-                                        id={`product-url-${index}`}
-                                        placeholder="Pega la URL de un producto (ej: Amazon)" 
-                                        value={productUrls[index]}
-                                        onChange={(e) => {
-                                            const newUrls = [...productUrls];
-                                            newUrls[index] = e.target.value;
-                                            setProductUrls(newUrls);
-                                        }}
-                                        disabled={isScraping[index]}
-                                    />
-                                    <Button 
-                                        type="button" 
-                                        variant="secondary" 
-                                        onClick={() => handleImportFromUrl(index)}
-                                        disabled={isScraping[index] || !productUrls[index]}
-                                    >
-                                        {isScraping[index] ? <Loader2 className="animate-spin" /> : <LinkIcon className="mr-2" />}
-                                        Importar
-                                    </Button>
+                           {isAiEnabled && (
+                              <TabsContent value="url" className="space-y-4 mt-4">
+                                <div className='space-y-2'>
+                                  <FormLabel htmlFor={`product-url-${index}`}>URL del Producto</FormLabel>
+                                  <div className="flex gap-2">
+                                      <Input 
+                                          id={`product-url-${index}`}
+                                          placeholder="Pega la URL de un producto (ej: Amazon)" 
+                                          value={productUrls[index]}
+                                          onChange={(e) => {
+                                              const newUrls = [...productUrls];
+                                              newUrls[index] = e.target.value;
+                                              setProductUrls(newUrls);
+                                          }}
+                                          disabled={isScraping[index]}
+                                      />
+                                      <Button 
+                                          type="button" 
+                                          variant="secondary" 
+                                          onClick={() => handleImportFromUrl(index)}
+                                          disabled={isScraping[index] || !productUrls[index]}
+                                      >
+                                          {isScraping[index] ? <Loader2 className="animate-spin" /> : <LinkIcon className="mr-2" />}
+                                          Importar
+                                      </Button>
+                                  </div>
+                                  <FormDescription>El sistema intentará extraer el título y la imagen. Si falla, usará IA como respaldo (requiere clave de API).</FormDescription>
                                 </div>
-                                <FormDescription>El sistema intentará extraer el título y la imagen. Si falla, usará IA como respaldo (requiere clave de API).</FormDescription>
-                              </div>
-                            </TabsContent>
+                              </TabsContent>
+                           )}
                         </Tabs>
                     </CardContent>
                 </Card>
