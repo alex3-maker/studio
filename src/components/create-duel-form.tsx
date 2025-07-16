@@ -69,6 +69,43 @@ interface CreateDuelFormProps {
   duelDataFromAI?: Partial<CreateDuelFormValues> | null;
 }
 
+function ManualInputFields({ form, index, handleFileChange, fileInputRefs }: any) {
+    return (
+        <div className="space-y-4 mt-4">
+            <FormField
+                control={form.control}
+                name={`options.${index}.imageUrl`}
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>URL de la Imagen (Opcional)</FormLabel>
+                        <div className="flex gap-2">
+                            <FormControl>
+                                <Input placeholder="https://... o sube un archivo" {...field} />
+                            </FormControl>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => fileInputRefs.current[index]?.click()}
+                            >
+                                <Upload className="mr-2 h-4 w-4" /> Subir
+                            </Button>
+                        </div>
+                        <input
+                            type="file"
+                            ref={el => fileInputRefs.current[index] = el}
+                            className="hidden"
+                            accept="image/png, image/jpeg, image/gif, image/webp"
+                            onChange={(e) => handleFileChange(e, index)}
+                        />
+                        <FormDescription>Pega una URL o sube una imagen (máx 2MB). Déjalo en blanco para una opción de solo texto.</FormDescription>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+        </div>
+    );
+}
+
 export default function CreateDuelForm({ user, state, formAction, duelData, isEditing = false, isPending, duelDataFromAI }: CreateDuelFormProps) {
   const { toast } = useToast();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -143,6 +180,16 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
         return;
     }
 
+    if (!apiKey) {
+      toast({
+        variant: 'destructive',
+        title: 'Falta la Clave de API',
+        description: 'No se ha configurado una clave de API de Gemini. Un admin puede añadirla en los Ajustes de IA.',
+        duration: 8000,
+      });
+      return;
+    }
+
     setIsScraping(prev => {
         const newScraping = [...prev];
         newScraping[index] = true;
@@ -157,15 +204,6 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
             form.setValue(`options.${index}.imageUrl`, result.imageUrl, { shouldValidate: true });
             toast({ title: "¡Éxito!", description: "Producto importado directamente." });
         } else {
-             if (!apiKey) {
-                toast({
-                    variant: "destructive",
-                    title: "Importación simple fallida",
-                    description: "No se encontraron metadatos. Se requiere una clave de API de Gemini para un análisis más profundo. Un admin puede configurarla en los Ajustes de IA.",
-                    duration: 8000
-                });
-                return;
-            }
             toast({ title: "Análisis Profundo", description: "No se encontraron metadatos. Usando IA para analizar la página. Esto puede tardar un momento..." });
             
             const aiResult = await analyzeProductPage({ htmlContent: result.htmlContent, url, apiKey });
@@ -180,7 +218,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
             variant: "destructive", 
             title: "Error al Importar", 
             description: (
-                <div className="space-y-2">
+                 <div className="space-y-2">
                     <p>No se pudo obtener la información.</p>
                     <div className="text-xs bg-destructive-foreground/10 p-2 rounded-md whitespace-pre-wrap break-all max-h-40 overflow-y-auto font-mono">
                         {errorMessage}
@@ -399,74 +437,48 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                                 <img src={form.watch(`options.${index}.imageUrl`) as string} alt="Vista previa" className="w-full h-full object-contain" />
                             </div>
                         )}
-                        <Tabs defaultValue="manual" className="w-full">
-                            <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="manual">Entrada Manual</TabsTrigger>
-                                {isAiEnabled && <TabsTrigger value="url">Importar desde URL</TabsTrigger>}
-                            </TabsList>
-                            <TabsContent value="manual" className="space-y-4 mt-4">
-                                <FormField
-                                    control={form.control}
-                                    name={`options.${index}.imageUrl`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>URL de la Imagen (Opcional)</FormLabel>
-                                            <div className="flex gap-2">
-                                                <FormControl>
-                                                    <Input placeholder="https://... o sube un archivo" {...field} />
-                                                </FormControl>
-                                                <Button 
-                                                    type="button" 
-                                                    variant="outline" 
-                                                    onClick={() => fileInputRefs.current[index]?.click()}
-                                                >
-                                                    <Upload className="mr-2 h-4 w-4" /> Subir
-                                                </Button>
-                                            </div>
-                                            <input 
-                                                type="file"
-                                                ref={el => fileInputRefs.current[index] = el}
-                                                className="hidden"
-                                                accept="image/png, image/jpeg, image/gif, image/webp"
-                                                onChange={(e) => handleFileChange(e, index)}
-                                            />
-                                            <FormDescription>Pega una URL o sube una imagen (máx 2MB). Déjalo en blanco para una opción de solo texto.</FormDescription>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </TabsContent>
-                           {isAiEnabled && (
-                              <TabsContent value="url" className="space-y-4 mt-4">
-                                <div className='space-y-2'>
-                                  <FormLabel htmlFor={`product-url-${index}`}>URL del Producto</FormLabel>
-                                  <div className="flex gap-2">
-                                      <Input 
-                                          id={`product-url-${index}`}
-                                          placeholder="Pega la URL de un producto (ej: Amazon)" 
-                                          value={productUrls[index]}
-                                          onChange={(e) => {
-                                              const newUrls = [...productUrls];
-                                              newUrls[index] = e.target.value;
-                                              setProductUrls(newUrls);
-                                          }}
-                                          disabled={isScraping[index]}
-                                      />
-                                      <Button 
-                                          type="button" 
-                                          variant="secondary" 
-                                          onClick={() => handleImportFromUrl(index)}
-                                          disabled={isScraping[index] || !productUrls[index]}
-                                      >
-                                          {isScraping[index] ? <Loader2 className="animate-spin" /> : <LinkIcon className="mr-2" />}
-                                          Importar
-                                      </Button>
-                                  </div>
-                                  <FormDescription>El sistema intentará extraer el título y la imagen. Si falla, usará IA como respaldo (requiere clave de API).</FormDescription>
-                                </div>
-                              </TabsContent>
-                           )}
-                        </Tabs>
+                        
+                        {isAiEnabled ? (
+                            <Tabs defaultValue="manual" className="w-full">
+                                <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="manual">Entrada Manual</TabsTrigger>
+                                    <TabsTrigger value="url">Importar desde URL</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="manual">
+                                    <ManualInputFields form={form} index={index} handleFileChange={handleFileChange} fileInputRefs={fileInputRefs} />
+                                </TabsContent>
+                                <TabsContent value="url" className="space-y-4 mt-4">
+                                    <div className='space-y-2'>
+                                      <FormLabel htmlFor={`product-url-${index}`}>URL del Producto</FormLabel>
+                                      <div className="flex gap-2">
+                                          <Input 
+                                              id={`product-url-${index}`}
+                                              placeholder="Pega la URL de un producto (ej: Amazon)" 
+                                              value={productUrls[index]}
+                                              onChange={(e) => {
+                                                  const newUrls = [...productUrls];
+                                                  newUrls[index] = e.target.value;
+                                                  setProductUrls(newUrls);
+                                              }}
+                                              disabled={isScraping[index]}
+                                          />
+                                          <Button 
+                                              type="button" 
+                                              variant="secondary" 
+                                              onClick={() => handleImportFromUrl(index)}
+                                              disabled={isScraping[index] || !productUrls[index]}
+                                          >
+                                              {isScraping[index] ? <Loader2 className="animate-spin" /> : <LinkIcon className="mr-2" />}
+                                              Importar
+                                          </Button>
+                                      </div>
+                                      <FormDescription>El sistema intentará extraer el título y la imagen. Si falla, usará IA como respaldo (requiere clave de API).</FormDescription>
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
+                        ) : (
+                             <ManualInputFields form={form} index={index} handleFileChange={handleFileChange} fileInputRefs={fileInputRefs} />
+                        )}
                     </CardContent>
                 </Card>
             ))}
@@ -497,3 +509,4 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
     </Form>
   );
 }
+
