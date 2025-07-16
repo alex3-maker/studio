@@ -40,8 +40,8 @@ const analyzeProductPageFlow = ai.defineFlow(
         outputSchema: AnalyzeProductPageOutputSchema,
     },
     async (input) => {
-        // The second argument to a prompt is the per-request config.
-        const { output } = await analyzePrompt(input, { apiKey: input.apiKey });
+        // The prompt will now use the globally configured API key from the environment.
+        const { output } = await analyzePrompt(input);
         if (!output) {
             throw new Error('La IA no pudo analizar la página del producto.');
         }
@@ -52,12 +52,12 @@ const analyzeProductPageFlow = ai.defineFlow(
 
 export async function analyzeProductPage(input: AnalyzeProductPageInput): Promise<AnalyzeProductPageOutput> {
     try {
+        // The flow is called without passing the API key directly.
         return await analyzeProductPageFlow(input);
     } catch (error) {
         const originalMessage = error instanceof Error ? error.message : String(error);
-        const apiKeyForDebug = input.apiKey ? `...${input.apiKey.slice(-4)}` : 'No proporcionada';
         
         // Throw a new, more descriptive error that will be caught by the frontend
-        throw new Error(`Error de IA: ${originalMessage}. (Clave usada: ${apiKeyForDebug})`);
+        throw new Error(`Error de IA: ${originalMessage}. Asegúrate de que la clave GEMINI_API_KEY está configurada en tu entorno.`);
     }
 }

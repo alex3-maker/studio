@@ -161,14 +161,15 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                 toast({
                     variant: "destructive",
                     title: "Importación fallida",
-                    description: "No se encontraron metadatos. Se requiere una clave de API de Gemini para un análisis más profundo.",
+                    description: "No se encontraron metadatos. Se requiere una clave de API de Gemini para un análisis más profundo. Configúrala en los ajustes de Admin.",
                     duration: 8000
                 });
                 return;
             }
             toast({ title: "Análisis Profundo", description: "No se encontraron metadatos. Usando IA para analizar la página. Esto puede tardar un momento..." });
             
-            const aiResult = await analyzeProductPage({ htmlContent: result.htmlContent, url, apiKey });
+            // The API Key is no longer passed directly. Genkit uses the environment variable.
+            const aiResult = await analyzeProductPage({ htmlContent: result.htmlContent, url });
 
             form.setValue(`options.${index}.title`, aiResult.title, { shouldValidate: true });
             form.setValue(`options.${index}.imageUrl`, aiResult.imageUrl, { shouldValidate: true });
