@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/app-context';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import DuelResultsDetails from './duel-results-details';
-import { Progress } from './ui/progress';
 
 const HINT_STORAGE_KEY = 'dueliax-landscape-hint-dismissed';
 
@@ -81,7 +80,7 @@ function AutoAdvanceButton({ onComplete, hasMoreDuels }: { onComplete: () => voi
 
   return (
     <Button onClick={onComplete} className="w-full relative overflow-hidden" size="lg">
-      <div className="absolute top-0 left-0 h-full bg-primary/30" style={{ width: `${progress}%`, transition: 'width 30ms linear' }} />
+      <div className="absolute top-0 left-0 h-full bg-primary-foreground/30" style={{ width: `${progress}%` }} />
       <span className="relative z-10 flex items-center">
         {hasMoreDuels ? 'Siguiente Duelo' : 'Finalizar'}
         <ArrowRight className="ml-2 h-4 w-4" />
@@ -94,7 +93,6 @@ function AutoAdvanceButton({ onComplete, hasMoreDuels }: { onComplete: () => voi
 export default function VotingFeed() {
   const { duels, castVote, votedDuelIds, getDuelStatus } = useAppContext();
   const [currentDuelIndex, setCurrentDuelIndex] = useState(0);
-  const [voted, setVoted] = useState<DuelOption | null>(null);
   const [votedDuelDetails, setVotedDuelDetails] = useState<Duel | null>(null);
   const [animationClass, setAnimationClass] = useState('');
   const [isPending, startTransition] = useTransition();
@@ -134,9 +132,8 @@ export default function VotingFeed() {
 
 
   const handleVote = (selectedOption: DuelOption, direction?: 'left' | 'right') => {
-    if (voted || !currentDuel) return;
+    if (votedDuelDetails || !currentDuel) return;
     
-    setVoted(selectedOption);
     if(direction){
         setAnimationClass(direction === 'left' ? 'animate-card-select-left' : 'animate-card-select-right');
     }
@@ -166,17 +163,18 @@ export default function VotingFeed() {
     }, currentDuel.type === 'A_VS_B' ? 350 : 100);
   };
   
-  const onDialogClose = (open: boolean) => {
-    if(!open) {
+  const handleDialogClose = () => {
       setIsDialogOpen(false);
-      setAnimationClass('');
-      setVoted(null);
-      setVotedDuelDetails(null);
+      
+      // Delay state reset to allow dialog to animate out
+      setTimeout(() => {
+        setAnimationClass('');
+        setVotedDuelDetails(null);
 
-      if (currentDuelIndex >= activeDuels.length - 1) {
-          setCurrentDuelIndex(0);
-      }
-    }
+        if (currentDuelIndex >= activeDuels.length - 1) {
+            setCurrentDuelIndex(0);
+        }
+      }, 300);
   }
 
   const duelToShow = votedDuelDetails || currentDuel;
@@ -237,7 +235,7 @@ export default function VotingFeed() {
 
 
       <div className="text-center mt-8">
-        <Dialog open={isDialogOpen} onOpenChange={onDialogClose}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleDialogClose()}>
           <DialogContent className="max-w-2xl">
             {votedDuelDetails && (
               <>
@@ -245,7 +243,7 @@ export default function VotingFeed() {
                   <DialogTitle>Resultados: {votedDuelDetails.title}</DialogTitle>
                 </DialogHeader>
                 <DuelResultsDetails duel={votedDuelDetails} />
-                <AutoAdvanceButton onComplete={() => onDialogClose(false)} hasMoreDuels={activeDuels.length > 0} />
+                <AutoAdvanceButton onComplete={handleDialogClose} hasMoreDuels={activeDuels.length > 0} />
               </>
             )}
           </DialogContent>
