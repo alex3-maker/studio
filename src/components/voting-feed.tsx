@@ -5,7 +5,6 @@ import { useState, useTransition, useMemo, useEffect } from 'react';
 import { ArrowRight, Key, Smartphone, X } from 'lucide-react';
 
 import DuelCard from './duel-card';
-import ResultsChart from './panel/results-chart';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -55,7 +54,7 @@ function ListDuel({ duel, onVote }: { duel: Duel, onVote: (option: DuelOption) =
 
 
 export default function VotingFeed() {
-  const { duels, castVote, votedDuelIds } = useAppContext();
+  const { duels, castVote, votedDuelIds, getDuelStatus } = useAppContext();
   const [currentDuelIndex, setCurrentDuelIndex] = useState(0);
   const [voted, setVoted] = useState<DuelOption | null>(null);
   const [animationClass, setAnimationClass] = useState('');
@@ -79,10 +78,10 @@ export default function VotingFeed() {
 
   const activeDuels = useMemo(() => 
     duels.filter(d => {
-        const status = d.status; // status is pre-calculated now in context
+        const status = getDuelStatus(d);
         return status === 'active' && !votedDuelIds.includes(d.id)
     }), 
-  [duels, votedDuelIds]);
+  [duels, votedDuelIds, getDuelStatus]);
 
   const currentDuel: Duel | undefined = useMemo(() => {
     if (activeDuels.length === 0) return undefined;
@@ -183,7 +182,9 @@ export default function VotingFeed() {
       <Card className="mb-8 border-none bg-transparent shadow-none">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl md:text-4xl font-headline">{currentDuel.title}</CardTitle>
-          <CardDescription className="text-lg">{currentDuel.description}</CardDescription>
+          {currentDuel.description && (
+             <CardDescription className="text-lg">{currentDuel.description}</CardDescription>
+          )}
         </CardHeader>
       </Card>
       
