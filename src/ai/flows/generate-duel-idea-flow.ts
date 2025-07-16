@@ -8,7 +8,7 @@
  */
 import { z } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
-import { genkit, configureGenkit } from 'genkit';
+import genkit, { configureGenkit } from 'genkit';
 
 const DuelIdeaInputSchema = z.object({
   apiKey: z.string().optional(),
