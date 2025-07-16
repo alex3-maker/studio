@@ -1,3 +1,4 @@
+
 'use server';
 
 import { signIn, signOut } from '@/app/api/auth/[...nextauth]/route';
@@ -14,6 +15,8 @@ const loginSchema = z.object({
 export async function login(prevState: any, formData: FormData) {
   try {
     await signIn('credentials', Object.fromEntries(formData));
+    // SignIn on success throws a NEXT_REDIRECT error, which we don't need to handle here.
+    // If it fails, it will throw a different error that will be caught below.
     return { success: true, message: '¡Sesión iniciada!' };
   } catch (error) {
     if (error instanceof AuthError) {
@@ -24,6 +27,7 @@ export async function login(prevState: any, formData: FormData) {
           return { message: `Algo salió mal: ${error.type}.`, success: false };
       }
     }
+    // This will be caught by the nearest error boundary
     throw error;
   }
 }
@@ -75,28 +79,36 @@ export async function signup(prevState: any, formData: FormData) {
         };
         mockUsers.push(newUser as any);
 
-        await signIn('credentials', {
-            email,
-            password,
-            redirectTo: '/',
-        });
-
-        return { success: true, message: '¡Registro completado!' };
-
     } catch (error) {
-       console.error("Error detallado en signup:", error);
+       console.error("Error creating user:", error);
+       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+       return { 
+         message: `Un error inesperado ocurrió al crear el usuario. Detalle: ${errorMessage}`,
+         success: false 
+       };
+    }
+    
+    // If user creation was successful, attempt to sign in.
+    // This is outside the try...catch because a successful signIn throws a NEXT_REDIRECT error,
+    // which we want Next.js to handle by redirecting the user.
+    try {
+      await signIn('credentials', {
+          email,
+          password,
+          redirectTo: '/',
+      });
+      return { success: true, message: '¡Registro completado!' };
+    } catch (error) {
        if (error instanceof AuthError) {
           switch (error.type) {
             case 'CredentialsSignin':
-              // This can happen if the sign-in post-registration fails for some reason
               return { message: 'Error al iniciar sesión después del registro. Intenta iniciar sesión manualmente.', success: false };
             default:
-              return { message: `Error de autenticación: ${error.type}.`, success: false };
+              return { message: `Error de autenticación post-registro: ${error.type}.`, success: false };
           }
        }
-       
-       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-       return { message: `Un error inesperado ocurrió. Detalle: ${errorMessage}`, success: false };
+       // Re-throw other errors (like NEXT_REDIRECT) so Next.js can handle them.
+       throw error;
     }
 }
 
