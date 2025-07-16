@@ -61,6 +61,7 @@ export default function VotingFeed() {
   const [animationClass, setAnimationClass] = useState('');
   const [isPending, startTransition] = useTransition();
   const [showHint, setShowHint] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     // Mostrar pista solo en móvil y si no se ha descartado previamente
@@ -86,13 +87,19 @@ export default function VotingFeed() {
 
   const currentDuel: Duel | undefined = useMemo(() => {
     if (activeDuels.length === 0) return undefined;
+    
+    // Si hay un duelo votado, seguimos mostrándolo hasta que se cierre el diálogo
+    if (votedDuelDetails) {
+        return votedDuelDetails;
+    }
+
     // Asegurarse de que el índice no esté fuera de los límites
     const newIndex = Math.min(currentDuelIndex, activeDuels.length - 1);
     if (newIndex !== currentDuelIndex) {
         setCurrentDuelIndex(newIndex);
     }
     return activeDuels[newIndex];
-  }, [activeDuels, currentDuelIndex]);
+  }, [activeDuels, currentDuelIndex, votedDuelDetails]);
 
 
   const handleVote = (selectedOption: DuelOption, direction?: 'left' | 'right') => {
@@ -120,22 +127,24 @@ export default function VotingFeed() {
           ),
         });
         
-        document.getElementById(`results-trigger-${currentDuel.id}`)?.click();
+        setIsDialogOpen(true);
       });
     }, currentDuel.type === 'A_VS_B' ? 350 : 100);
   };
   
-  const onDialogClose = () => {
-    // Cuando el diálogo se cierra (tras ver los resultados), pasamos al siguiente duelo.
-    setAnimationClass('');
-    setVoted(null);
-    setVotedDuelDetails(null);
+  const onDialogClose = (open: boolean) => {
+    if(!open) {
+      setIsDialogOpen(false);
+      // Cuando el diálogo se cierra (tras ver los resultados), pasamos al siguiente duelo.
+      setAnimationClass('');
+      setVoted(null);
+      setVotedDuelDetails(null);
 
-    // React se encargará de re-renderizar si la lista de 'activeDuels' ha cambiado (por ejemplo, al reiniciar un voto)
-    if (currentDuelIndex >= activeDuels.length - 1) {
-        setCurrentDuelIndex(0);
-    } else {
-        setCurrentDuelIndex(currentDuelIndex + 1);
+      // La lista de activeDuels ya se ha actualizado. Si estamos al final, volvemos al principio.
+      // Si no, el índice actual ya apunta al siguiente duelo correcto.
+      if (currentDuelIndex >= activeDuels.length - 1) {
+          setCurrentDuelIndex(0);
+      }
     }
   }
 
@@ -144,7 +153,8 @@ export default function VotingFeed() {
     return <VotingFeedSkeleton />;
   }
   
-  if (activeDuels.length === 0) {
+  // Condición de fin de duelos, pero solo si no estamos viendo los resultados de un voto
+  if (activeDuels.length === 0 && !votedDuelDetails) {
     return (
        <div className="text-center py-16">
         <h2 className="text-2xl font-headline mb-4">¡No hay más duelos!</h2>
@@ -157,7 +167,7 @@ export default function VotingFeed() {
     // Esto puede pasar brevemente si el último duelo es votado
     return (
         <div className="text-center py-16">
-         <h2 className="text-2xl font-headline mb-4">Cargando siguiente duelo...</h2>
+         <h2 className="text-2xl font-headline mb-4">Cargando...</h2>
        </div>
      )
   }
@@ -202,16 +212,7 @@ export default function VotingFeed() {
 
 
       <div className="text-center mt-8">
-        <Dialog onOpenChange={(open) => {
-          if (!open) {
-            onDialogClose();
-          }
-        }}>
-          <DialogTrigger asChild>
-             <Button id={`results-trigger-${currentDuel.id}`} className="hidden" variant="outline">
-                Ver Resultados
-              </Button>
-          </DialogTrigger>
+        <Dialog open={isDialogOpen} onOpenChange={onDialogClose}>
           <DialogContent className="max-w-2xl">
             {votedDuelDetails && (
               <>
