@@ -48,7 +48,14 @@ function SubmitButton({ isEditing = false, isPending }: SubmitButtonProps) {
 
   return (
     <Button type="submit" disabled={isPending} className="w-full">
-      {isPending ? pendingText : buttonText}
+      {isPending ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          {pendingText}
+        </>
+      ) : (
+        buttonText
+      )}
     </Button>
   );
 }
@@ -517,8 +524,8 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
              <Alert variant="destructive">
                 <Terminal className="h-4 w-4" />
                 <AlertTitle>Error al Procesar el Formulario</AlertTitle>
-                <AlertDescription>
-                    {state.errors._form.join(', ')}
+                <AlertDescription className="text-xs bg-muted text-destructive-foreground p-2 rounded-md font-mono whitespace-pre-wrap break-all max-h-60 overflow-y-auto">
+                    {state.errors._form.join('\n')}
                 </AlertDescription>
             </Alert>
         )}

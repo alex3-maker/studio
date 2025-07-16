@@ -28,18 +28,20 @@ const DUEL_CREATION_COST = 5;
 
 // Helper function to extract and construct structured data from FormData
 function getStructuredFormData(formData: FormData) {
-    const rawData = Object.fromEntries(formData.entries());
-
-    const options = [];
-    let i = 0;
-    while (rawData.hasOwnProperty(`options[${i}].title`)) {
-        options.push({
-            id: rawData[`options[${i}].id`] as string | undefined,
-            title: rawData[`options[${i}].title`] as string,
-            imageUrl: rawData[`options[${i}].imageUrl`] as string,
-            affiliateUrl: rawData[`options[${i}].affiliateUrl`] as string,
-        });
-        i++;
+    const rawData: { [key: string]: any } = Object.fromEntries(formData);
+    const options: any[] = [];
+    
+    // A more robust way to gather options
+    for (const [key, value] of formData.entries()) {
+        const match = key.match(/options\[(\d+)\]\.(.+)/);
+        if (match) {
+            const index = parseInt(match[1], 10);
+            const property = match[2];
+            if (!options[index]) {
+                options[index] = {};
+            }
+            options[index][property] = value;
+        }
     }
 
     return {
@@ -89,10 +91,14 @@ export async function createDuelAction(
   const validatedFields = createDuelSchema.safeParse(rawFormData);
   
   if (!validatedFields.success) {
+    const errorDetails = JSON.stringify(validatedFields.error.flatten(), null, 2);
     return {
       message: 'Validación fallida. Por favor, revisa tus datos.',
       success: false,
-      errors: validatedFields.error.flatten().fieldErrors,
+      errors: {
+        ...validatedFields.error.flatten().fieldErrors,
+        _form: [`Error de validación. Detalles: ${errorDetails}`],
+      }
     };
   }
   
@@ -169,10 +175,14 @@ export async function updateDuelAction(
   const validatedFields = createDuelSchema.safeParse(rawFormData);
 
   if (!validatedFields.success) {
+    const errorDetails = JSON.stringify(validatedFields.error.flatten(), null, 2);
     return {
       message: 'Validación fallida. Por favor, revisa tus datos.',
       success: false,
-      errors: validatedFields.error.flatten().fieldErrors,
+      errors: {
+        ...validatedFields.error.flatten().fieldErrors,
+        _form: [`Error de validación. Detalles: ${errorDetails}`],
+      }
     };
   }
 
