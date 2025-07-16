@@ -49,6 +49,7 @@ export default function CreateDuelPage() {
   }, [state, toast, router, addDuel, user.keys]);
 
   const handleGenerate = async () => {
+    console.log("Attempting to generate with API Key:", apiKey ? `...${apiKey.slice(-4)}` : 'Not found');
     if (!apiKey) {
        toast({
         variant: 'destructive',

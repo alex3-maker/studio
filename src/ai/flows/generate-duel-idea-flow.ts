@@ -8,8 +8,7 @@
  */
 import { z } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
-import { genkit } from 'genkit';
-import { ai } from '@/ai/genkit';
+import { genkit, configureGenkit } from 'genkit';
 
 const DuelIdeaInputSchema = z.object({
   apiKey: z.string().optional(),
@@ -24,31 +23,7 @@ const DuelIdeaOutputSchema = z.object({
 export type DuelIdeaOutput = z.infer<typeof DuelIdeaOutputSchema>;
 
 
-const generateDuelIdeaPrompt = ai.definePrompt({
-    name: 'generateDuelIdeaPrompt',
-    input: { schema: z.object({}) },
-    output: { schema: DuelIdeaOutputSchema },
-    prompt: `You are a creative assistant specialized in creating engaging "A vs B" style duel topics for a social voting app called DueliaX.
-
-    Generate a compelling and fun duel topic that people would have strong opinions about.
-    The topic can be about anything: movies, food, technology, hypothetical scenarios, pop culture, etc.
-
-    Provide a concise title for the duel (formatted as a question), a short engaging description to give context, and the two opposing options.
-
-    Make the titles and description in Spanish.
-
-    Example:
-    Title: ¿Qué superpoder preferirías tener?
-    Description: Si pudieras elegir un solo poder, ¿cuál sería el más útil o divertido en tu día a día?
-    Option 1: Volar
-    Option 2: Invisibilidad
-
-    Return the output in the specified JSON format.
-    `,
-});
-
-
-const generateDuelIdeaFlow = ai.defineFlow(
+const generateDuelIdeaFlow = genkit.defineFlow(
   {
     name: 'generateDuelIdeaFlow',
     inputSchema: DuelIdeaInputSchema,
@@ -56,12 +31,12 @@ const generateDuelIdeaFlow = ai.defineFlow(
   },
   async ({ apiKey }) => {
     // IMPORTANT: Create a temporary genkit instance with the provided API key
-    const dynamicAi = genkit({
+    const dynamicAi = configureGenkit({
       plugins: [googleAI({ apiKey })],
     });
 
     const dynamicPrompt = dynamicAi.definePrompt({
-      name: 'generateDuelIdeaPrompt', // Must match the original name
+      name: 'generateDuelIdeaDynamicPrompt', // Use a unique name to avoid conflicts
       input: { schema: z.object({}) },
       output: { schema: DuelIdeaOutputSchema },
       prompt: `You are a creative assistant specialized in creating engaging "A vs B" style duel topics for a social voting app called DueliaX.
