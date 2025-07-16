@@ -4,10 +4,12 @@ import { subDays, addDays, formatISO } from 'date-fns';
 
 const now = new Date();
 
-export const mockUsers: User[] = [
+export const mockUsers: (User & { password?: string })[] = [
   {
     id: 'user-1',
     name: 'Alex Doe',
+    email: 'admin@dueliax.com',
+    password: '$2a$10$1Yc.Mv5S5A.sO8.1/f4E7uS.j.h6iZk6.Y1R.D9j.F6iZk6.Y1R.', // 'password123' hasheada
     avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop',
     keys: 5,
     duelsCreated: 3,
@@ -18,6 +20,8 @@ export const mockUsers: User[] = [
   {
     id: 'user-2',
     name: 'SciFiFan',
+    email: 'scifi@dueliax.com',
+    password: '$2a$10$1Yc.Mv5S5A.sO8.1/f4E7uS.j.h6iZk6.Y1R.D9j.F6iZk6.Y1R.', // 'password123'
     avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1974&auto=format&fit=crop',
     keys: 10,
     duelsCreated: 1,
@@ -28,6 +32,8 @@ export const mockUsers: User[] = [
   {
     id: 'user-3',
     name: 'MythMaster',
+    email: 'myth@dueliax.com',
+    password: '$2a$10$1Yc.Mv5S5A.sO8.1/f4E7uS.j.h6iZk6.Y1R.D9j.F6iZk6.Y1R.', // 'password123'
     avatarUrl: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=2070&auto=format&fit=crop',
     keys: 2,
     duelsCreated: 1,
@@ -35,7 +41,7 @@ export const mockUsers: User[] = [
     role: 'USER',
     createdAt: formatISO(subDays(now, 18)),
   },
-]
+];
 
 export const mockDuels: Duel[] = [
   {
