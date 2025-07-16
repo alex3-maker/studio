@@ -75,7 +75,7 @@ function ManualInputFields({ form, index, handleFileChange, fileInputRefs }: any
         <div className="space-y-4 mt-4">
             <FormField
                 control={form.control}
-                name={`options.${index}.imageUrl`}
+                name={`options[${index}].imageUrl`}
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>URL de la Imagen (Opcional)</FormLabel>
@@ -105,7 +105,7 @@ function ManualInputFields({ form, index, handleFileChange, fileInputRefs }: any
             />
              <FormField
                 control={form.control}
-                name={`options.${index}.affiliateUrl`}
+                name={`options[${index}].affiliateUrl`}
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>URL (Opcional)</FormLabel>
@@ -129,7 +129,8 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
   const { apiKey, isAiEnabled } = useAppContext();
   
   const defaultValues = duelData ? {
-      type: duelData.type,
+      type: duelData.type || 'A_VS_B',
+      id: duelData.id,
       title: duelData.title,
       description: duelData.description,
       options: duelData.options.map(opt => ({ title: opt.title, imageUrl: opt.imageUrl || '', affiliateUrl: opt.affiliateUrl || '' })),
@@ -194,7 +195,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        form.setValue(`options.${index}.imageUrl`, reader.result as string, { shouldValidate: true });
+        form.setValue(`options[${index}].imageUrl`, reader.result as string, { shouldValidate: true });
       };
       reader.readAsDataURL(file);
     }
@@ -227,18 +228,18 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
         const result = await scrapeUrl({ url });
 
         if (result.title && result.imageUrl) {
-            form.setValue(`options.${index}.title`, result.title, { shouldValidate: true });
-            form.setValue(`options.${index}.imageUrl`, result.imageUrl, { shouldValidate: true });
-            form.setValue(`options.${index}.affiliateUrl`, url, { shouldValidate: true });
+            form.setValue(`options[${index}].title`, result.title, { shouldValidate: true });
+            form.setValue(`options[${index}].imageUrl`, result.imageUrl, { shouldValidate: true });
+            form.setValue(`options[${index}].affiliateUrl`, url, { shouldValidate: true });
             toast({ title: "¡Éxito!", description: "Producto importado directamente." });
         } else {
             toast({ title: "Análisis Profundo", description: "No se encontraron metadatos. Usando IA para analizar la página. Esto puede tardar un momento..." });
             
             const aiResult = await analyzeProductPage({ htmlContent: result.htmlContent, url, apiKey });
 
-            form.setValue(`options.${index}.title`, aiResult.title, { shouldValidate: true });
-            form.setValue(`options.${index}.imageUrl`, aiResult.imageUrl, { shouldValidate: true });
-            form.setValue(`options.${index}.affiliateUrl`, url, { shouldValidate: true });
+            form.setValue(`options[${index}].title`, aiResult.title, { shouldValidate: true });
+            form.setValue(`options[${index}].imageUrl`, aiResult.imageUrl, { shouldValidate: true });
+            form.setValue(`options[${index}].affiliateUrl`, url, { shouldValidate: true });
             toast({ title: "¡Éxito con IA!", description: "Producto importado usando análisis de IA." });
         }
     } catch (error) {
@@ -271,8 +272,8 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
         action={formAction}
         className="space-y-8"
       >
-        {isEditing && duelData?.id && <input type="hidden" name="id" value={duelData.id} />}
-        {!isEditing && user && <input type="hidden" name="userKeys" value={user.keys} />}
+        {isEditing && duelData?.id && <input type="hidden" {...form.register("id")} value={duelData.id} />}
+        {!isEditing && user && <input type="hidden" {...form.register("userKeys")} value={user.keys} />}
         
         <FormField
           control={form.control}
@@ -428,7 +429,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                     <CardContent className="space-y-4">
                         <FormField
                             control={form.control}
-                            name={`options.${index}.title`}
+                            name={`options[${index}].title`}
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Título de la Opción</FormLabel>
@@ -437,9 +438,9 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                                 </FormItem>
                             )}
                         />
-                         {form.watch(`options.${index}.imageUrl`) && (
+                         {form.watch(`options[${index}].imageUrl`) && (
                             <div className="relative w-full h-48 mt-4 rounded-md overflow-hidden border bg-muted/30">
-                                <img src={form.watch(`options.${index}.imageUrl`) as string} alt="Vista previa" className="w-full h-full object-contain" />
+                                <img src={form.watch(`options[${index}].imageUrl`) as string} alt="Vista previa" className="w-full h-full object-contain" />
                             </div>
                         )}
                         
@@ -524,7 +525,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
              <Alert variant="destructive">
                 <Terminal className="h-4 w-4" />
                 <AlertTitle>Error al Procesar el Formulario</AlertTitle>
-                <AlertDescription className="text-sm font-mono whitespace-pre-wrap break-all max-h-60 overflow-y-auto">
+                <AlertDescription className="text-sm font-mono whitespace-pre-wrap break-all max-h-60 overflow-y-auto text-destructive-foreground bg-destructive/20 p-2 rounded">
                     {state.errors._form.join('\n')}
                 </AlertDescription>
             </Alert>

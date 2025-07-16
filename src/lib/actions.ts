@@ -27,28 +27,28 @@ export type FormState = {
 const DUEL_CREATION_COST = 5;
 
 // This helper function reconstructs the nested options array from the flat FormData
-function processFormDataWithOptions(formData: FormData) {
-    const data: { [key: string]: any } = {};
-    const options: any[] = [];
+function getStructuredFormData(formData: FormData) {
+  const data: { [key: string]: any } = {
+    options: [],
+  };
+  const optionFields: { [key: string]: any }[] = [];
 
-    for (const [key, value] of formData.entries()) {
-        const optionMatch = key.match(/^options\.(\d+)\.(.+)$/);
-
-        if (optionMatch) {
-            const [, indexStr, field] = optionMatch;
-            const index = parseInt(indexStr, 10);
-            
-            if (!options[index]) {
-                options[index] = {};
-            }
-            options[index][field] = value;
-        } else {
-            data[key] = value;
-        }
+  for (const [key, value] of formData.entries()) {
+    const optionMatch = key.match(/^options\[(\d+)\]\.(.+)$/);
+    if (optionMatch) {
+      const index = parseInt(optionMatch[1], 10);
+      const field = optionMatch[2];
+      if (!optionFields[index]) {
+        optionFields[index] = {};
+      }
+      optionFields[index][field] = value;
+    } else {
+      data[key] = value;
     }
-    
-    data.options = options.filter(opt => opt && opt.title); // Filter out empty/undefined slots
-    return data;
+  }
+
+  data.options = optionFields;
+  return data;
 }
 
 
@@ -82,7 +82,7 @@ export async function createDuelAction(
   formData: FormData
 ): Promise<FormState> {
   
-  const rawFormData = processFormDataWithOptions(formData);
+  const rawFormData = getStructuredFormData(formData);
   
   const validatedFields = createDuelSchema.safeParse(rawFormData);
   
@@ -160,7 +160,7 @@ export async function updateDuelAction(
   prevState: FormState,
   formData: FormData
 ): Promise<FormState> {
-  const rawFormData = processFormDataWithOptions(formData);
+  const rawFormData = getStructuredFormData(formData);
   
   if (!rawFormData.id) {
     return { success: false, message: "ID del duelo no encontrado.", errors: { _form: ["ID del duelo no encontrado."] } };

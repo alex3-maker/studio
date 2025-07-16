@@ -19,6 +19,7 @@ export const duelOptionSchema = z.object({
 });
 
 export const createDuelSchema = z.object({
+  id: z.string().optional(),
   type: z.enum(['A_VS_B', 'LIST']),
   title: z.string().min(3, { message: "El título debe tener al menos 3 caracteres." }).max(100),
   description: z.string().max(500).optional(),

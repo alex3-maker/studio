@@ -81,10 +81,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isAiEnabled, setAiEnabledState] = useState<boolean>(true);
   const [isLoaded, setIsLoaded] = useState(false);
   
-  const persistUser = useCallback((updatedUser: User) => {
-    setUser(updatedUser);
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users.map(u => u.id === updatedUser.id ? updatedUser : u)));
-  }, [users]);
   
   // Load from localStorage on initial render
   useEffect(() => {
@@ -146,8 +142,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
   // Persist state changes to localStorage
   useEffect(() => {
-    if (isLoaded) localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-  }, [users, isLoaded]);
+    if (isLoaded) {
+      const updatedUsers = users.map(u => u.id === user.id ? user : u);
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+      setUsers(updatedUsers);
+    }
+  }, [user, isLoaded]); // Depend only on user object
 
   useEffect(() => {
     if (isLoaded) localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(duels));
@@ -220,9 +220,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
   const spendKeys = useCallback((amount: number, description: string) => {
     let success = false;
-    const updatedUser = { ...user, keys: user.keys - amount };
     if (user.keys >= amount) {
-        persistUser(updatedUser);
+        setUser(prevUser => ({...prevUser, keys: prevUser.keys - amount}));
         addKeyTransaction('spent', amount, description);
         addNotification({
           type: 'keys-spent',
@@ -232,7 +231,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         success = true;
     }
     return success;
-  }, [user, persistUser, addKeyTransaction, addNotification]);
+  }, [user.keys, addKeyTransaction, addNotification]);
 
   const castVote = useCallback((duelId: string, optionId: string): boolean => {
     const duel = duels.find(d => d.id === duelId);
@@ -257,11 +256,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setDuelVotingHistory(prevHistory => [...prevHistory, duelId]);
     }
     
-    persistUser({
-        ...user,
-        votesCast: user.votesCast + 1,
-        keys: awardedKey ? user.keys + 1 : user.keys,
-    });
+    setUser(prevUser => ({
+        ...prevUser,
+        votesCast: prevUser.votesCast + 1,
+        keys: awardedKey ? prevUser.keys + 1 : prevUser.keys,
+    }));
 
     setVotedDuelIds(prevIds => [...prevIds, duelId]);
     setUserVotedOptions(prevVotes => ({
@@ -271,7 +270,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     return awardedKey;
 
-  }, [duels, duelVotingHistory, user, persistUser, addKeyTransaction]);
+  }, [duels, duelVotingHistory, addKeyTransaction]);
 
   const addDuel = useCallback((newDuelData: Duel) => {
     const hasEnoughKeys = user.keys >= DUEL_CREATION_COST;
@@ -285,8 +284,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         spendKeys(DUEL_CREATION_COST, `Creación de "${newDuelData.title}"`);
     }
     
-    persistUser({ ...user, duelsCreated: user.duelsCreated + 1 });
-  }, [user, spendKeys, persistUser]);
+    setUser(prevUser => ({...prevUser, duelsCreated: prevUser.duelsCreated + 1 }));
+  }, [user.keys, spendKeys]);
 
   const activateDraftDuel = useCallback((duelId: string): boolean => {
     const duel = duels.find(d => d.id === duelId);
