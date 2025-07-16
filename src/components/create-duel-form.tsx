@@ -334,7 +334,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                                 <Input placeholder="Ej: ¿Mejor película de ciencia ficción?" {...field} maxLength={MAX_TITLE_LENGTH} />
                               </FormControl>
                                <p className="absolute top-2.5 right-3 text-xs text-muted-foreground">
-                                  {titleValue.length} / {MAX_TITLE_LENGTH}
+                                  {(titleValue || "").length} / {MAX_TITLE_LENGTH}
                                </p>
                            </div>
                           <FormDescription>
@@ -369,8 +369,8 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                 />
             </div>
             
-            <div className="flex flex-col md:flex-row gap-6 items-start">
-                 <div className="w-full md:w-2/3 flex">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                 <div className="md:col-span-2 h-full flex flex-col">
                     <FormField
                       control={form.control}
                       name="description"
@@ -391,7 +391,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                     />
                  </div>
 
-                <div className="w-full md:w-1/3 space-y-6">
+                <div className="w-full space-y-6">
                    <FormField
                     control={form.control}
                     name="startsAt"
@@ -609,3 +609,5 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
     </Form>
   );
 }
+
+    
