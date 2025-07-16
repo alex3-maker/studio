@@ -9,7 +9,7 @@ import { formatISO } from 'date-fns';
 import { auth } from '@/app/api/auth/[...nextauth]/route';
 import { getDb } from '@/lib/db';
 import { guestVotes, duels as duelsTable, users as usersTable } from '@/lib/schema';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import crypto from 'crypto';
 
@@ -33,7 +33,7 @@ export type FormState = {
 const DUEL_CREATION_COST = 5;
 
 // This is a new action to handle votes from both guests and users.
-export async function castVoteAction(duelId: string, optionId: string): Promise<{ awardedKey: boolean; updatedDuel: Duel | null; error?: string }> {
+export async function castVoteAction(duelId: string, optionId: string): Promise<{ awardedKey: boolean; updatedDuel: Duel | null; error?: string; voteRegistered?: boolean }> {
     const session = await auth();
     const db = getDb();
     
@@ -52,7 +52,10 @@ export async function castVoteAction(duelId: string, optionId: string): Promise<
         const ipHash = crypto.createHash('sha256').update(ip).digest('hex');
         
         const existingVote = await db.query.guestVotes.findFirst({
-            where: sql`duel_id = ${duelId} AND ip_hash = ${ipHash}`
+            where: and(
+                eq(guestVotes.duelId, duelId),
+                eq(guestVotes.ipHash, ipHash)
+            )
         });
         
         if (existingVote) {
@@ -60,7 +63,7 @@ export async function castVoteAction(duelId: string, optionId: string): Promise<
         }
         
         await db.insert(guestVotes).values({
-            id: `guestvote-${Date.now()}`,
+            id: `guestvote-${Date.now()}-${Math.random()}`,
             duelId,
             ipHash
         });
@@ -71,23 +74,24 @@ export async function castVoteAction(duelId: string, optionId: string): Promise<
         opt.id === optionId ? { ...opt, votes: (opt.votes || 0) + 1 } : opt
     );
 
-    const [updatedDuel] = await db.update(duelsTable)
+    const [updatedDuelResult] = await db.update(duelsTable)
       .set({ options: updatedOptions })
       .where(eq(duelsTable.id, duelId))
       .returning();
 
-    if (!updatedDuel) {
+    if (!updatedDuelResult) {
        return { error: "No se pudo actualizar el duelo.", awardedKey: false, updatedDuel: null };
     }
     
-    const creator = await db.query.users.findFirst({ where: eq(usersTable.id, updatedDuel.creatorId) });
+    const creator = await db.query.users.findFirst({ where: eq(usersTable.id, updatedDuelResult.creatorId) });
     
     revalidatePath('/');
     
     return {
-        awardedKey: !!session?.user, // Award key only to logged-in users for now
+        awardedKey: !!session?.user, // Award key only to logged-in users
+        voteRegistered: !session?.user, // Mark that a guest vote was registered
         updatedDuel: {
-          ...updatedDuel,
+          ...updatedDuelResult,
           creator: creator ? { id: creator.id, name: creator.name || 'N/A', avatarUrl: creator.image || null } : { id: 'unknown', name: 'Usuario Desconocido', avatarUrl: null }
         },
     };

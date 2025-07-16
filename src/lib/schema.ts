@@ -8,6 +8,7 @@ import {
   varchar,
   boolean,
   jsonb,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import type { AdapterAccount } from 'next-auth/adapters';
 
@@ -77,4 +78,9 @@ export const guestVotes = pgTable('dueliax_guest_votes', {
   duelId: varchar('duel_id', { length: 255 }).notNull().references(() => duels.id, { onDelete: 'cascade' }),
   ipHash: varchar('ip_hash', { length: 255 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
+},
+(table) => {
+  return {
+    uniqueVote: uniqueIndex('unique_vote_idx').on(table.duelId, table.ipHash),
+  };
 });

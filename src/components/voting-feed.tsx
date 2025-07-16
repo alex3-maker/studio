@@ -18,6 +18,7 @@ import DuelResultsDetails from './duel-results-details';
 import { useSession } from 'next-auth/react';
 
 const HINT_STORAGE_KEY = 'dueliax-landscape-hint-dismissed';
+const GUEST_VOTED_DUELS_STORAGE_KEY = 'dueliax_guest_voted_duels';
 
 
 // Component for "A vs B" duel type
@@ -100,9 +101,14 @@ export default function VotingFeed() {
   const [isPending, startTransition] = useTransition();
   const [showHint, setShowHint] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [guestVotedDuels, setGuestVotedDuels] = useState<string[]>([]);
 
   useEffect(() => {
     fetchInitialData();
+    const storedGuestVotes = localStorage.getItem(GUEST_VOTED_DUELS_STORAGE_KEY);
+    if (storedGuestVotes) {
+      setGuestVotedDuels(JSON.parse(storedGuestVotes));
+    }
   }, [fetchInitialData]);
 
   useEffect(() => {
@@ -118,13 +124,18 @@ export default function VotingFeed() {
     localStorage.setItem(HINT_STORAGE_KEY, 'true');
     setShowHint(false);
   };
+  
+  const allVotedIds = useMemo(() => {
+    return new Set([...votedDuelIds, ...guestVotedDuels]);
+  }, [votedDuelIds, guestVotedDuels]);
+
 
   const activeDuels = useMemo(() => 
     duels.filter(d => {
         const status = getDuelStatus(d);
-        return status === 'active' && !votedDuelIds.includes(d.id)
+        return status === 'active' && !allVotedIds.has(d.id)
     }), 
-  [duels, votedDuelIds, getDuelStatus]);
+  [duels, allVotedIds, getDuelStatus]);
 
   const currentDuel: Duel | undefined = useMemo(() => {
     if (activeDuels.length === 0) return undefined;
@@ -155,6 +166,12 @@ export default function VotingFeed() {
             });
             setAnimationClass(''); // Reset animation
             return;
+        }
+
+        if (result.voteRegistered) {
+          const newGuestVotes = [...guestVotedDuels, currentDuel.id];
+          setGuestVotedDuels(newGuestVotes);
+          localStorage.setItem(GUEST_VOTED_DUELS_STORAGE_KEY, JSON.stringify(newGuestVotes));
         }
         
         if (result.updatedDuel) {
