@@ -17,35 +17,34 @@ const DuelIdeaOutputSchema = z.object({
 });
 export type DuelIdeaOutput = z.infer<typeof DuelIdeaOutputSchema>;
 
-const prompt = ai.definePrompt({
-    name: 'generateDuelIdeaPrompt',
-    output: { schema: DuelIdeaOutputSchema },
-    prompt: `You are a creative assistant specialized in creating engaging "A vs B" style duel topics for a social voting app called DuelDash.
-
-  Generate a compelling and fun duel topic that people would have strong opinions about.
-  The topic can be about anything: movies, food, technology, hypothetical scenarios, pop culture, etc.
-
-  Provide a concise title for the duel (formatted as a question), a short engaging description to give context, and the two opposing options.
-
-  Make the titles and description in Spanish.
-
-  Example:
-  Title: ¿Qué superpoder preferirías tener?
-  Description: Si pudieras elegir un solo poder, ¿cuál sería el más útil o divertido en tu día a día?
-  Option 1: Volar
-  Option 2: Invisibilidad
-
-  Return the output in the specified JSON format.
-  `,
-});
-
 const generateDuelIdeaFlow = ai.defineFlow(
   {
     name: 'generateDuelIdeaFlow',
     outputSchema: DuelIdeaOutputSchema,
   },
   async () => {
-    const { output } = await prompt();
+    const { output } = await ai.generate({
+      model: 'gemini-pro',
+      output: { schema: DuelIdeaOutputSchema },
+      prompt: `You are a creative assistant specialized in creating engaging "A vs B" style duel topics for a social voting app called DuelDash.
+
+        Generate a compelling and fun duel topic that people would have strong opinions about.
+        The topic can be about anything: movies, food, technology, hypothetical scenarios, pop culture, etc.
+
+        Provide a concise title for the duel (formatted as a question), a short engaging description to give context, and the two opposing options.
+
+        Make the titles and description in Spanish.
+
+        Example:
+        Title: ¿Qué superpoder preferirías tener?
+        Description: Si pudieras elegir un solo poder, ¿cuál sería el más útil o divertido en tu día a día?
+        Option 1: Volar
+        Option 2: Invisibilidad
+
+        Return the output in the specified JSON format.
+        `,
+    });
+
     if (!output) {
       throw new Error('Could not generate a duel idea.');
     }
