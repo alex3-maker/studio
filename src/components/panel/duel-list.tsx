@@ -108,10 +108,10 @@ export default function DuelList({ duels }: DuelListProps) {
 
               return (
                  <Card key={duel.id} className="overflow-hidden" onClick={() => handleRowClick(duel)}>
-                  <div className="p-4 flex flex-col md:flex-row gap-4">
-                    {/* Image & Status */}
-                    <div className="flex-shrink-0 w-full md:w-24 flex md:flex-col items-center gap-4">
-                        <div className={cn("w-24 h-24 relative", currentStatus !== 'draft' && "cursor-pointer")}>
+                  <div className="flex items-center gap-4 p-4">
+                    {/* Chart & Status */}
+                    <div className="flex flex-col items-center justify-center gap-2 flex-shrink-0 w-24">
+                       <div className={cn("w-24 h-24 relative", currentStatus !== 'draft' && "cursor-pointer")}>
                            <ResultsChart duel={duel} />
                            {currentStatus !== 'draft' && (
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity rounded-full">
@@ -119,64 +119,14 @@ export default function DuelList({ duels }: DuelListProps) {
                               </div>
                            )}
                         </div>
-                         <Badge className={cn("w-fit", statusInfo.className)}>
+                        <Badge className={cn("w-fit", statusInfo.className)}>
                            {statusInfo.text}
-                         </Badge>
+                        </Badge>
                     </div>
 
-                    {/* Main Content */}
-                    <div className="flex-grow">
-                      <div className="flex justify-between items-start">
-                        <CardTitle className="text-xl font-headline mb-1">{duel.title}</CardTitle>
-                        
-                        {/* Action Buttons */}
-                        <div className="flex items-center gap-1">
-                          {currentStatus === 'draft' ? (
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleActivateDuel(e, duel.id)}>
-                                    <CheckCircle className="h-4 w-4 text-green-500" />
-                                </Button>
-                          ) : (
-                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); toggleDuelStatus(duel.id); }}>
-                                {currentStatus === 'active' ? <PowerOff className="h-4 w-4 text-orange-500" /> : <Power className="h-4 w-4 text-green-500" />}
-                            </Button>
-                          )}
-                          <Button asChild variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-                            <Link href={`/panel/mis-duelos/${duel.id}/edit`}>
-                              <Edit className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                           <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()} disabled={currentStatus === 'draft'}>
-                                <RotateCcw className="h-4 w-4 text-blue-500" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader><AlertDialogTitle>¿Resetear votación?</AlertDialogTitle><AlertDialogDescription>Esta acción pondrá a cero todos los votos para este duelo. No se puede deshacer.</AlertDialogDescription></AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={(e) => handleResetVotes(e, duel.id)}>Resetear</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                           <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader><AlertDialogTitle>¿Estás seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Esto eliminará permanentemente tu duelo.</AlertDialogDescription></AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={(e) => { e.stopPropagation(); deleteDuel(duel.id); }}>Eliminar</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </div>
-
-                      {/* Footer Info */}
+                    {/* Title & Details */}
+                    <div className="flex-grow min-w-0">
+                      <CardTitle className="text-xl font-headline mb-2 truncate">{duel.title}</CardTitle>
                        <div className="border-t mt-2 pt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                         {duel.createdAt && (
                           <div className="flex items-center gap-1">
@@ -188,7 +138,7 @@ export default function DuelList({ duels }: DuelListProps) {
                           <div className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
                             <span>
-                                {currentStatus === 'draft' ? 'Pendiente de activación' : `Cierra ${formatDistanceToNow(new Date(duel.endsAt), { locale: es, addSuffix: true })}`}
+                                {currentStatus === 'draft' ? 'Pendiente' : `Cierra ${formatDistanceToNow(new Date(duel.endsAt), { locale: es, addSuffix: true })}`}
                             </span>
                           </div>
                         )}
@@ -197,6 +147,52 @@ export default function DuelList({ duels }: DuelListProps) {
                           <span>{getTotalVotes(duel)} Votos</span>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-col items-center justify-center gap-1">
+                      {currentStatus === 'draft' ? (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleActivateDuel(e, duel.id)}>
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                          </Button>
+                      ) : (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); toggleDuelStatus(duel.id); }}>
+                              {currentStatus === 'active' ? <PowerOff className="h-4 w-4 text-orange-500" /> : <Power className="h-4 w-4 text-green-500" />}
+                          </Button>
+                      )}
+                      <Button asChild variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                        <Link href={`/panel/mis-duelos/${duel.id}/edit`}>
+                          <Edit className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                       <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()} disabled={currentStatus === 'draft'}>
+                            <RotateCcw className="h-4 w-4 text-blue-500" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                          <AlertDialogHeader><AlertDialogTitle>¿Resetear votación?</AlertDialogTitle><AlertDialogDescription>Esta acción pondrá a cero todos los votos para este duelo. No se puede deshacer.</AlertDialogDescription></AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={(e) => handleResetVotes(e, duel.id)}>Resetear</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                       <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                          <AlertDialogHeader><AlertDialogTitle>¿Estás seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Esto eliminará permanentemente tu duelo.</AlertDialogDescription></AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={(e) => { e.stopPropagation(); deleteDuel(duel.id); }}>Eliminar</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 </Card>
