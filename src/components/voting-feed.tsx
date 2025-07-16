@@ -101,7 +101,6 @@ export default function VotingFeed() {
   const handleVote = (selectedOption: DuelOption, direction?: 'left' | 'right') => {
     if (voted || !currentDuel) return;
     
-    setVotedDuelDetails(currentDuel);
     setVoted(selectedOption);
     if(direction){
         setAnimationClass(direction === 'left' ? 'animate-card-select-left' : 'animate-card-select-right');
@@ -109,8 +108,12 @@ export default function VotingFeed() {
 
     setTimeout(() => {
       startTransition(() => {
-        const awardedKey = castVote(currentDuel.id, selectedOption.id);
+        const { awardedKey, updatedDuel } = castVote(currentDuel.id, selectedOption.id);
         
+        if (updatedDuel) {
+          setVotedDuelDetails(updatedDuel);
+        }
+
         toast({
           duration: 3000,
           title: '¡Voto registrado!',
@@ -144,14 +147,12 @@ export default function VotingFeed() {
     }
   }
 
-
-  if (!votedDuelIds) { // Loading state while context loads from localstorage
-    return <VotingFeedSkeleton />;
-  }
-  
   const duelToShow = votedDuelDetails || currentDuel;
   
   if (!duelToShow) {
+    if (votedDuelIds.length === 0) { // Context might still be loading
+        return <VotingFeedSkeleton />;
+    }
     return (
        <div className="text-center py-16">
         <h2 className="text-2xl font-headline mb-4">¡No hay más duelos!</h2>

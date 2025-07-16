@@ -29,7 +29,7 @@ interface AppContextType {
   setApiKey: (key: string) => void;
   isAiEnabled: boolean;
   setIsAiEnabled: (enabled: boolean) => void;
-  castVote: (duelId: string, optionId: string) => boolean;
+  castVote: (duelId: string, optionId: string) => { awardedKey: boolean; updatedDuel: Duel | null };
   addDuel: (newDuel: Duel) => void;
   updateDuel: (updatedDuel: Partial<Duel> & { id: string }) => void;
   toggleDuelStatus: (duelId: string) => void;
@@ -243,34 +243,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return success;
   }, [addKeyTransaction, addNotification]);
 
-  const castVote = useCallback((duelId: string, optionId: string): boolean => {
-    const duel = duels.find(d => d.id === duelId);
-    if (!duel) return false;
-
-    setDuels(prevDuels => prevDuels.map(d => {
-        if (d.id === duelId) {
-          const newOptions = d.options.map(option => 
-            option.id === optionId ? { ...option, votes: option.votes + 1 } : option
-          );
-          return { ...d, options: newOptions };
-        }
-        return d;
-    }));
-
-    const hasVotedBefore = duelVotingHistory.includes(duelId);
+  const castVote = useCallback((duelId: string, optionId: string): { awardedKey: boolean; updatedDuel: Duel | null } => {
     let awardedKey = false;
+    let finalUpdatedDuel: Duel | null = null;
     
-    if (!hasVotedBefore) {
-        awardedKey = true;
-        addKeyTransaction('earned', 1, `Voto en "${duel.title}"`);
-        setDuelVotingHistory(prevHistory => [...prevHistory, duelId]);
+    setDuels(prevDuels => {
+        const newDuels = prevDuels.map(d => {
+            if (d.id === duelId) {
+                const newOptions = d.options.map(option => 
+                    option.id === optionId ? { ...option, votes: option.votes + 1 } : option
+                );
+                finalUpdatedDuel = { ...d, options: newOptions };
+                return finalUpdatedDuel;
+            }
+            return d;
+        });
+        return newDuels;
+    });
+
+    if (finalUpdatedDuel) {
+        const hasVotedBefore = duelVotingHistory.includes(duelId);
+        
+        if (!hasVotedBefore) {
+            awardedKey = true;
+            addKeyTransaction('earned', 1, `Voto en "${finalUpdatedDuel.title}"`);
+            setDuelVotingHistory(prevHistory => [...prevHistory, duelId]);
+        }
+        
+        setUser(prevUser => ({
+            ...prevUser,
+            votesCast: prevUser.votesCast + 1,
+            keys: awardedKey ? prevUser.keys + 1 : prevUser.keys,
+        }));
     }
-    
-    setUser(prevUser => ({
-        ...prevUser,
-        votesCast: prevUser.votesCast + 1,
-        keys: awardedKey ? prevUser.keys + 1 : prevUser.keys,
-    }));
 
     setVotedDuelIds(prevIds => [...prevIds, duelId]);
     setUserVotedOptions(prevVotes => ({
@@ -278,9 +283,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         [duelId]: { optionId, timestamp: new Date().toISOString() },
     }));
 
-    return awardedKey;
-
-  }, [duels, duelVotingHistory, addKeyTransaction]);
+    return { awardedKey, updatedDuel: finalUpdatedDuel };
+  }, [duelVotingHistory, addKeyTransaction]);
 
   const addDuel = useCallback((newDuelData: Duel) => {
     const hasEnoughKeys = user.keys >= DUEL_CREATION_COST;
