@@ -55,12 +55,15 @@ const generateDuelIdeaFlow = ai.defineFlow(
   },
   async ({ apiKey }) => {
     
-    // Dynamically configure Genkit for this specific flow execution
-    const dynamicAi = genkit({
-      plugins: [googleAI({ apiKey: apiKey || process.env.GEMINI_API_KEY })],
-    });
-
-    const { output } = await dynamicAi.prompt(generateDuelIdeaPrompt)({});
+    const configuredPrompt = ai.definePrompt(
+      {
+        ...generateDuelIdeaPrompt.config,
+        plugins: [googleAI({ apiKey })],
+      },
+      generateDuelIdeaPrompt.compile
+    );
+    
+    const { output } = await configuredPrompt({});
     return output!;
   }
 );
