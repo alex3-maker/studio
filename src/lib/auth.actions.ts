@@ -1,4 +1,3 @@
-
 'use server';
 
 import { signIn, signOut } from '@/app/api/auth/[...nextauth]/route';
@@ -22,7 +21,7 @@ export async function login(prevState: any, formData: FormData) {
         case 'CredentialsSignin':
           return { message: 'Email o contraseña incorrectos.', success: false };
         default:
-          return { message: 'Algo salió mal. Por favor, inténtalo de nuevo.', success: false };
+          return { message: `Algo salió mal: ${error.type}.`, success: false };
       }
     }
     throw error;
@@ -36,26 +35,25 @@ const signupSchema = z.object({
 });
 
 export async function signup(prevState: any, formData: FormData) {
+    const validatedFields = signupSchema.safeParse(
+      Object.fromEntries(formData.entries())
+    );
+
+    if (!validatedFields.success) {
+      return {
+        message: 'Datos de registro inválidos. Por favor, revisa los errores.',
+        errors: validatedFields.error.flatten().fieldErrors,
+        success: false,
+      };
+    }
+
+    const { name, email, password } = validatedFields.data;
+
     try {
-        const validatedFields = signupSchema.safeParse(
-          Object.fromEntries(formData.entries())
-        );
-
-        if (!validatedFields.success) {
-          return {
-            message: 'Datos de registro inválidos. Por favor, revisa los errores.',
-            errors: validatedFields.error.flatten().fieldErrors,
-            success: false,
-          };
-        }
-
-        const { name, email, password } = validatedFields.data;
-
-        // En una app real, esto consultaría la base de datos
         const existingUser = mockUsers.find(u => u.email === email);
         if (existingUser) {
             return {
-                message: 'Ya existe un usuario con este email. Por favor, inicia sesión.',
+                message: 'Ya existe un usuario con este email.',
                 errors: { email: ['Este email ya está en uso.'] },
                 success: false,
             }
@@ -84,15 +82,21 @@ export async function signup(prevState: any, formData: FormData) {
         });
 
         return { success: true, message: '¡Registro completado!' };
+
     } catch (error) {
-        if (error instanceof AuthError) {
-            if (error.type === 'CredentialsSignin') {
-                return { message: 'No se pudo iniciar sesión después del registro. Credenciales inválidas.', success: false };
-            }
-             return { message: `Error de autenticación: ${error.type}.`, success: false };
-        }
-        console.error("Error inesperado en signup:", error);
-        return { message: `Un error inesperado ocurrió. Por favor, inténtalo de nuevo.`, success: false };
+       console.error("Error detallado en signup:", error);
+       if (error instanceof AuthError) {
+          switch (error.type) {
+            case 'CredentialsSignin':
+              // This can happen if the sign-in post-registration fails for some reason
+              return { message: 'Error al iniciar sesión después del registro. Intenta iniciar sesión manualmente.', success: false };
+            default:
+              return { message: `Error de autenticación: ${error.type}.`, success: false };
+          }
+       }
+       
+       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+       return { message: `Un error inesperado ocurrió. Detalle: ${errorMessage}`, success: false };
     }
 }
 

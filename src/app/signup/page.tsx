@@ -48,8 +48,8 @@ export default function SignupPage() {
             )}
             <div className="grid gap-2">
               <Label htmlFor="name">Nombre</Label>
-              <Input id="name" name="name" placeholder="Alex Doe" required />
-              {state.errors?.name && <p className="text-sm font-medium text-destructive">{state.errors.name}</p>}
+              <Input id="name" name="name" placeholder="Alex Doe" required aria-describedby="name-error" />
+              {state.errors?.name && <p id="name-error" className="text-sm font-medium text-destructive">{state.errors.name.join(', ')}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
@@ -59,13 +59,14 @@ export default function SignupPage() {
                 type="email"
                 placeholder="m@ejemplo.com"
                 required
+                aria-describedby="email-error"
               />
-              {state.errors?.email && <p className="text-sm font-medium text-destructive">{state.errors.email}</p>}
+              {state.errors?.email && <p id="email-error" className="text-sm font-medium text-destructive">{state.errors.email.join(', ')}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Contraseña</Label>
-              <Input id="password" name="password" type="password" required />
-              {state.errors?.password && <p className="text-sm font-medium text-destructive">{state.errors.password}</p>}
+              <Input id="password" name="password" type="password" required aria-describedby="password-error" />
+              {state.errors?.password && <p id="password-error" className="text-sm font-medium text-destructive">{state.errors.password.join(', ')}</p>}
             </div>
           </CardContent>
           <CardFooter className="flex flex-col">
