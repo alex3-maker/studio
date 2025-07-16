@@ -4,7 +4,7 @@
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRef, useEffect, useState } from 'react';
-import { format } from "date-fns";
+import { format, formatISO } from "date-fns";
 import { es } from 'date-fns/locale';
 
 import { createDuelSchema, type CreateDuelFormValues } from '@/lib/schemas';
@@ -129,7 +129,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
   const { apiKey, isAiEnabled } = useAppContext();
   
   const defaultValues = duelData ? {
-      type: duelData.type || 'A_VS_B',
+      type: duelData.type,
       id: duelData.id,
       title: duelData.title,
       description: duelData.description,
@@ -272,8 +272,8 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
         action={formAction}
         className="space-y-8"
       >
-        {isEditing && duelData?.id && <input type="hidden" {...form.register("id")} value={duelData.id} />}
-        {!isEditing && user && <input type="hidden" {...form.register("userKeys")} value={user.keys} />}
+        {isEditing && duelData?.id && <input type="hidden" name="id" value={duelData.id} />}
+        {!isEditing && user && <input type="hidden" name="userKeys" value={user.keys} />}
         
         <FormField
           control={form.control}
@@ -334,6 +334,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Fecha de Inicio</FormLabel>
+                 {field.value && <input type="hidden" name="startsAt" value={formatISO(field.value)} />}
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -378,6 +379,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Fecha de Fin</FormLabel>
+                {field.value && <input type="hidden" name="endsAt" value={formatISO(field.value)} />}
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -429,7 +431,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                     <CardContent className="space-y-4">
                         <FormField
                             control={form.control}
-                            name={`options[${index}].title`}
+                            name={`options.${index}.title`}
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Título de la Opción</FormLabel>
@@ -438,9 +440,9 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                                 </FormItem>
                             )}
                         />
-                         {form.watch(`options[${index}].imageUrl`) && (
+                         {form.watch(`options.${index}.imageUrl`) && (
                             <div className="relative w-full h-48 mt-4 rounded-md overflow-hidden border bg-muted/30">
-                                <img src={form.watch(`options[${index}].imageUrl`) as string} alt="Vista previa" className="w-full h-full object-contain" />
+                                <img src={form.watch(`options.${index}.imageUrl`) as string} alt="Vista previa" className="w-full h-full object-contain" />
                             </div>
                         )}
                         

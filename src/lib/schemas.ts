@@ -24,15 +24,9 @@ export const createDuelSchema = z.object({
   title: z.string().min(3, { message: "El título debe tener al menos 3 caracteres." }).max(100),
   description: z.string().max(500).optional(),
   options: z.array(duelOptionSchema).min(1, "Debe haber al menos una opción."),
-  startsAt: z.coerce.date({
-      required_error: 'Por favor, selecciona una fecha de inicio.',
-      invalid_type_error: "Por favor, selecciona una fecha de inicio válida."
-  }),
-  endsAt: z.coerce.date({
-      required_error: 'Por favor, selecciona una fecha de fin.',
-      invalid_type_error: "Por favor, selecciona una fecha de fin válida."
-  }),
-  userKeys: z.coerce.number().optional(), // Make this optional for updates
+  startsAt: z.string({required_error: "La fecha de inicio es requerida."}).datetime({ message: "Por favor, selecciona una fecha de inicio válida." }),
+  endsAt: z.string({required_error: "La fecha de fin es requerida."}).datetime({ message: "Por favor, selecciona una fecha de fin válida." }),
+  userKeys: z.string().optional(), // Comes from FormData as string
 }).superRefine((data, ctx) => {
     if (data.endsAt <= data.startsAt) {
         ctx.addIssue({

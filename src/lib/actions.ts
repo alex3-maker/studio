@@ -26,28 +26,25 @@ export type FormState = {
 
 const DUEL_CREATION_COST = 5;
 
-// This helper function reconstructs the nested options array from the flat FormData
-function getStructuredFormData(formData: FormData) {
-  const data: { [key: string]: any } = {
-    options: [],
-  };
-  const optionFields: { [key: string]: any }[] = [];
+function processFormDataWithOptions(formData: FormData): Record<string, any> {
+  const data: Record<string, any> = {};
+  const options: Record<string, any>[] = [];
 
   for (const [key, value] of formData.entries()) {
-    const optionMatch = key.match(/^options\[(\d+)\]\.(.+)$/);
+    const optionMatch = key.match(/options\.(\d+)\.(.+)/);
     if (optionMatch) {
       const index = parseInt(optionMatch[1], 10);
       const field = optionMatch[2];
-      if (!optionFields[index]) {
-        optionFields[index] = {};
+      if (!options[index]) {
+        options[index] = {};
       }
-      optionFields[index][field] = value;
+      options[index][field] = value;
     } else {
       data[key] = value;
     }
   }
 
-  data.options = optionFields;
+  data.options = options;
   return data;
 }
 
@@ -82,7 +79,7 @@ export async function createDuelAction(
   formData: FormData
 ): Promise<FormState> {
   
-  const rawFormData = getStructuredFormData(formData);
+  const rawFormData = processFormDataWithOptions(formData);
   
   const validatedFields = createDuelSchema.safeParse(rawFormData);
   
@@ -109,7 +106,7 @@ export async function createDuelAction(
     revalidatePath('/');
     revalidatePath('/panel/mis-duelos');
 
-    const hasEnoughKeys = (userKeys || 0) >= DUEL_CREATION_COST;
+    const hasEnoughKeys = (Number(userKeys) || 0) >= DUEL_CREATION_COST;
     const status: Duel['status'] = hasEnoughKeys ? 'scheduled' : 'draft'; 
 
     const newDuel: Duel = {
@@ -119,8 +116,8 @@ export async function createDuelAction(
       description: description || '',
       status, 
       createdAt: formatISO(new Date()),
-      startsAt: formatISO(startsAt),
-      endsAt: formatISO(endsAt),
+      startsAt: startsAt,
+      endsAt: endsAt,
       creator: {
         id: 'user-1',
         name: 'Alex Doe',
@@ -160,7 +157,7 @@ export async function updateDuelAction(
   prevState: FormState,
   formData: FormData
 ): Promise<FormState> {
-  const rawFormData = getStructuredFormData(formData);
+  const rawFormData = processFormDataWithOptions(formData);
   
   if (!rawFormData.id) {
     return { success: false, message: "ID del duelo no encontrado.", errors: { _form: ["ID del duelo no encontrado."] } };
@@ -198,8 +195,8 @@ export async function updateDuelAction(
       type,
       title,
       description: description || '',
-      startsAt: formatISO(startsAt),
-      endsAt: formatISO(endsAt),
+      startsAt: startsAt,
+      endsAt: endsAt,
       options: options.map((opt, index) => ({
         id: opt.id || `opt-${rawFormData.id}-${index}`, 
         title: opt.title,
