@@ -303,7 +303,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Descripción</FormLabel>
+              <FormLabel>Descripción (Opcional)</FormLabel>
               <FormControl>
                 <Textarea placeholder="Añade una breve descripción para dar contexto." {...field} />
               </FormControl>
