@@ -7,9 +7,11 @@ import { mockUsers } from '@/lib/data';
 import type { User } from '@/lib/types';
 import bcrypt from 'bcryptjs';
 
-async function getUser(email: string): Promise<User | undefined> {
+async function getUser(email: string): Promise<(User & { password?: string }) | undefined> {
+  // En una aplicación real, esto consultaría la base de datos.
+  // pg.query('SELECT * FROM "User" WHERE email = $1', [email]);
   const user = mockUsers.find((user) => user.email === email);
-  return user as User | undefined;
+  return user;
 }
 
 export const { auth, signIn, signOut, handlers } = NextAuth({
@@ -27,17 +29,15 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           const user = await getUser(email);
           if (!user || !user.password) return null;
 
-          // En una app real, user.password sería el hash de la BD
           const passwordsMatch = await bcrypt.compare(password, user.password);
-
+          
           if (passwordsMatch) {
-            // Devolvemos el usuario sin la contraseña
             const { password, ...userWithoutPassword } = user;
             return userWithoutPassword as any;
           }
         }
-
-        console.log('Invalid credentials');
+        
+        console.log('Autorización fallida: Credenciales inválidas.');
         return null;
       },
     }),
