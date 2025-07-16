@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/app-context';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import DuelResultsDetails from './duel-results-details';
+import { Progress } from './ui/progress';
 
 const HINT_STORAGE_KEY = 'dueliax-landscape-hint-dismissed';
 
@@ -52,6 +53,43 @@ function ListDuel({ duel, onVote }: { duel: Duel, onVote: (option: DuelOption) =
   )
 }
 
+function AutoAdvanceButton({ onComplete, hasMoreDuels }: { onComplete: () => void; hasMoreDuels: boolean; }) {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onComplete();
+    }, 3000);
+
+    // Update progress every 30ms for a smooth 3-second animation
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        const newProgress = prev + 1;
+        if (newProgress >= 100) {
+          clearInterval(interval);
+          return 100;
+        }
+        return newProgress;
+      });
+    }, 30);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, [onComplete]);
+
+  return (
+    <Button onClick={onComplete} className="w-full relative overflow-hidden" size="lg">
+      <div className="absolute top-0 left-0 h-full bg-primary/30" style={{ width: `${progress}%`, transition: 'width 30ms linear' }} />
+      <span className="relative z-10 flex items-center">
+        {hasMoreDuels ? 'Siguiente Duelo' : 'Finalizar'}
+        <ArrowRight className="ml-2 h-4 w-4" />
+      </span>
+    </Button>
+  );
+}
+
 
 export default function VotingFeed() {
   const { duels, castVote, votedDuelIds, getDuelStatus } = useAppContext();
@@ -86,10 +124,7 @@ export default function VotingFeed() {
   [duels, votedDuelIds, getDuelStatus]);
 
   const currentDuel: Duel | undefined = useMemo(() => {
-    // Si la lista de duelos activos está vacía, no hay nada que mostrar.
     if (activeDuels.length === 0) return undefined;
-
-    // Asegurarse de que el índice no esté fuera de los límites
     const newIndex = Math.min(currentDuelIndex, activeDuels.length - 1);
     if (newIndex !== currentDuelIndex) {
         setCurrentDuelIndex(newIndex);
@@ -134,13 +169,10 @@ export default function VotingFeed() {
   const onDialogClose = (open: boolean) => {
     if(!open) {
       setIsDialogOpen(false);
-      // Cuando el diálogo se cierra (tras ver los resultados), pasamos al siguiente duelo.
       setAnimationClass('');
       setVoted(null);
       setVotedDuelDetails(null);
 
-      // La lista de activeDuels ya se ha actualizado. Si estamos al final, volvemos al principio.
-      // Si no, el índice actual ya apunta al siguiente duelo correcto.
       if (currentDuelIndex >= activeDuels.length - 1) {
           setCurrentDuelIndex(0);
       }
@@ -149,16 +181,20 @@ export default function VotingFeed() {
 
   const duelToShow = votedDuelDetails || currentDuel;
   
+   if (isPending) {
+     return <VotingFeedSkeleton />;
+   }
+
   if (!duelToShow) {
-    if (votedDuelIds.length === 0) { // Context might still be loading
-        return <VotingFeedSkeleton />;
-    }
-    return (
-       <div className="text-center py-16">
-        <h2 className="text-2xl font-headline mb-4">¡No hay más duelos!</h2>
-        <p className="text-muted-foreground">Has votado en todos los duelos disponibles. ¡Vuelve más tarde o crea el tuyo!</p>
-      </div>
-    )
+     if (duels.length > 0 && activeDuels.length === 0) {
+        return (
+            <div className="text-center py-16">
+                <h2 className="text-2xl font-headline mb-4">¡No hay más duelos!</h2>
+                <p className="text-muted-foreground">Has votado en todos los duelos disponibles. ¡Vuelve más tarde o crea el tuyo!</p>
+            </div>
+        )
+     }
+     return <VotingFeedSkeleton />;
   }
 
 
@@ -209,21 +245,11 @@ export default function VotingFeed() {
                   <DialogTitle>Resultados: {votedDuelDetails.title}</DialogTitle>
                 </DialogHeader>
                 <DuelResultsDetails duel={votedDuelDetails} />
-                <DialogClose asChild>
-                  <Button id={`results-close-${votedDuelDetails.id}`} className="w-full" size="lg">
-                    Siguiente Duelo <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </DialogClose>
+                <AutoAdvanceButton onComplete={() => onDialogClose(false)} hasMoreDuels={activeDuels.length > 0} />
               </>
             )}
           </DialogContent>
         </Dialog>
-
-        {voted && (
-          <p className="text-lg font-semibold text-primary">
-            Has votado por: {voted.title}
-          </p>
-        )}
       </div>
     </div>
   );
