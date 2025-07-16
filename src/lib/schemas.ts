@@ -22,15 +22,16 @@ export const createDuelSchema = z.object({
   type: z.enum(['A_VS_B', 'LIST']),
   title: z.string().min(3, { message: "El título debe tener al menos 3 caracteres." }).max(100),
   description: z.string().max(500).optional(),
-  options: z.array(duelOptionSchema).min(1),
-  startsAt: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Fecha de inicio inválida." }),
-  endsAt: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Fecha de fin inválida." }),
-  userKeys: z.number().optional(), // Make this optional for updates
+  options: z.array(duelOptionSchema).min(1, "Debe haber al menos una opción."),
+  startsAt: z.coerce.date({
+      errorMap: () => ({ message: 'Por favor, selecciona una fecha de inicio válida.' }),
+  }),
+  endsAt: z.coerce.date({
+      errorMap: () => ({ message: 'Por favor, selecciona una fecha de fin válida.' }),
+  }),
+  userKeys: z.coerce.number().optional(), // Make this optional for updates
 }).superRefine((data, ctx) => {
-    const startDate = new Date(data.startsAt);
-    const endDate = new Date(data.endsAt);
-
-    if (endDate <= startDate) {
+    if (data.endsAt <= data.startsAt) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: "La fecha de fin debe ser posterior a la fecha de inicio.",

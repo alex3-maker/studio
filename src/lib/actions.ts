@@ -28,29 +28,30 @@ const DUEL_CREATION_COST = 5;
 
 // This helper function reconstructs the nested options array from the flat FormData
 function processFormDataWithOptions(formData: FormData) {
-  const data: Record<string, any> = Object.fromEntries(formData.entries());
+  const data: Record<string, any> = {};
   const options: { title: string; imageUrl?: string; affiliateUrl?: string, id?: string }[] = [];
-  
-  // Find all keys that look like option titles
-  const titleKeys = Object.keys(data).filter(key => key.match(/^options\[\d+\]\.title$/));
+  const optionsMap: Record<number, any> = {};
 
-  for (const titleKey of titleKeys) {
-    const indexMatch = titleKey.match(/\[(\d+)\]/);
-    if (!indexMatch) continue;
-    const i = indexMatch[1];
-    
-    const title = data[`options[${i}].title`];
-    if (title) { // Only add if title exists
-        options.push({
-            id: data[`options[${i}].id`],
-            title: title,
-            imageUrl: data[`options[${i}].imageUrl`],
-            affiliateUrl: data[`options[${i}].affiliateUrl`],
-        });
+  formData.forEach((value, key) => {
+    const optionMatch = key.match(/^options\[(\d+)\]\.(.*)$/);
+    if (optionMatch) {
+      const [, indexStr, field] = optionMatch;
+      const index = parseInt(indexStr, 10);
+      if (!optionsMap[index]) {
+        optionsMap[index] = {};
+      }
+      optionsMap[index][field] = value;
+    } else {
+      data[key] = value;
     }
-  }
-  
-  data.options = options;
+  });
+
+  // Convert the map to an array, ensuring order
+  Object.keys(optionsMap).sort((a,b) => parseInt(a) - parseInt(b)).forEach(index => {
+      options.push(optionsMap[parseInt(index)]);
+  });
+
+  data.options = options.filter(opt => opt.title); // Only include options that have a title
   return data;
 }
 
@@ -86,14 +87,8 @@ export async function createDuelAction(
 ): Promise<FormState> {
   
   const rawFormData = processFormDataWithOptions(formData);
-
-  // Explicitly convert types before validation
-  const dataToValidate = {
-    ...rawFormData,
-    userKeys: rawFormData.userKeys ? Number(rawFormData.userKeys) : undefined,
-  };
   
-  const validatedFields = createDuelSchema.safeParse(dataToValidate);
+  const validatedFields = createDuelSchema.safeParse(rawFormData);
   
   if (!validatedFields.success) {
     const errorDetails = JSON.stringify(validatedFields.error.flatten(), null, 2);
@@ -109,10 +104,6 @@ export async function createDuelAction(
   
   const { type, title, options, description, startsAt, endsAt, userKeys } = validatedFields.data;
   
-  // Convert dates after successful validation
-  const startDate = new Date(startsAt);
-  const endDate = new Date(endsAt);
-
   try {
     const moderationResult = await runModeration({ title, options });
     if (!moderationResult.success) {
@@ -132,8 +123,8 @@ export async function createDuelAction(
       description: description || '',
       status, 
       createdAt: formatISO(new Date()),
-      startsAt: formatISO(startDate),
-      endsAt: formatISO(endDate),
+      startsAt: formatISO(startsAt),
+      endsAt: formatISO(endsAt),
       creator: {
         id: 'user-1',
         name: 'Alex Doe',
@@ -194,10 +185,6 @@ export async function updateDuelAction(
   }
 
   const { title, options, description, startsAt, endsAt, type } = validatedFields.data;
-  
-  // Convert dates after successful validation
-  const startDate = new Date(startsAt);
-  const endDate = new Date(endsAt);
 
   try {
     const moderationResult = await runModeration({ title, options });
@@ -215,8 +202,8 @@ export async function updateDuelAction(
       type,
       title,
       description: description || '',
-      startsAt: formatISO(startDate),
-      endsAt: formatISO(endDate),
+      startsAt: formatISO(startsAt),
+      endsAt: formatISO(endsAt),
       options: options.map((opt, index) => ({
         id: opt.id || `opt-${rawFormData.id}-${index}`, 
         title: opt.title,
