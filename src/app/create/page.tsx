@@ -30,17 +30,29 @@ export default function CreateDuelPage() {
   const [state, formAction, isPending] = useActionState(createDuelAction, initialState);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedData, setGeneratedData] = useState<Partial<CreateDuelFormValues> | null>(null);
+  const [formSubmitted, setFormSubmitted] = useState(false);
 
   useEffect(() => {
-    if (state.success && state.newDuel) {
+    // This effect runs ONLY when the form action succeeds AND we've recorded that the form was submitted.
+    // This prevents the loop caused by re-renders.
+    if (state.success && state.newDuel && formSubmitted) {
         addDuel(state.newDuel);
         toast({
             title: '¡Éxito!',
             description: state.message,
         });
+        
+        // Reset the submission flag and navigate away.
+        setFormSubmitted(false);
         router.push('/panel/mis-duelos');
     }
-  }, [state, addDuel, toast, router]);
+  }, [state, addDuel, toast, router, formSubmitted]);
+
+  // Wrapper for the form action to set the submission flag
+  const handleFormAction = (payload: FormData) => {
+    setFormSubmitted(true);
+    formAction(payload);
+  };
 
 
   const handleGenerate = async () => {
@@ -123,7 +135,7 @@ export default function CreateDuelPage() {
             <CreateDuelForm 
               user={user} 
               state={state} 
-              formAction={formAction} 
+              formAction={handleFormAction} 
               isPending={isPending}
               key={generatedData ? JSON.stringify(generatedData) : 'form'}
               duelDataFromAI={generatedData}
