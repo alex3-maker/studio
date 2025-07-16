@@ -107,11 +107,11 @@ function ManualInputFields({ form, index, handleFileChange, fileInputRefs }: any
                 name={`options.${index}.affiliateUrl`}
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel>URL de Afiliado (Opcional)</FormLabel>
+                        <FormLabel>URL (Opcional)</FormLabel>
                         <FormControl>
-                            <Input placeholder="https://enlace.afiliado/producto" {...field} />
+                            <Input placeholder="https://ejemplo.com/enlace" {...field} />
                         </FormControl>
-                        <FormDescription>Si quieres, añade un enlace de compra o de afiliado para esta opción.</FormDescription>
+                        <FormDescription>Si quieres, añade un enlace externo para esta opción.</FormDescription>
                         <FormMessage />
                     </FormItem>
                 )}

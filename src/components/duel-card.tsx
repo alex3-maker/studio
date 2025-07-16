@@ -65,7 +65,7 @@ export default function DuelCard({ option, onClick, className }: DuelCardProps) 
                 size="icon"
                 className="absolute top-2 right-2 h-8 w-8 rounded-full shadow-lg opacity-80 group-hover:opacity-100 transition-opacity"
                 onClick={handleLinkClick}
-                aria-label="Ver producto"
+                aria-label="Ver enlace"
             >
                 <Link2 className="h-4 w-4" />
             </Button>
