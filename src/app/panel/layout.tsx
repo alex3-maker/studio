@@ -3,13 +3,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { User, Grip, Settings, Bell } from 'lucide-react';
+import { User, Grip, Settings, Bell, Vote } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 const panelNavLinks = [
   { href: '/panel/mis-duelos', label: 'Mis Duelos', icon: Grip },
+  { href: '/panel/duelos-votados', label: 'Duelos Votados', icon: Vote },
   { href: '/panel/perfil', label: 'Perfil', icon: User },
   { href: '/panel/notificaciones', label: 'Notificaciones', icon: Bell },
 ];

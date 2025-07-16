@@ -2,11 +2,12 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
-import type { User, Duel, DuelOption, Notification, KeyTransaction } from '@/lib/types';
+import type { User, Duel, DuelOption, Notification, KeyTransaction, UserVote } from '@/lib/types';
 import { mockUser, mockDuels, mockUsers } from '@/lib/data';
 import { isAfter, isBefore, parseISO, formatISO } from 'date-fns';
 
 const VOTED_DUELS_STORAGE_KEY = 'dueliax_voted_duels';
+const USER_VOTES_STORAGE_KEY = 'dueliax_user_votes';
 const DUEL_VOTING_HISTORY_STORAGE_KEY = 'dueliax_duel_voting_history';
 const USERS_STORAGE_KEY = 'dueliax_users';
 const CURRENT_USER_ID_KEY = 'dueliax_current_user_id';
@@ -21,6 +22,7 @@ interface AppContextType {
   user: User;
   duels: Duel[];
   votedDuelIds: string[];
+  userVotedOptions: Record<string, UserVote>;
   notifications: Notification[];
   keyHistory: KeyTransaction[];
   apiKey: string | null;
@@ -71,6 +73,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [duels, setDuels] = useState<Duel[]>([]);
   const [votedDuelIds, setVotedDuelIds] = useState<string[]>([]);
+  const [userVotedOptions, setUserVotedOptions] = useState<Record<string, UserVote>>({});
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [keyHistory, setKeyHistory] = useState<KeyTransaction[]>([]);
   const [duelVotingHistory, setDuelVotingHistory] = useState<string[]>([]);
@@ -120,6 +123,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const storedVotedIds = localStorage.getItem(VOTED_DUELS_STORAGE_KEY);
       if (storedVotedIds) setVotedDuelIds(JSON.parse(storedVotedIds));
 
+      const storedUserVotes = localStorage.getItem(USER_VOTES_STORAGE_KEY);
+      if (storedUserVotes) setUserVotedOptions(JSON.parse(storedUserVotes));
+
       const storedVotingHistory = localStorage.getItem(DUEL_VOTING_HISTORY_STORAGE_KEY);
       if (storedVotingHistory) setDuelVotingHistory(JSON.parse(storedVotingHistory));
       
@@ -150,6 +156,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (isLoaded) localStorage.setItem(VOTED_DUELS_STORAGE_KEY, JSON.stringify(votedDuelIds));
   }, [votedDuelIds, isLoaded]);
+  
+  useEffect(() => {
+    if (isLoaded) localStorage.setItem(USER_VOTES_STORAGE_KEY, JSON.stringify(userVotedOptions));
+  }, [userVotedOptions, isLoaded]);
 
   useEffect(() => {
     if (isLoaded) localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifications));
@@ -254,6 +264,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
 
     setVotedDuelIds(prevIds => [...prevIds, duelId]);
+    setUserVotedOptions(prevVotes => ({
+        ...prevVotes,
+        [duelId]: { optionId, timestamp: new Date().toISOString() },
+    }));
 
     return awardedKey;
 
@@ -356,6 +370,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return duel;
     }));
     setVotedDuelIds(prevIds => prevIds.filter(id => id !== duelId));
+    setUserVotedOptions(prevVotes => {
+        const newVotes = { ...prevVotes };
+        delete newVotes[duelId];
+        return newVotes;
+    });
+
     const message = isOwnerReset 
         ? `Has reiniciado los votos de tu duelo "${duelTitle}".`
         : `Un administrador ha reiniciado los votos del duelo "${duelTitle}".`;
@@ -416,6 +436,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     deleteDuel, 
     resetDuelVotes, 
     votedDuelIds, 
+    userVotedOptions,
     getDuelStatus, 
     notifications, 
     markNotificationAsRead, 

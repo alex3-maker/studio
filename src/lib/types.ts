@@ -34,6 +34,11 @@ export type Duel = {
   endsAt: string; // ISO 8601 string
 };
 
+export type UserVote = {
+  optionId: string;
+  timestamp: string; // ISO 8601 string
+};
+
 export type Notification = {
     id: string;
     type: 'duel-closed' | 'duel-edited' | 'duel-reset' | 'winner-changed' | 'keys-spent';
