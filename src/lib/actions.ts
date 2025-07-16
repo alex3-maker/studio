@@ -69,7 +69,7 @@ export async function castVoteAction({ duelId, optionId }: { duelId: string; opt
         const ipHash = hashIp(getClientIp());
         
         const existingGuestVote = await prisma.guestVote.findUnique({
-            where: { duel_id_ip_hash: { duel_id: duelId, ip_hash: ipHash } }
+            where: { duelId_ipHash: { duelId: duelId, ipHash: ipHash } }
         });
 
         if (existingGuestVote) {
@@ -78,9 +78,9 @@ export async function castVoteAction({ duelId, optionId }: { duelId: string; opt
         
         await prisma.guestVote.create({
           data: {
-            duel_id: duelId,
-            option_id: optionId,
-            ip_hash: ipHash
+            duelId: duelId,
+            optionId: optionId,
+            ipHash: ipHash
           }
         });
     }
