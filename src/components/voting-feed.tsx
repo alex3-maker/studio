@@ -57,6 +57,7 @@ export default function VotingFeed() {
   const { duels, castVote, votedDuelIds, getDuelStatus } = useAppContext();
   const [currentDuelIndex, setCurrentDuelIndex] = useState(0);
   const [voted, setVoted] = useState<DuelOption | null>(null);
+  const [votedDuelDetails, setVotedDuelDetails] = useState<Duel | null>(null);
   const [animationClass, setAnimationClass] = useState('');
   const [isPending, startTransition] = useTransition();
   const [showHint, setShowHint] = useState(false);
@@ -96,7 +97,8 @@ export default function VotingFeed() {
 
   const handleVote = (selectedOption: DuelOption, direction?: 'left' | 'right') => {
     if (voted || !currentDuel) return;
-
+    
+    setVotedDuelDetails(currentDuel);
     setVoted(selectedOption);
     if(direction){
         setAnimationClass(direction === 'left' ? 'animate-card-select-left' : 'animate-card-select-right');
@@ -125,9 +127,11 @@ export default function VotingFeed() {
   
   const onDialogClose = () => {
     // Cuando el diálogo se cierra (tras ver los resultados), pasamos al siguiente duelo.
-    // React se encargará de re-renderizar si la lista de 'activeDuels' ha cambiado (por ejemplo, al reiniciar un voto)
     setAnimationClass('');
     setVoted(null);
+    setVotedDuelDetails(null);
+
+    // React se encargará de re-renderizar si la lista de 'activeDuels' ha cambiado (por ejemplo, al reiniciar un voto)
     if (currentDuelIndex >= activeDuels.length - 1) {
         setCurrentDuelIndex(0);
     } else {
@@ -209,15 +213,19 @@ export default function VotingFeed() {
               </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Resultados: {currentDuel.title}</DialogTitle>
-            </DialogHeader>
-            <DuelResultsDetails duel={currentDuel} />
-            <DialogClose asChild>
-              <Button id={`results-close-${currentDuel.id}`} className="w-full" size="lg">
-                Siguiente Duelo <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </DialogClose>
+            {votedDuelDetails && (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Resultados: {votedDuelDetails.title}</DialogTitle>
+                </DialogHeader>
+                <DuelResultsDetails duel={votedDuelDetails} />
+                <DialogClose asChild>
+                  <Button id={`results-close-${currentDuel.id}`} className="w-full" size="lg">
+                    Siguiente Duelo <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </DialogClose>
+              </>
+            )}
           </DialogContent>
         </Dialog>
 
