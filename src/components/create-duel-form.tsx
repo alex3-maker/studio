@@ -347,89 +347,89 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                     <CardHeader>
                         <CardTitle>Opción {index + 1}</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <Tabs defaultValue="manual" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
-                          <TabsTrigger value="manual">Manual</TabsTrigger>
-                          <TabsTrigger value="url">Importar desde URL</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="manual" className="space-y-4 mt-4">
-                           <FormField
-                                control={form.control}
-                                name={`options.${index}.title`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Título de la Opción</FormLabel>
-                                        <FormControl><Input placeholder={`Título para la opción ${index + 1}`} {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name={`options.${index}.imageUrl`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>URL de la Imagen (Opcional)</FormLabel>
-                                        <div className="flex gap-2">
-                                            <FormControl>
-                                                <Input placeholder="https://... o sube un archivo" {...field} />
-                                            </FormControl>
-                                            <Button 
-                                                type="button" 
-                                                variant="outline" 
-                                                onClick={() => fileInputRefs.current[index]?.click()}
-                                            >
-                                                <Upload className="mr-2 h-4 w-4" /> Subir
-                                            </Button>
-                                        </div>
-                                        <input 
-                                            type="file"
-                                            ref={el => fileInputRefs.current[index] = el}
-                                            className="hidden"
-                                            accept="image/png, image/jpeg, image/gif, image/webp"
-                                            onChange={(e) => handleFileChange(e, index)}
-                                        />
-                                        <FormDescription>Pega una URL o sube una imagen (máx 2MB). Déjalo en blanco para una opción de solo texto.</FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </TabsContent>
-                        <TabsContent value="url" className="space-y-4 mt-4">
-                          <div className='space-y-2'>
-                            <FormLabel htmlFor={`product-url-${index}`}>URL del Producto</FormLabel>
-                            <div className="flex gap-2">
-                                <Input 
-                                    id={`product-url-${index}`}
-                                    placeholder="Pega la URL de un producto aquí (ej: Amazon)" 
-                                    value={productUrls[index]}
-                                    onChange={(e) => {
-                                        const newUrls = [...productUrls];
-                                        newUrls[index] = e.target.value;
-                                        setProductUrls(newUrls);
-                                    }}
-                                    disabled={isScraping[index]}
-                                />
-                                <Button 
-                                    type="button" 
-                                    variant="secondary" 
-                                    onClick={() => handleImportFromUrl(index)}
-                                    disabled={isScraping[index] || !productUrls[index]}
-                                >
-                                    {isScraping[index] ? <Loader2 className="animate-spin" /> : <LinkIcon className="mr-2" />}
-                                    Importar
-                                </Button>
+                    <CardContent className="space-y-4">
+                        <FormField
+                            control={form.control}
+                            name={`options.${index}.title`}
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Título de la Opción</FormLabel>
+                                    <FormControl><Input placeholder={`Título para la opción ${index + 1}`} {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         {form.watch(`options.${index}.imageUrl`) && (
+                            <div className="relative w-full h-48 mt-4 rounded-md overflow-hidden border bg-muted/30">
+                                <img src={form.watch(`options.${index}.imageUrl`) as string} alt="Vista previa" className="w-full h-full object-contain" />
                             </div>
-                            <FormDescription>El sistema extraerá el título y la imagen del producto. Aún podrás editarlos después.</FormDescription>
-                          </div>
-                        </TabsContent>
-                      </Tabs>
-                      {form.watch(`options.${index}.imageUrl`) && (
-                          <div className="relative w-full h-48 mt-4 rounded-md overflow-hidden border bg-muted/30">
-                              <img src={form.watch(`options.${index}.imageUrl`) as string} alt="Vista previa" className="w-full h-full object-contain" />
-                          </div>
-                      )}
+                        )}
+                        <Tabs defaultValue="manual" className="w-full">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="manual">Imagen Manual</TabsTrigger>
+                                <TabsTrigger value="url">Importar desde URL</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="manual" className="space-y-4 mt-4">
+                                <FormField
+                                    control={form.control}
+                                    name={`options.${index}.imageUrl`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>URL de la Imagen (Opcional)</FormLabel>
+                                            <div className="flex gap-2">
+                                                <FormControl>
+                                                    <Input placeholder="https://... o sube un archivo" {...field} />
+                                                </FormControl>
+                                                <Button 
+                                                    type="button" 
+                                                    variant="outline" 
+                                                    onClick={() => fileInputRefs.current[index]?.click()}
+                                                >
+                                                    <Upload className="mr-2 h-4 w-4" /> Subir
+                                                </Button>
+                                            </div>
+                                            <input 
+                                                type="file"
+                                                ref={el => fileInputRefs.current[index] = el}
+                                                className="hidden"
+                                                accept="image/png, image/jpeg, image/gif, image/webp"
+                                                onChange={(e) => handleFileChange(e, index)}
+                                            />
+                                            <FormDescription>Pega una URL o sube una imagen (máx 2MB). Déjalo en blanco para una opción de solo texto.</FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </TabsContent>
+                            <TabsContent value="url" className="space-y-4 mt-4">
+                              <div className='space-y-2'>
+                                <FormLabel htmlFor={`product-url-${index}`}>URL del Producto</FormLabel>
+                                <div className="flex gap-2">
+                                    <Input 
+                                        id={`product-url-${index}`}
+                                        placeholder="Pega la URL de un producto aquí (ej: Amazon)" 
+                                        value={productUrls[index]}
+                                        onChange={(e) => {
+                                            const newUrls = [...productUrls];
+                                            newUrls[index] = e.target.value;
+                                            setProductUrls(newUrls);
+                                        }}
+                                        disabled={isScraping[index]}
+                                    />
+                                    <Button 
+                                        type="button" 
+                                        variant="secondary" 
+                                        onClick={() => handleImportFromUrl(index)}
+                                        disabled={isScraping[index] || !productUrls[index]}
+                                    >
+                                        {isScraping[index] ? <Loader2 className="animate-spin" /> : <LinkIcon className="mr-2" />}
+                                        Importar
+                                    </Button>
+                                </div>
+                                <FormDescription>El sistema extraerá el título y la imagen del producto.</FormDescription>
+                              </div>
+                            </TabsContent>
+                        </Tabs>
                     </CardContent>
                 </Card>
             ))}
