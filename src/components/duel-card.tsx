@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { DuelOption } from '@/lib/types';
+import { Link2 } from 'lucide-react';
+import { Button } from './ui/button';
 
 interface DuelCardProps {
   option: DuelOption;
@@ -14,6 +16,13 @@ interface DuelCardProps {
 
 export default function DuelCard({ option, onClick, className }: DuelCardProps) {
   const hasImage = !!option.imageUrl;
+
+  const handleLinkClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Evita que se active el voto al hacer clic en el enlace
+    if (option.affiliateUrl) {
+      window.open(option.affiliateUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   return (
     <Card
@@ -49,6 +58,17 @@ export default function DuelCard({ option, onClick, className }: DuelCardProps) 
               {option.title}
             </h3>
           </div>
+        )}
+        {option.affiliateUrl && (
+            <Button
+                variant="secondary"
+                size="icon"
+                className="absolute top-2 right-2 h-8 w-8 rounded-full shadow-lg opacity-80 group-hover:opacity-100 transition-opacity"
+                onClick={handleLinkClick}
+                aria-label="Ver producto"
+            >
+                <Link2 className="h-4 w-4" />
+            </Button>
         )}
       </CardContent>
     </Card>

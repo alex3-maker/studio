@@ -37,8 +37,8 @@ function getFormData(formData: FormData) {
     description: formData.get('description') as string,
     type: formData.get('type') as "A_VS_B" | "LIST" | "KING_OF_THE_HILL",
     options: [
-      { id: formData.get('options.0.id') as string | undefined, title: formData.get('options.0.title') as string, imageUrl: formData.get('options.0.imageUrl') as string },
-      { id: formData.get('options.1.id') as string | undefined, title: formData.get('options.1.title') as string, imageUrl: formData.get('options.1.imageUrl') as string }
+      { id: formData.get('options.0.id') as string | undefined, title: formData.get('options.0.title') as string, imageUrl: formData.get('options.0.imageUrl') as string, affiliateUrl: formData.get('options.0.affiliateUrl') as string },
+      { id: formData.get('options.1.id') as string | undefined, title: formData.get('options.1.title') as string, imageUrl: formData.get('options.1.imageUrl') as string, affiliateUrl: formData.get('options.1.affiliateUrl') as string }
     ],
     startsAt: startsAt ? new Date(startsAt) : undefined,
     endsAt: endsAt ? new Date(endsAt) : undefined,
@@ -115,8 +115,8 @@ export async function createDuelAction(
         avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop'
       },
       options: [
-        { id: `opt-${Date.now()}-a`, title: options[0].title, imageUrl: options[0].imageUrl || undefined, votes: 0 },
-        { id: `opt-${Date.now()}-b`, title: options[1].title, imageUrl: options[1].imageUrl || undefined, votes: 0 },
+        { id: `opt-${Date.now()}-a`, title: options[0].title, imageUrl: options[0].imageUrl || undefined, affiliateUrl: options[0].affiliateUrl || undefined, votes: 0 },
+        { id: `opt-${Date.now()}-b`, title: options[1].title, imageUrl: options[1].imageUrl || undefined, affiliateUrl: options[1].affiliateUrl || undefined, votes: 0 },
       ],
     };
 
@@ -184,6 +184,7 @@ export async function updateDuelAction(
         id: opt.id || `opt-${rawFormData.id}-${index}`, // Ensure option has an id
         title: options[index].title,
         imageUrl: options[index].imageUrl || undefined,
+        affiliateUrl: options[index].affiliateUrl || undefined,
         // Votes are preserved from the original state in the context, so no need to set them here
       })) as [any, any] // Type assertion to satisfy partial update
     };

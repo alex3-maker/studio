@@ -94,10 +94,24 @@ function ManualInputFields({ form, index, handleFileChange, fileInputRefs }: any
                             type="file"
                             ref={el => fileInputRefs.current[index] = el}
                             className="hidden"
-                            accept="image/png, image/jpeg, image/gif, image/webp"
+                            accept="image/*"
                             onChange={(e) => handleFileChange(e, index)}
                         />
                         <FormDescription>Pega una URL o sube una imagen (máx 2MB). Déjalo en blanco para una opción de solo texto.</FormDescription>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+             <FormField
+                control={form.control}
+                name={`options.${index}.affiliateUrl`}
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>URL de Afiliado (Opcional)</FormLabel>
+                        <FormControl>
+                            <Input placeholder="https://enlace.afiliado/producto" {...field} />
+                        </FormControl>
+                        <FormDescription>Si quieres, añade un enlace de compra o de afiliado para esta opción.</FormDescription>
                         <FormMessage />
                     </FormItem>
                 )}
@@ -117,7 +131,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
       title: duelData.title,
       description: duelData.description,
       type: duelData.type,
-      options: duelData.options.map(opt => ({ title: opt.title, imageUrl: opt.imageUrl || '' })),
+      options: duelData.options.map(opt => ({ title: opt.title, imageUrl: opt.imageUrl || '', affiliateUrl: opt.affiliateUrl || '' })),
       startsAt: new Date(duelData.startsAt),
       endsAt: new Date(duelData.endsAt),
   } : {
@@ -125,8 +139,8 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
       description: '',
       type: 'A_VS_B',
       options: [
-        { title: '', imageUrl: '' },
-        { title: '', imageUrl: '' },
+        { title: '', imageUrl: '', affiliateUrl: '' },
+        { title: '', imageUrl: '', affiliateUrl: '' },
       ],
       startsAt: new Date(),
       endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
@@ -202,6 +216,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
         if (result.title && result.imageUrl) {
             form.setValue(`options.${index}.title`, result.title, { shouldValidate: true });
             form.setValue(`options.${index}.imageUrl`, result.imageUrl, { shouldValidate: true });
+            form.setValue(`options.${index}.affiliateUrl`, url, { shouldValidate: true });
             toast({ title: "¡Éxito!", description: "Producto importado directamente." });
         } else {
             toast({ title: "Análisis Profundo", description: "No se encontraron metadatos. Usando IA para analizar la página. Esto puede tardar un momento..." });
@@ -210,22 +225,23 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
 
             form.setValue(`options.${index}.title`, aiResult.title, { shouldValidate: true });
             form.setValue(`options.${index}.imageUrl`, aiResult.imageUrl, { shouldValidate: true });
+            form.setValue(`options.${index}.affiliateUrl`, url, { shouldValidate: true });
             toast({ title: "¡Éxito con IA!", description: "Producto importado usando análisis de IA." });
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        toast({ 
-            variant: "destructive", 
-            title: "Error al Importar", 
+        toast({
+            variant: "destructive",
+            title: "Error al Importar",
             description: (
-                 <div className="space-y-2">
+                <div className="space-y-2">
                     <p>No se pudo obtener la información.</p>
-                    <div className="text-xs bg-destructive-foreground/10 p-2 rounded-md whitespace-pre-wrap break-all max-h-40 overflow-y-auto font-mono">
+                    <div className="text-xs bg-destructive-foreground/10 p-2 rounded-md font-mono whitespace-pre-wrap break-all max-h-40 overflow-y-auto">
                         {errorMessage}
                     </div>
                 </div>
             ),
-            duration: 15000 
+            duration: 15000
         });
     } finally {
         setIsScraping(prev => {
@@ -253,6 +269,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
     data.options.forEach((option, index) => {
         formData.append(`options.${index}.title`, option.title);
         formData.append(`options.${index}.imageUrl`, option.imageUrl || '');
+        formData.append(`options.${index}.affiliateUrl`, option.affiliateUrl || '');
         if (isEditing && duelData?.options[index]?.id) {
           formData.append(`options.${index}.id`, duelData.options[index].id);
         }
@@ -509,4 +526,3 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
     </Form>
   );
 }
-

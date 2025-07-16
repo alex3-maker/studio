@@ -14,6 +14,7 @@ const imageUrlSchema = z.string().refine(value => {
 export const duelOptionSchema = z.object({
   title: z.string().min(1, { message: "El título de la opción es requerido." }).max(50),
   imageUrl: imageUrlSchema.optional(),
+  affiliateUrl: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal('')),
 });
 
 export const createDuelSchema = z.object({

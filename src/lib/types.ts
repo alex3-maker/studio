@@ -16,6 +16,7 @@ export type DuelOption = {
   id: string;
   title: string;
   imageUrl?: string;
+  affiliateUrl?: string;
   votes: number;
   "data-ai-hint"?: string;
 };
