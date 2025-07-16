@@ -49,19 +49,21 @@ export default function CreateDuelPage() {
   }, [state, toast, router, addDuel, user.keys]);
 
   const handleGenerate = async () => {
-    console.log("Attempting to generate with API Key:", apiKey ? `...${apiKey.slice(-4)}` : 'Not found');
-    if (!apiKey) {
+    if (!apiKey && user.role === 'admin') {
        toast({
         variant: 'destructive',
         title: 'Falta la Clave de API',
-        description: 'Por favor, introduce una clave de API de Gemini en el panel de Ajustes de IA del administrador.',
+        description: 'Por favor, introduce tu clave de API de Gemini en el panel de Ajustes de IA del administrador para usar esta función.',
         duration: 8000
       });
       return;
     }
+    
+    console.log("Attempting to generate duel idea...");
     setIsGenerating(true);
     try {
-      const idea = await generateDuelIdea(apiKey);
+      // The API key is now handled on the server via environment variables
+      const idea = await generateDuelIdea();
       setGeneratedData({
         title: idea.title,
         description: idea.description,

@@ -7,12 +7,8 @@
  * - DuelIdeaOutput - The return type for the generateDuelIdea function.
  */
 import { z } from 'genkit';
-import { googleAI } from '@genkit-ai/googleai';
-import { genkit, configureGenkit } from 'genkit';
+import { ai } from '@/ai/genkit';
 
-const DuelIdeaInputSchema = z.object({
-  apiKey: z.string().optional(),
-});
 
 const DuelIdeaOutputSchema = z.object({
   title: z.string().describe('The title of the duel. Should be a question.'),
@@ -22,47 +18,43 @@ const DuelIdeaOutputSchema = z.object({
 });
 export type DuelIdeaOutput = z.infer<typeof DuelIdeaOutputSchema>;
 
+const generateDuelIdeaPrompt = ai.definePrompt({
+  name: 'generateDuelIdeaPrompt',
+  input: { schema: z.object({}) },
+  output: { schema: DuelIdeaOutputSchema },
+  prompt: `You are a creative assistant specialized in creating engaging "A vs B" style duel topics for a social voting app called DuelDash.
 
-const generateDuelIdeaFlow = genkit({name: 'generateDuelIdeaFlow'}).defineFlow(
+  Generate a compelling and fun duel topic that people would have strong opinions about.
+  The topic can be about anything: movies, food, technology, hypothetical scenarios, pop culture, etc.
+
+  Provide a concise title for the duel (formatted as a question), a short engaging description to give context, and the two opposing options.
+
+  Make the titles and description in Spanish.
+
+  Example:
+  Title: ¿Qué superpoder preferirías tener?
+  Description: Si pudieras elegir un solo poder, ¿cuál sería el más útil o divertido en tu día a día?
+  Option 1: Volar
+  Option 2: Invisibilidad
+
+  Return the output in the specified JSON format.
+  `,
+});
+
+
+const generateDuelIdeaFlow = ai.defineFlow(
   {
-    inputSchema: DuelIdeaInputSchema,
+    name: 'generateDuelIdeaFlow',
+    inputSchema: z.object({}),
     outputSchema: DuelIdeaOutputSchema,
   },
-  async ({ apiKey }) => {
-    // IMPORTANT: Create a temporary genkit instance with the provided API key
-    const dynamicAi = configureGenkit({
-      plugins: [googleAI({ apiKey })],
-    });
-
-    const dynamicPrompt = dynamicAi.definePrompt({
-      name: 'generateDuelIdeaDynamicPrompt', // Use a unique name to avoid conflicts
-      input: { schema: z.object({}) },
-      output: { schema: DuelIdeaOutputSchema },
-      prompt: `You are a creative assistant specialized in creating engaging "A vs B" style duel topics for a social voting app called DuelDash.
-
-      Generate a compelling and fun duel topic that people would have strong opinions about.
-      The topic can be about anything: movies, food, technology, hypothetical scenarios, pop culture, etc.
-
-      Provide a concise title for the duel (formatted as a question), a short engaging description to give context, and the two opposing options.
-
-      Make the titles and description in Spanish.
-
-      Example:
-      Title: ¿Qué superpoder preferirías tener?
-      Description: Si pudieras elegir un solo poder, ¿cuál sería el más útil o divertido en tu día a día?
-      Option 1: Volar
-      Option 2: Invisibilidad
-
-      Return the output in the specified JSON format.
-      `,
-    });
-    
-    const { output } = await dynamicPrompt({});
+  async () => {
+    const { output } = await generateDuelIdeaPrompt({});
     return output!;
   }
 );
 
 
-export async function generateDuelIdea(apiKey?: string): Promise<DuelIdeaOutput> {
-  return generateDuelIdeaFlow({ apiKey });
+export async function generateDuelIdea(): Promise<DuelIdeaOutput> {
+  return generateDuelIdeaFlow({});
 }
