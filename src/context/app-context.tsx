@@ -3,16 +3,15 @@
 
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import type { User, Duel, DuelOption, Notification, KeyTransaction, UserVote } from '@/lib/types';
-// mockDuels and mockUsers are no longer the source of truth.
-// The context will fetch initial data or start empty and be populated by database interactions.
-import { mockDuels, mockUsers } from '@/lib/data';
+import { getDb } from '@/lib/db';
 import { isAfter, isBefore, parseISO, formatISO } from 'date-fns';
+import { castVoteAction } from '@/lib/actions';
 
 const VOTED_DUELS_STORAGE_KEY = 'dueliax_voted_duels';
 const USER_VOTES_STORAGE_KEY = 'dueliax_user_votes';
 const DUEL_VOTING_HISTORY_STORAGE_KEY = 'dueliax_duel_voting_history';
-const USERS_STORAGE_KEY = 'dueliax_users_fallback'; // renamed to avoid conflict
-const DUELS_STORAGE_KEY = 'dueliax_duels_fallback'; // renamed to avoid conflict
+const USERS_STORAGE_KEY = 'dueliax_users_fallback'; 
+const DUELS_STORAGE_KEY = 'dueliax_duels_fallback';
 const NOTIFICATIONS_STORAGE_KEY = 'dueliax_notifications';
 const KEY_HISTORY_STORAGE_KEY = 'dueliax_key_history';
 const API_KEY_STORAGE_KEY = 'dueliax_api_key';
@@ -30,7 +29,7 @@ interface AppContextType {
   setApiKey: (key: string) => void;
   isAiEnabled: boolean;
   setIsAiEnabled: (enabled: boolean) => void;
-  castVote: (duelId: string, optionId: string, userId: string) => { awardedKey: boolean; updatedDuel: Duel | null };
+  castVote: (duelId: string, optionId: string, userId?: string) => Promise<{ awardedKey: boolean; updatedDuel: Duel | null; error?: string }>;
   addDuel: (newDuel: Omit<Duel, 'id' | 'creator' | 'createdAt' | 'status'>, creator: Pick<User, 'id' | 'name' | 'avatarUrl'>) => Duel;
   updateDuel: (updatedDuel: Partial<Duel> & { id: string }) => void;
   toggleDuelStatus: (duelId: string) => void;
@@ -50,6 +49,8 @@ interface AppContextType {
   deleteUser: (userId: string) => void;
   adjustUserKeys: (userId: string, amount: number, reason: string) => void;
   getUserById: (userId: string) => User | undefined;
+  fetchInitialData: () => Promise<void>;
+  isDataLoaded: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -73,8 +74,6 @@ const getStatus = (duel: Duel): Duel['status'] => {
     }
 }
 
-// NOTE: This provider now uses localStorage as a fallback/cache but the primary
-// source of truth for users and duels should be the database, managed via server actions.
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [duels, setDuels] = useState<Duel[]>([]);
@@ -85,8 +84,46 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [duelVotingHistory, setDuelVotingHistory] = useState<string[]>([]);
   const [apiKey, setApiKeyState] = useState<string | null>(null);
   const [isAiEnabled, setAiEnabledState] = useState<boolean>(true);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   
+  const fetchInitialData = useCallback(async () => {
+    try {
+      const db = getDb();
+      const allUsers = await db.query.users.findMany();
+      // This is a temporary solution to map DB users to App users.
+      // In a real app, you might have relations or more complex queries.
+      const allDuelsFromDb = await db.query.duels.findMany();
+      const allDuels = allDuelsFromDb.map(d => {
+          const creator = allUsers.find(u => u.id === d.creatorId);
+          return {
+              ...d,
+              creator: creator ? { id: creator.id, name: creator.name || 'N/A', avatarUrl: creator.image || null } : { id: 'unknown', name: 'Usuario Desconocido', avatarUrl: null }
+          }
+      });
+      
+      setUsers(allUsers.map(u => ({...u, avatarUrl: u.image || null})));
+      setDuels(allDuels);
+      
+      const storedVotedIds = localStorage.getItem(VOTED_DUELS_STORAGE_KEY);
+      if (storedVotedIds) setVotedDuelIds(JSON.parse(storedVotedIds));
+
+      const storedUserVotes = localStorage.getItem(USER_VOTES_STORAGE_KEY);
+      if (storedUserVotes) setUserVotedOptions(JSON.parse(storedUserVotes));
+      
+      const storedVotingHistory = localStorage.getItem(DUEL_VOTING_HISTORY_STORAGE_KEY);
+      if (storedVotingHistory) setDuelVotingHistory(JSON.parse(storedVotingHistory));
+      
+    } catch (error) {
+      console.error("Error fetching initial data from DB, using localStorage cache.", error);
+       const storedDuels = localStorage.getItem(DUELS_STORAGE_KEY);
+      if(storedDuels) setDuels(JSON.parse(storedDuels));
+      
+      const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+      if(storedUsers) setUsers(JSON.parse(storedUsers));
+    } finally {
+        setIsDataLoaded(true);
+    }
+  }, []);
   
   useEffect(() => {
     try {
@@ -96,45 +133,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const storedAiEnabled = localStorage.getItem(AI_ENABLED_STORAGE_KEY);
       setAiEnabledState(storedAiEnabled ? JSON.parse(storedAiEnabled) : true);
 
-      // We still use localStorage for some client-side state, but users/duels should come from server.
-      const storedDuels = localStorage.getItem(DUELS_STORAGE_KEY);
-      setDuels(storedDuels ? JSON.parse(storedDuels) : mockDuels);
-      
-      const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-      setUsers(storedUsers ? JSON.parse(storedUsers) : mockUsers);
-      
-      const storedVotedIds = localStorage.getItem(VOTED_DUELS_STORAGE_KEY);
-      if (storedVotedIds) setVotedDuelIds(JSON.parse(storedVotedIds));
-
-      const storedUserVotes = localStorage.getItem(USER_VOTES_STORAGE_KEY);
-      if (storedUserVotes) setUserVotedOptions(JSON.parse(storedUserVotes));
-
-      const storedVotingHistory = localStorage.getItem(DUEL_VOTING_HISTORY_STORAGE_KEY);
-      if (storedVotingHistory) setDuelVotingHistory(JSON.parse(storedVotingHistory));
+      const storedNotifications = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+      if (storedNotifications) setNotifications(JSON.parse(storedNotifications));
       
       const storedKeyHistory = localStorage.getItem(KEY_HISTORY_STORAGE_KEY);
       if (storedKeyHistory) setKeyHistory(JSON.parse(storedKeyHistory));
-      
-      const storedNotifications = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
-      if (storedNotifications) setNotifications(JSON.parse(storedNotifications));
-
     } catch (error) {
-      console.error("Error reading from localStorage, using defaults.", error);
-      // Initialize with empty arrays as DB is the source of truth
-      setUsers([]);
-      setDuels([]);
+        console.error("Error loading non-critical data from local storage", error);
     }
-    setIsLoaded(true);
-  }, []);
+    fetchInitialData();
+  }, [fetchInitialData]);
   
   // Persist state to localStorage
-  useEffect(() => { if (isLoaded) localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users)); }, [users, isLoaded]);
-  useEffect(() => { if (isLoaded) localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(duels)); }, [duels, isLoaded]);
-  useEffect(() => { if (isLoaded) localStorage.setItem(VOTED_DUELS_STORAGE_KEY, JSON.stringify(votedDuelIds)); }, [votedDuelIds, isLoaded]);
-  useEffect(() => { if (isLoaded) localStorage.setItem(USER_VOTES_STORAGE_KEY, JSON.stringify(userVotedOptions)); }, [userVotedOptions, isLoaded]);
-  useEffect(() => { if (isLoaded) localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifications)); }, [notifications, isLoaded]);
-  useEffect(() => { if (isLoaded) localStorage.setItem(KEY_HISTORY_STORAGE_KEY, JSON.stringify(keyHistory)); }, [keyHistory, isLoaded]);
-  useEffect(() => { if (isLoaded) localStorage.setItem(DUEL_VOTING_HISTORY_STORAGE_KEY, JSON.stringify(duelVotingHistory)); }, [duelVotingHistory, isLoaded]);
+  useEffect(() => { if (isDataLoaded) localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users)); }, [users, isDataLoaded]);
+  useEffect(() => { if (isDataLoaded) localStorage.setItem(DUELS_STORAGE_KEY, JSON.stringify(duels)); }, [duels, isDataLoaded]);
+  useEffect(() => { if (isDataLoaded) localStorage.setItem(VOTED_DUELS_STORAGE_KEY, JSON.stringify(votedDuelIds)); }, [votedDuelIds, isDataLoaded]);
+  useEffect(() => { if (isDataLoaded) localStorage.setItem(USER_VOTES_STORAGE_KEY, JSON.stringify(userVotedOptions)); }, [userVotedOptions, isDataLoaded]);
+  useEffect(() => { if (isDataLoaded) localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifications)); }, [notifications, isDataLoaded]);
+  useEffect(() => { if (isDataLoaded) localStorage.setItem(KEY_HISTORY_STORAGE_KEY, JSON.stringify(keyHistory)); }, [keyHistory, isDataLoaded]);
+  useEffect(() => { if (isDataLoaded) localStorage.setItem(DUEL_VOTING_HISTORY_STORAGE_KEY, JSON.stringify(duelVotingHistory)); }, [duelVotingHistory, isDataLoaded]);
 
   const setApiKey = useCallback((key: string) => {
     setApiKeyState(key);
@@ -182,7 +199,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const getDuelStatus = useCallback((duel: Duel): Duel['status'] => getStatus(duel), []);
   
   const spendKeys = useCallback((userId: string, amount: number, description: string) => {
-    // This logic should be a server action to update the database
     console.warn("spendKeys should be a server action");
     let success = false;
     setUsers(prevUsers => {
@@ -204,58 +220,40 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return success;
   }, [addKeyTransaction, addNotification]);
 
-  const castVote = useCallback((duelId: string, optionId: string, userId: string): { awardedKey: boolean; updatedDuel: Duel | null } => {
-    // This logic should be a server action
-    console.warn("castVote should be a server action");
-    let awardedKey = false;
-    let finalUpdatedDuel: Duel | null = null;
-    
-    setDuels(prevDuels => {
-        const newDuels = prevDuels.map(d => {
-            if (d.id === duelId) {
-                const newOptions = d.options.map(option => 
-                    option.id === optionId ? { ...option, votes: (option.votes || 0) + 1 } : option
-                );
-                finalUpdatedDuel = { ...d, options: newOptions };
-                return finalUpdatedDuel;
-            }
-            return d;
-        });
-        return newDuels;
-    });
+  const castVote = useCallback(async (duelId: string, optionId: string, userId?: string): Promise<{ awardedKey: boolean; updatedDuel: Duel | null; error?: string }> => {
+    const result = await castVoteAction(duelId, optionId);
 
-    if (finalUpdatedDuel) {
-        const hasVotedBefore = duelVotingHistory.includes(`${userId}-${duelId}`);
-        
-        if (!hasVotedBefore) {
-            awardedKey = true;
-            addKeyTransaction(userId, 'EARNED', 1, `Voto en "${finalUpdatedDuel.title}"`);
-            setDuelVotingHistory(prevHistory => [...prevHistory, `${userId}-${duelId}`]);
+    if (result.error) {
+      return { awardedKey: false, updatedDuel: null, error: result.error };
+    }
+    
+    if (result.updatedDuel) {
+        // Update client-side state after successful server action
+        setDuels(prevDuels => prevDuels.map(d => d.id === duelId ? result.updatedDuel! : d));
+        setVotedDuelIds(prev => [...prev, duelId]);
+
+        if (result.awardedKey && userId) {
+            setUsers(prevUsers => prevUsers.map(u => {
+                if (u.id === userId) {
+                    addKeyTransaction(userId, 'EARNED', 1, `Voto en "${result.updatedDuel!.title}"`);
+                    return { ...u, votesCast: u.votesCast + 1, keys: u.keys + 1 };
+                }
+                return u;
+            }));
         }
-        
-        setUsers(prevUsers => prevUsers.map(u => {
-            if (u.id === userId) {
-                return {
-                    ...u,
-                    votesCast: u.votesCast + 1,
-                    keys: awardedKey ? u.keys + 1 : u.keys,
-                };
-            }
-            return u;
-        }));
+
+        if (userId) {
+            setUserVotedOptions(prevVotes => ({
+                ...prevVotes,
+                [duelId]: { optionId, timestamp: new Date().toISOString() },
+            }));
+        }
     }
 
-    setVotedDuelIds(prevIds => [...prevIds, duelId]);
-    setUserVotedOptions(prevVotes => ({
-        ...prevVotes,
-        [duelId]: { optionId, timestamp: new Date().toISOString() },
-    }));
-
-    return { awardedKey, updatedDuel: finalUpdatedDuel };
-  }, [duelVotingHistory, addKeyTransaction]);
+    return result;
+  }, [addKeyTransaction]);
 
   const addDuel = useCallback((newDuelData: Omit<Duel, 'id' | 'creator' | 'createdAt' | 'status'>, creator: Pick<User, 'id' | 'name' | 'avatarUrl'>): Duel => {
-    // This logic should be a server action
     console.warn("addDuel should be a server action");
     const creatorUser = users.find(u => u.id === creator.id);
     if (!creatorUser) throw new Error("Creator not found");
@@ -286,7 +284,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [users, spendKeys]);
 
   const activateDraftDuel = useCallback((duelId: string, userId: string): boolean => {
-    // This logic should be a server action
     console.warn("activateDraftDuel should be a server action");
     const duel = duels.find(d => d.id === duelId);
     const user = users.find(u => u.id === userId);
@@ -302,7 +299,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [duels, users, spendKeys]);
 
   const updateDuel = useCallback((updatedDuelData: Partial<Duel> & { id: string }) => {
-    // This logic should be a server action
     console.warn("updateDuel should be a server action");
     setDuels(prevDuels => prevDuels.map(duel => {
       if (duel.id === updatedDuelData.id) {
@@ -318,7 +314,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         });
         
         const potentiallyUpdatedDuel = { ...duel, ...updatedDuelData, options: updatedOptions || duel.options };
-        // Recalculate status based on new dates if they changed
         if (updatedDuelData.startsAt || updatedDuelData.endsAt) {
           return { ...potentiallyUpdatedDuel, status: getStatus(potentiallyUpdatedDuel) };
         }
@@ -329,7 +324,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const toggleDuelStatus = useCallback((duelId: string) => {
-    // This logic should be a server action
     console.warn("toggleDuelStatus should be a server action");
     let notificationMessage = '';
     let duelToNotify: Duel | undefined;
@@ -363,7 +357,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
 
   const deleteDuel = useCallback((duelId: string) => {
-    // This logic should be a server action
     console.warn("deleteDuel should be a server action");
     const duelToDelete = duels.find(d => d.id === duelId);
     if (!duelToDelete) return;
@@ -493,11 +486,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const getAllUsers = useCallback(() => {
-    console.warn("getAllUsers should be a server action");
     return users
   }, [users]);
   const getUserById = useCallback((userId: string) => {
-    console.warn("getUserById should be a server action");
     return users.find(u => u.id === userId)
   }, [users]);
 
@@ -556,11 +547,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setApiKey,
     isAiEnabled,
     setIsAiEnabled,
+    fetchInitialData,
+    isDataLoaded,
   };
-
-  if (!isLoaded) {
-    return null; 
-  }
 
   return (
     <AppContext.Provider value={value}>

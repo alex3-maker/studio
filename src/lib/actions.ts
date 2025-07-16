@@ -7,6 +7,11 @@ import { revalidatePath } from 'next/cache';
 import type { Duel } from './types';
 import { formatISO } from 'date-fns';
 import { auth } from '@/app/api/auth/[...nextauth]/route';
+import { getDb } from '@/lib/db';
+import { guestVotes, duels as duelsTable, users as usersTable } from '@/lib/schema';
+import { eq, sql } from 'drizzle-orm';
+import { headers } from 'next/headers';
+import crypto from 'crypto';
 
 export type FormState = {
   message: string;
@@ -21,12 +26,73 @@ export type FormState = {
     moderation?: string;
     _form?: string[];
   };
-  // We no longer pass the full duel object, just the data needed for the context to create it
   newDuel?: Omit<Duel, 'id' | 'creator' | 'createdAt' | 'status'>;
   updatedDuel?: Partial<Duel> & { id: string };
 };
 
 const DUEL_CREATION_COST = 5;
+
+// This is a new action to handle votes from both guests and users.
+export async function castVoteAction(duelId: string, optionId: string): Promise<{ awardedKey: boolean; updatedDuel: Duel | null; error?: string }> {
+    const session = await auth();
+    const db = getDb();
+    
+    // Check if duel exists and is active
+    const duel = await db.query.duels.findFirst({ where: eq(duelsTable.id, duelId) });
+    if (!duel) {
+        return { error: "El duelo no existe.", awardedKey: false, updatedDuel: null };
+    }
+    // A more robust status check is needed here, for now we assume it's votable
+    
+    if (session?.user) { // Authenticated user
+        // TODO: Check if user has already voted
+        // For now, we simulate success
+    } else { // Guest user
+        const ip = headers().get('x-forwarded-for') ?? '127.0.0.1';
+        const ipHash = crypto.createHash('sha256').update(ip).digest('hex');
+        
+        const existingVote = await db.query.guestVotes.findFirst({
+            where: sql`duel_id = ${duelId} AND ip_hash = ${ipHash}`
+        });
+        
+        if (existingVote) {
+            return { error: "Ya has votado en este duelo.", awardedKey: false, updatedDuel: null };
+        }
+        
+        await db.insert(guestVotes).values({
+            id: `guestvote-${Date.now()}`,
+            duelId,
+            ipHash
+        });
+    }
+    
+    // Update vote count on the option
+    const updatedOptions = duel.options.map(opt => 
+        opt.id === optionId ? { ...opt, votes: (opt.votes || 0) + 1 } : opt
+    );
+
+    const [updatedDuel] = await db.update(duelsTable)
+      .set({ options: updatedOptions })
+      .where(eq(duelsTable.id, duelId))
+      .returning();
+
+    if (!updatedDuel) {
+       return { error: "No se pudo actualizar el duelo.", awardedKey: false, updatedDuel: null };
+    }
+    
+    const creator = await db.query.users.findFirst({ where: eq(usersTable.id, updatedDuel.creatorId) });
+    
+    revalidatePath('/');
+    
+    return {
+        awardedKey: !!session?.user, // Award key only to logged-in users for now
+        updatedDuel: {
+          ...updatedDuel,
+          creator: creator ? { id: creator.id, name: creator.name || 'N/A', avatarUrl: creator.image || null } : { id: 'unknown', name: 'Usuario Desconocido', avatarUrl: null }
+        },
+    };
+}
+
 
 function processFormDataWithOptions(formData: FormData) {
   const data: Record<string, any> = {};
@@ -179,7 +245,7 @@ export async function updateDuelAction(
         title: opt.title,
         imageUrl: opt.imageUrl || undefined,
         affiliateUrl: opt.affiliateUrl || undefined,
-        votes: 0, // Votes are preserved in AppContext, not reset here
+        votes: 0, 
       }))
     };
     

@@ -71,3 +71,10 @@ export const duels = pgTable('dueliax_duels', {
     // Drizzle doesn't have a direct JSON array type, so we use jsonb for options
     options: jsonb('options').$type<Array<{ id: string; title: string; imageUrl?: string; affiliateUrl?: string; votes: number }>>().notNull(),
 });
+
+export const guestVotes = pgTable('dueliax_guest_votes', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  duelId: varchar('duel_id', { length: 255 }).notNull().references(() => duels.id, { onDelete: 'cascade' }),
+  ipHash: varchar('ip_hash', { length: 255 }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
+});

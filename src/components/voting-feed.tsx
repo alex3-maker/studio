@@ -93,13 +93,17 @@ function AutoAdvanceButton({ onComplete, hasMoreDuels }: { onComplete: () => voi
 
 export default function VotingFeed() {
   const { data: session } = useSession();
-  const { duels, castVote, votedDuelIds, getDuelStatus } = useAppContext();
+  const { duels, castVote, votedDuelIds, getDuelStatus, isDataLoaded, fetchInitialData } = useAppContext();
   const [currentDuelIndex, setCurrentDuelIndex] = useState(0);
   const [votedDuelDetails, setVotedDuelDetails] = useState<Duel | null>(null);
   const [animationClass, setAnimationClass] = useState('');
   const [isPending, startTransition] = useTransition();
   const [showHint, setShowHint] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  useEffect(() => {
+    fetchInitialData();
+  }, [fetchInitialData]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
@@ -133,24 +137,34 @@ export default function VotingFeed() {
 
 
   const handleVote = (selectedOption: DuelOption, direction?: 'left' | 'right') => {
-    if (votedDuelDetails || !currentDuel || !session?.user) return;
+    if (votedDuelDetails || !currentDuel) return;
     
     if(direction){
         setAnimationClass(direction === 'left' ? 'animate-card-select-left' : 'animate-card-select-right');
     }
 
     setTimeout(() => {
-      startTransition(() => {
-        const { awardedKey, updatedDuel } = castVote(currentDuel.id, selectedOption.id, session.user.id);
+      startTransition(async () => {
+        const result = await castVote(currentDuel.id, selectedOption.id, session?.user?.id);
         
-        if (updatedDuel) {
-          setVotedDuelDetails(updatedDuel);
+        if(result.error) {
+            toast({
+                variant: "destructive",
+                title: "Error al votar",
+                description: result.error,
+            });
+            setAnimationClass(''); // Reset animation
+            return;
+        }
+        
+        if (result.updatedDuel) {
+          setVotedDuelDetails(result.updatedDuel);
         }
 
         toast({
           duration: 3000,
           title: '¡Voto registrado!',
-          description: awardedKey ? (
+          description: result.awardedKey ? (
             <div className="flex items-center">
               ¡Has ganado una llave! <Key className="ml-2 h-4 w-4 text-yellow-500" />
             </div>
@@ -172,14 +186,17 @@ export default function VotingFeed() {
         setVotedDuelDetails(null);
 
         if (currentDuelIndex >= activeDuels.length - 1) {
-            setCurrentDuelIndex(0);
+            // Optional: loop back to the start or show end message
+            setCurrentDuelIndex(0); 
+        } else {
+            // This is handled by the useMemo for currentDuel automatically
         }
       }, 300);
   }
 
   const duelToShow = votedDuelDetails || currentDuel;
   
-   if (isPending) {
+   if (!isDataLoaded || isPending) {
      return <VotingFeedSkeleton />;
    }
 
