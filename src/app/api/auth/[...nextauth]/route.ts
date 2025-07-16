@@ -32,8 +32,8 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           const passwordsMatch = await bcrypt.compare(password, user.password);
           
           if (passwordsMatch) {
-            const { password, ...userWithoutPassword } = user;
-            return userWithoutPassword as any;
+            // Return the full user object including the role
+            return user;
           }
         }
         
