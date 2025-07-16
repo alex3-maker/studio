@@ -6,23 +6,11 @@
  *
  * - analyzeProductPage - A function that takes HTML content and extracts product info.
  */
-import { googleAI } from '@genkit-ai/googleai';
 import { ai } from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/googleai';
 import type { AnalyzeProductPageInput, AnalyzeProductPageOutput } from '@/lib/types';
 import { AnalyzeProductPageInputSchema, AnalyzeProductPageOutputSchema } from '@/lib/types';
 
-const analyzePromptText = `You are an expert web scraper. You are given the HTML content of a product page.
-Your task is to extract the main product title and the primary product image URL.
-
-- The title should be the concise name of the product, without extra marketing text.
-- The image URL must be a full, absolute URL. If you find a relative URL, convert it to an absolute one using the provided page URL: {{{url}}}.
-- Prioritize high-resolution images if available. Look for attributes like 'data-src', 'src', or inside 'script' tags with JSON data.
-
-Analyze the following HTML content:
-\`\`\`html
-{{{htmlContent}}}
-\`\`\`
-`;
 
 const analyzeProductPageFlow = ai.defineFlow(
     {
@@ -31,10 +19,21 @@ const analyzeProductPageFlow = ai.defineFlow(
         outputSchema: AnalyzeProductPageOutputSchema,
     },
     async (input) => {
+        const analyzePromptText = `You are an expert web scraper. You are given the HTML content of a product page.
+Your task is to extract the main product title and the primary product image URL.
+
+- The title should be the concise name of the product, without extra marketing text.
+- The image URL must be a full, absolute URL. If you find a relative URL, convert it to an absolute one using the provided page URL: ${input.url}.
+- Prioritize high-resolution images if available. Look for attributes like 'data-src', 'src', or inside 'script' tags with JSON data.
+
+Analyze the following HTML content:
+\`\`\`html
+${input.htmlContent}
+\`\`\`
+`;
         const { output } = await ai.generate({
             model: googleAI.model('gemini-pro'),
             prompt: analyzePromptText,
-            input,
             output: {
                 schema: AnalyzeProductPageOutputSchema,
             },
@@ -49,7 +48,7 @@ const analyzeProductPageFlow = ai.defineFlow(
 
 
 export async function analyzeProductPage(input: AnalyzeProductPageInput): Promise<AnalyzeProductPageOutput> {
-    try {
+     try {
         return await analyzeProductPageFlow(input);
     } catch (error) {
         const originalMessage = error instanceof Error ? error.message : String(error);

@@ -157,11 +157,11 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
             form.setValue(`options.${index}.imageUrl`, result.imageUrl, { shouldValidate: true });
             toast({ title: "¡Éxito!", description: "Producto importado directamente." });
         } else {
-             if (!apiKey) {
+             if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY && !apiKey) {
                 toast({
                     variant: "destructive",
                     title: "Importación fallida",
-                    description: "No se encontraron metadatos. Se requiere una clave de API de Gemini para un análisis más profundo. Configúrala en los ajustes de Admin.",
+                    description: "No se encontraron metadatos. Se requiere una clave de API de Gemini para un análisis más profundo. Configúrala en los ajustes de Admin o en las variables de entorno.",
                     duration: 8000
                 });
                 return;
@@ -180,11 +180,11 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
             variant: "destructive", 
             title: "Error al Importar", 
             description: (
-                <div className="space-y-2">
+                 <div className="space-y-2">
                     <p>No se pudo obtener la información.</p>
-                    <pre className="mt-2 w-full whitespace-pre-wrap rounded-md bg-destructive-foreground/10 p-2 font-mono text-xs">
+                    <div className="text-xs font-mono bg-destructive-foreground/10 p-2 rounded-md whitespace-pre-wrap break-all max-h-40 overflow-y-auto">
                         {errorMessage}
-                    </pre>
+                    </div>
                 </div>
             ),
             duration: 15000 
