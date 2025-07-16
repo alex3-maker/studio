@@ -168,7 +168,6 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
             }
             toast({ title: "Análisis Profundo", description: "No se encontraron metadatos. Usando IA para analizar la página. Esto puede tardar un momento..." });
             
-            // The API Key is no longer passed directly. Genkit uses the environment variable.
             const aiResult = await analyzeProductPage({ htmlContent: result.htmlContent, url });
 
             form.setValue(`options.${index}.title`, aiResult.title, { shouldValidate: true });
@@ -177,7 +176,19 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        toast({ variant: "destructive", title: "Error al Importar", description: `No se pudo obtener la información. Detalle: ${errorMessage}` });
+        toast({ 
+            variant: "destructive", 
+            title: "Error al Importar", 
+            description: (
+                <div className="space-y-2">
+                    <p>No se pudo obtener la información.</p>
+                    <pre className="mt-2 w-full whitespace-pre-wrap rounded-md bg-destructive-foreground/10 p-2 font-mono text-xs">
+                        {errorMessage}
+                    </pre>
+                </div>
+            ),
+            duration: 15000 
+        });
     } finally {
         setIsScraping(prev => {
             const newScraping = [...prev];
