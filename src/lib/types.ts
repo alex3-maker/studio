@@ -68,6 +68,7 @@ export type ScrapeUrlOutput = z.infer<typeof ScrapeUrlOutputSchema>;
 export const AnalyzeProductPageInputSchema = z.object({
   htmlContent: z.string().describe('The full HTML content of the product page.'),
   url: z.string().url().describe('The original URL of the product page for context.'),
+  apiKey: z.string().optional().describe('The API key for the AI model.'),
 });
 export type AnalyzeProductPageInput = z.infer<typeof AnalyzeProductPageInputSchema>;
 

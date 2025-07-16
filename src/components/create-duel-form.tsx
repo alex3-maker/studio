@@ -168,7 +168,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
             }
             toast({ title: "Análisis Profundo", description: "No se encontraron metadatos. Usando IA para analizar la página. Esto puede tardar un momento..." });
             
-            const aiResult = await analyzeProductPage({ htmlContent: result.htmlContent, url });
+            const aiResult = await analyzeProductPage({ htmlContent: result.htmlContent, url, apiKey });
 
             form.setValue(`options.${index}.title`, aiResult.title, { shouldValidate: true });
             form.setValue(`options.${index}.imageUrl`, aiResult.imageUrl, { shouldValidate: true });

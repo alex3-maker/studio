@@ -40,7 +40,7 @@ Analyze the following HTML content:
             },
         });
         
-        const { output } = await analyzePrompt(input);
+        const { output } = await analyzePrompt(input, { config: { apiKey: input.apiKey } });
         if (!output) {
             throw new Error('La IA no pudo analizar la página del producto.');
         }
