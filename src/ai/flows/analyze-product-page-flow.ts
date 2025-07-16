@@ -37,7 +37,7 @@ ${input.htmlContent}
             output: {
                 schema: AnalyzeProductPageOutputSchema,
             },
-        });
+        }, { apiKey: input.apiKey });
         
         if (!output) {
             throw new Error('La IA no pudo analizar la página del producto.');
@@ -52,6 +52,8 @@ export async function analyzeProductPage(input: AnalyzeProductPageInput): Promis
         return await analyzeProductPageFlow(input);
     } catch (error) {
         const originalMessage = error instanceof Error ? error.message : String(error);
-        throw new Error(`Error de IA: ${originalMessage}. Asegúrate de que la clave GEMINI_API_KEY está configurada en tu entorno.`);
+        const keyInfo = input.apiKey ? `...${input.apiKey.slice(-4)}` : 'no proporcionada';
+        const finalMessage = `Error de IA: ${originalMessage}. (Clave usada: ${keyInfo})`;
+        throw new Error(finalMessage);
     }
 }

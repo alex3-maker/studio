@@ -157,18 +157,18 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
             form.setValue(`options.${index}.imageUrl`, result.imageUrl, { shouldValidate: true });
             toast({ title: "¡Éxito!", description: "Producto importado directamente." });
         } else {
-             if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY && !apiKey) {
+             if (!apiKey) {
                 toast({
                     variant: "destructive",
-                    title: "Importación fallida",
-                    description: "No se encontraron metadatos. Se requiere una clave de API de Gemini para un análisis más profundo. Configúrala en los ajustes de Admin o en las variables de entorno.",
+                    title: "Importación simple fallida",
+                    description: "No se encontraron metadatos. Se requiere una clave de API de Gemini para un análisis más profundo. Un admin puede configurarla en los Ajustes de IA.",
                     duration: 8000
                 });
                 return;
             }
             toast({ title: "Análisis Profundo", description: "No se encontraron metadatos. Usando IA para analizar la página. Esto puede tardar un momento..." });
             
-            const aiResult = await analyzeProductPage({ htmlContent: result.htmlContent, url });
+            const aiResult = await analyzeProductPage({ htmlContent: result.htmlContent, url, apiKey });
 
             form.setValue(`options.${index}.title`, aiResult.title, { shouldValidate: true });
             form.setValue(`options.${index}.imageUrl`, aiResult.imageUrl, { shouldValidate: true });
@@ -182,7 +182,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
             description: (
                  <div className="space-y-2">
                     <p>No se pudo obtener la información.</p>
-                    <div className="text-xs font-mono bg-destructive-foreground/10 p-2 rounded-md whitespace-pre-wrap break-all max-h-40 overflow-y-auto">
+                    <div className="text-xs bg-destructive-foreground/10 p-2 rounded-md whitespace-pre-wrap break-all max-h-40 overflow-y-auto font-mono">
                         {errorMessage}
                     </div>
                 </div>
@@ -483,9 +483,9 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                 <Terminal className="h-4 w-4" />
                 <AlertTitle>Error al Procesar el Formulario</AlertTitle>
                 <AlertDescription>
-                    <pre className="mt-2 whitespace-pre-wrap font-mono text-xs">
+                    <div className="mt-2 whitespace-pre-wrap font-mono text-xs">
                         {state.errors._form.join('\n')}
-                    </pre>
+                    </div>
                 </AlertDescription>
             </Alert>
         )}

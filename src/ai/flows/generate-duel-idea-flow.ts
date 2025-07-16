@@ -10,6 +10,12 @@ import { z } from 'genkit';
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/googleai';
 
+export const GenerateDuelIdeaInputSchema = z.object({
+  apiKey: z.string().optional(),
+});
+export type GenerateDuelIdeaInput = z.infer<typeof GenerateDuelIdeaInputSchema>;
+
+
 const DuelIdeaOutputSchema = z.object({
   title: z.string().describe('The title of the duel. Should be a question.'),
   description: z.string().describe('A short, engaging description for the duel to provide context.'),
@@ -21,9 +27,10 @@ export type DuelIdeaOutput = z.infer<typeof DuelIdeaOutputSchema>;
 const generateDuelIdeaFlow = ai.defineFlow(
   {
     name: 'generateDuelIdeaFlow',
+    inputSchema: GenerateDuelIdeaInputSchema,
     outputSchema: DuelIdeaOutputSchema,
   },
-  async () => {
+  async (input) => {
     const { output } = await ai.generate({
       model: googleAI.model('gemini-pro'),
       output: { schema: DuelIdeaOutputSchema },
@@ -44,7 +51,7 @@ const generateDuelIdeaFlow = ai.defineFlow(
 
         Return the output in the specified JSON format.
         `,
-    });
+    }, { apiKey: input.apiKey });
 
     if (!output) {
       throw new Error('Could not generate a duel idea.');
@@ -53,6 +60,6 @@ const generateDuelIdeaFlow = ai.defineFlow(
   }
 );
 
-export async function generateDuelIdea(): Promise<DuelIdeaOutput> {
-  return generateDuelIdeaFlow();
+export async function generateDuelIdea(input: GenerateDuelIdeaInput): Promise<DuelIdeaOutput> {
+  return generateDuelIdeaFlow(input);
 }

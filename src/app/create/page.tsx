@@ -61,7 +61,7 @@ export default function CreateDuelPage() {
     
     setIsGenerating(true);
     try {
-      const idea = await generateDuelIdea();
+      const idea = await generateDuelIdea({ apiKey });
       setGeneratedData({
         title: idea.title,
         description: idea.description,
