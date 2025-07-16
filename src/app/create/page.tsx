@@ -97,7 +97,7 @@ export default function CreateDuelPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         {user.keys < DUEL_CREATION_COST && (
           <Alert variant="default" className="mb-4 bg-blue-50 border-blue-200 text-blue-800">
               <Info className="h-4 w-4 !text-blue-800" />

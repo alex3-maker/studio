@@ -47,7 +47,7 @@ function SubmitButton({ isEditing = false, isPending }: SubmitButtonProps) {
   const pendingText = isEditing ? 'Guardando...' : 'Creando Duelo...';
 
   return (
-    <Button type="submit" disabled={isPending} className="w-full">
+    <Button type="submit" disabled={isPending} className="w-full mt-8">
       {isPending ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -296,160 +296,164 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
         {isEditing && duelData?.id && <input type="hidden" name="id" value={duelData.id} />}
         {!isEditing && user && <input type="hidden" name="userKeys" value={user.keys} />}
         
-        <FormField
-          control={form.control}
-          name="type"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tipo de Duelo</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} disabled={isEditing}>
+        {/* Header Fields */}
+        <div className="space-y-8">
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Duelo</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} disabled={isEditing}>
+                      <FormControl>
+                        <SelectTrigger className="md:w-1/2">
+                          <SelectValue placeholder="Selecciona un tipo de duelo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="A_VS_B">Duelo A vs B</SelectItem>
+                        <SelectItem value="LIST">Lista (Ranking)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  <FormDescription>Elige el formato de tu duelo. No se puede cambiar después de crearlo.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Título del Duelo</FormLabel>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona un tipo de duelo" />
-                    </SelectTrigger>
+                    <Input placeholder="Ej: ¿Mejor película de ciencia ficción?" {...field} />
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="A_VS_B">Duelo A vs B</SelectItem>
-                    <SelectItem value="LIST">Lista (Ranking)</SelectItem>
-                  </SelectContent>
-                </Select>
-              <FormDescription>Elige el formato de tu duelo. No se puede cambiar después de crearlo.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Título del Duelo</FormLabel>
-              <FormControl>
-                <Input placeholder="Ej: ¿Mejor película de ciencia ficción?" {...field} />
-              </FormControl>
-              <FormDescription>Un título atractivo para tu duelo.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                  <FormDescription>Un título atractivo para tu duelo.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Descripción (Opcional)</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Añade una breve descripción para dar contexto." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descripción (Opcional)</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Añade una breve descripción para dar contexto." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="startsAt"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Fecha de Inicio</FormLabel>
-                <input type="hidden" name="startsAt" value={field.value ? formatISO(field.value) : ''} />
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value ? (
-                          format(field.value, "PPP", { locale: es })
-                        ) : (
-                          <span>Elige una fecha</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={(date) =>
-                        date < new Date(new Date().setHours(0, 0, 0, 0))
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <FormDescription>
-                  Cuándo empezará a ser visible el duelo.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="endsAt"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Fecha de Fin</FormLabel>
-                <input type="hidden" name="endsAt" value={field.value ? formatISO(field.value) : ''} />
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value ? (
-                          format(field.value, "PPP", { locale: es })
-                        ) : (
-                          <span>Elige una fecha</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={(date) =>
-                        date < (form.getValues("startsAt") || new Date())
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <FormDescription>
-                   Cuándo se cerrará el duelo a nuevas votaciones.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="startsAt"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Fecha de Inicio</FormLabel>
+                    <input type="hidden" name="startsAt" value={field.value ? formatISO(field.value) : ''} />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP", { locale: es })
+                            ) : (
+                              <span>Elige una fecha</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date < new Date(new Date().setHours(0, 0, 0, 0))
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormDescription>
+                      Cuándo empezará a ser visible el duelo.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="endsAt"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Fecha de Fin</FormLabel>
+                    <input type="hidden" name="endsAt" value={field.value ? formatISO(field.value) : ''} />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP", { locale: es })
+                            ) : (
+                              <span>Elige una fecha</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date < (form.getValues("startsAt") || new Date())
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormDescription>
+                       Cuándo se cerrará el duelo a nuevas votaciones.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
         </div>
-        
-        <Separator />
 
-        <div className="space-y-4">
+        <Separator />
+        
+        {/* Options Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {fields.map((field, index) => (
-                <Card key={field.id} className="relative">
+                <Card key={field.id} className="relative flex flex-col">
                     <CardHeader>
                         <CardTitle>Opción {index + 1}</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 flex-grow">
                        <input type="hidden" {...form.register(`options[${index}].id`)} />
                         <FormField
                             control={form.control}
@@ -523,7 +527,10 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                     )}
                 </Card>
             ))}
-             {duelType === 'LIST' && fields.length < 5 && (
+        </div>
+
+        {duelType === 'LIST' && fields.length < 5 && (
+            <div className="md:col-span-2">
                 <Button
                     type="button"
                     variant="outline"
@@ -533,9 +540,9 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Añadir Opción
                 </Button>
-            )}
-            <FormMessage>{form.formState.errors.options?.root?.message}</FormMessage>
-        </div>
+            </div>
+        )}
+        <FormMessage>{form.formState.errors.options?.root?.message}</FormMessage>
         
         {state.errors?.moderation && (
              <Alert variant="destructive">
