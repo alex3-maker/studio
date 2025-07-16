@@ -2,8 +2,9 @@
 'use client';
 
 import Link from 'next/link';
-import { Flame, Key, Menu, Swords, ShieldCheck, Bell, CheckCheck, X, Trash2, PlusCircle, MinusCircle } from 'lucide-react';
+import { Flame, Key, Menu, Swords, ShieldCheck, Bell, CheckCheck, X, Trash2, PlusCircle, MinusCircle, LogIn } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -17,18 +18,22 @@ import { es } from 'date-fns/locale';
 import type { Notification, KeyTransaction } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import Logo from '../logo';
+import { Skeleton } from '../ui/skeleton';
+
 
 const navLinks = [
   { href: '/', label: 'Inicio', icon: Swords },
   { href: '/create', label: 'Crear Duelo', icon: Flame },
-  { href: '/panel/mis-duelos', label: 'Panel', icon: Key },
+  { href: '/panel/mis-duelos', label: 'Panel', icon: Key, auth: true },
 ];
 
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session, status } = useSession();
+  const user = session?.user;
+
   const { 
-    user, 
     notifications, 
     markNotificationAsRead, 
     markAllNotificationsAsRead, 
@@ -36,6 +41,7 @@ export default function Header() {
     clearAllNotifications,
     keyHistory
   } = useAppContext();
+  
   const unreadNotifications = notifications.filter(n => !n.read);
 
   const handleNotificationClick = (notification: Notification) => {
@@ -43,6 +49,170 @@ export default function Header() {
     if (notification.link) {
       router.push(notification.link);
     }
+  };
+
+  const renderUserSection = () => {
+    if (status === 'loading') {
+      return (
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-16" />
+          <Skeleton className="h-10 w-10 rounded-full" />
+        </div>
+      );
+    }
+
+    if (!user) {
+      return (
+        <Button asChild>
+          <Link href="/login">
+            <LogIn />
+            Iniciar Sesión
+          </Link>
+        </Button>
+      );
+    }
+
+    return (
+      <>
+        <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                {unreadNotifications.length > 0 && (
+                  <span className="absolute top-0 right-0 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+                  </span>
+                )}
+                <span className="sr-only">Abrir notificaciones</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 md:w-96" align="end">
+               <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium leading-none">Notificaciones</h4>
+                  {notifications.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={markAllNotificationsAsRead}>
+                            <CheckCheck className="mr-1 h-3 w-3" />
+                            Marcar leídas
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                             <Button variant="link" size="sm" className="h-auto p-0 text-xs text-destructive hover:text-destructive/80">
+                                <Trash2 className="mr-1 h-3 w-3" />
+                                Limpiar
+                             </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>¿Limpiar todas las notificaciones?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta acción no se puede deshacer. Se eliminarán todas tus notificaciones permanentemente.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={clearAllNotifications}>Limpiar</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                  )}
+               </div>
+               <Separator />
+               <div className="mt-2 flex flex-col gap-1 max-h-80 overflow-y-auto p-1">
+                  {notifications.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-4 space-y-2">
+                          <Bell className="w-8 h-8" />
+                          <p className="text-sm">No tienes notificaciones</p>
+                      </div>
+                  ) : (
+                      notifications.map(n => (
+                         <div 
+                            key={n.id} 
+                            className={cn(
+                              "group relative block p-2 rounded-md transition-colors",
+                              !n.read && "bg-secondary"
+                            )}
+                          >
+                              <div 
+                                onClick={() => handleNotificationClick(n)}
+                                className="cursor-pointer"
+                              >
+                                <p className="text-sm pr-4">{n.message}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {formatDistanceToNow(new Date(n.timestamp), { locale: es, addSuffix: true })}
+                                </p>
+                              </div>
+                             <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => deleteNotification(n.id)}
+                              >
+                                <X className="h-4 w-4" />
+                                <span className="sr-only">Eliminar notificación</span>
+                              </Button>
+                         </div>
+                      ))
+                  )}
+               </div>
+               <Separator className="my-2"/>
+               <Button asChild variant="outline" className="w-full">
+                   <Link href="/panel/notificaciones">
+                      Configurar notificaciones
+                  </Link>
+              </Button>
+            </PopoverContent>
+        </Popover>
+        <Popover>
+          <PopoverTrigger asChild>
+              <Button variant="ghost" className="flex items-center gap-2 px-2">
+                  <Key className="h-5 w-5 text-yellow-500" />
+                  <span className="font-bold text-lg text-foreground/80">{keyHistory.length}</span>
+              </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80" align="end">
+              <div className="flex justify-between items-center mb-2">
+                  <h4 className="font-medium">Historial de Llaves</h4>
+                  <Key className="h-4 w-4" />
+              </div>
+              <Separator />
+               <div className="mt-2 flex flex-col gap-1 max-h-80 overflow-y-auto p-1">
+                  {keyHistory.length === 0 ? (
+                      <div className="text-center text-sm text-muted-foreground py-4">
+                          No hay transacciones.
+                      </div>
+                  ) : (
+                      keyHistory.map((item) => (
+                          <div key={item.id} className="flex justify-between items-center p-2 rounded-md">
+                              <div className="flex items-center gap-3">
+                                 {item.type === 'earned' ? <PlusCircle className="h-5 w-5 text-green-500" /> : <MinusCircle className="h-5 w-5 text-red-500" />}
+                                  <div>
+                                      <p className="text-sm font-medium">{item.description}</p>
+                                      <p className="text-xs text-muted-foreground">{format(new Date(item.timestamp), "dd MMM yyyy 'a las' HH:mm", { locale: es })}</p>
+                                  </div>
+                              </div>
+                              <span className={cn(
+                                  "font-bold text-sm",
+                                  item.type === 'earned' ? 'text-green-500' : 'text-red-500'
+                              )}>
+                                 {item.type === 'earned' ? '+' : '-'}{item.amount}
+                              </span>
+                          </div>
+                      ))
+                  )}
+               </div>
+          </PopoverContent>
+        </Popover>
+        <Link href="/panel/perfil">
+          <Avatar>
+              <AvatarImage src={user.image || ''} alt={user.name || ''} />
+              <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
+          </Avatar>
+        </Link>
+      </>
+    );
   };
 
   return (
@@ -53,7 +223,7 @@ export default function Header() {
             <Logo className="h-6 w-auto" />
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
-            {navLinks.map((link) => (
+            {navLinks.filter(l => !l.auth || !!user).map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -65,7 +235,7 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
-             {user.role === 'admin' && (
+             {user?.role === 'ADMIN' && (
               <Link
                 href="/admin/duels"
                 className={cn(
@@ -94,7 +264,7 @@ export default function Header() {
                 <Logo className="h-6 w-auto" />
               </Link>
               <nav className="flex flex-col space-y-4">
-                {navLinks.map((link) => (
+                {navLinks.filter(l => !l.auth || !!user).map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
@@ -106,7 +276,7 @@ export default function Header() {
                     {link.label}
                   </Link>
                 ))}
-                 {user.role === 'admin' && (
+                 {user?.role === 'ADMIN' && (
                     <Link
                       href="/admin/duels"
                       className={cn(
@@ -124,145 +294,7 @@ export default function Header() {
         </div>
 
         <div className="flex flex-1 items-center justify-end space-x-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5" />
-                  {unreadNotifications.length > 0 && (
-                    <span className="absolute top-0 right-0 flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
-                    </span>
-                  )}
-                  <span className="sr-only">Abrir notificaciones</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80 md:w-96" align="end">
-                 <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium leading-none">Notificaciones</h4>
-                    {notifications.length > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={markAllNotificationsAsRead}>
-                              <CheckCheck className="mr-1 h-3 w-3" />
-                              Marcar leídas
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                               <Button variant="link" size="sm" className="h-auto p-0 text-xs text-destructive hover:text-destructive/80">
-                                  <Trash2 className="mr-1 h-3 w-3" />
-                                  Limpiar
-                               </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>¿Limpiar todas las notificaciones?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Esta acción no se puede deshacer. Se eliminarán todas tus notificaciones permanentemente.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={clearAllNotifications}>Limpiar</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                    )}
-                 </div>
-                 <Separator />
-                 <div className="mt-2 flex flex-col gap-1 max-h-80 overflow-y-auto p-1">
-                    {notifications.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-4 space-y-2">
-                            <Bell className="w-8 h-8" />
-                            <p className="text-sm">No tienes notificaciones</p>
-                        </div>
-                    ) : (
-                        notifications.map(n => (
-                           <div 
-                              key={n.id} 
-                              className={cn(
-                                "group relative block p-2 rounded-md transition-colors",
-                                !n.read && "bg-secondary"
-                              )}
-                            >
-                                <div 
-                                  onClick={() => handleNotificationClick(n)}
-                                  className="cursor-pointer"
-                                >
-                                  <p className="text-sm pr-4">{n.message}</p>
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                      {formatDistanceToNow(new Date(n.timestamp), { locale: es, addSuffix: true })}
-                                  </p>
-                                </div>
-                               <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={() => deleteNotification(n.id)}
-                                >
-                                  <X className="h-4 w-4" />
-                                  <span className="sr-only">Eliminar notificación</span>
-                                </Button>
-                           </div>
-                        ))
-                    )}
-                 </div>
-                 <Separator className="my-2"/>
-                 <Button asChild variant="outline" className="w-full">
-                     <Link href="/panel/notificaciones">
-                        Configurar notificaciones
-                    </Link>
-                </Button>
-              </PopoverContent>
-            </Popover>
-
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button variant="ghost" className="flex items-center gap-2 px-2">
-                        <Key className="h-5 w-5 text-yellow-500" />
-                        <span className="font-bold text-lg text-foreground/80">{user.keys}</span>
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80" align="end">
-                    <div className="flex justify-between items-center mb-2">
-                        <h4 className="font-medium">Historial de Llaves</h4>
-                        <Key className="h-4 w-4" />
-                    </div>
-                    <Separator />
-                     <div className="mt-2 flex flex-col gap-1 max-h-80 overflow-y-auto p-1">
-                        {keyHistory.length === 0 ? (
-                            <div className="text-center text-sm text-muted-foreground py-4">
-                                No hay transacciones.
-                            </div>
-                        ) : (
-                            keyHistory.map((item) => (
-                                <div key={item.id} className="flex justify-between items-center p-2 rounded-md">
-                                    <div className="flex items-center gap-3">
-                                       {item.type === 'earned' ? <PlusCircle className="h-5 w-5 text-green-500" /> : <MinusCircle className="h-5 w-5 text-red-500" />}
-                                        <div>
-                                            <p className="text-sm font-medium">{item.description}</p>
-                                            <p className="text-xs text-muted-foreground">{format(new Date(item.timestamp), "dd MMM yyyy 'a las' HH:mm", { locale: es })}</p>
-                                        </div>
-                                    </div>
-                                    <span className={cn(
-                                        "font-bold text-sm",
-                                        item.type === 'earned' ? 'text-green-500' : 'text-red-500'
-                                    )}>
-                                       {item.type === 'earned' ? '+' : '-'}{item.amount}
-                                    </span>
-                                </div>
-                            ))
-                        )}
-                     </div>
-                </PopoverContent>
-            </Popover>
-
-            <Link href="/panel/perfil">
-              <Avatar>
-                  <AvatarImage src={user.avatarUrl} alt={user.name} />
-                  <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-            </Link>
+            {renderUserSection()}
         </div>
       </div>
     </header>

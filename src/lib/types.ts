@@ -4,11 +4,11 @@ import { z } from "zod";
 export type User = {
   id: string;
   name: string;
-  avatarUrl: string;
+  avatarUrl: string | null;
   keys: number;
   duelsCreated: number;
   votesCast: number;
-  role: 'admin' | 'user';
+  role: 'ADMIN' | 'USER';
   createdAt?: string; // ISO 8601 string
 };
 
@@ -17,7 +17,7 @@ export type DuelOption = {
   title: string;
   imageUrl?: string;
   affiliateUrl?: string;
-  votes: number;
+  votes?: number;
   "data-ai-hint"?: string;
 };
 
@@ -28,7 +28,7 @@ export type Duel = {
   description: string;
   options: DuelOption[];
   creator: Pick<User, 'name' | 'avatarUrl' | 'id'>;
-  status: 'active' | 'closed' | 'scheduled' | 'draft' | 'inactive';
+  status: 'ACTIVE' | 'CLOSED' | 'SCHEDULED' | 'DRAFT' | 'INACTIVE';
   createdAt: string; // ISO 8601 string
   startsAt: string; // ISO 8601 string
   endsAt: string; // ISO 8601 string
@@ -41,7 +41,8 @@ export type UserVote = {
 
 export type Notification = {
     id: string;
-    type: 'duel-closed' | 'duel-edited' | 'duel-reset' | 'winner-changed' | 'keys-spent';
+    userId: string;
+    type: 'DUEL_CLOSED' | 'DUEL_EDITED' | 'DUEL_RESET' | 'WINNER_CHANGED' | 'KEYS_SPENT';
     message: string;
     link: string | null;
     timestamp: string; // ISO 8601 string
@@ -50,7 +51,8 @@ export type Notification = {
 
 export type KeyTransaction = {
     id: string;
-    type: 'earned' | 'spent';
+    userId: string;
+    type: 'EARNED' | 'SPENT';
     amount: number;
     description: string;
     timestamp: string; // ISO 8601 string
