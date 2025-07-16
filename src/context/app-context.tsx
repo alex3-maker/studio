@@ -35,6 +35,8 @@ interface AppContextType {
   toggleDuelStatus: (duelId: string) => void;
   deleteDuel: (duelId: string) => void;
   deleteMultipleDuels: (duelIds: string[]) => void;
+  activateMultipleDuels: (duelIds: string[]) => void;
+  deactivateMultipleDuels: (duelIds: string[]) => void;
   resetDuelVotes: (duelId: string, isAdminReset?: boolean) => void;
   getDuelStatus: (duel: Duel) => Duel['status'];
   markNotificationAsRead: (notificationId: string) => void;
@@ -339,10 +341,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           newStatus = 'inactive';
           notificationMessage = `El duelo "${duel.title}" ha sido desactivado.`;
         } else {
-          newStatus = 'active'; // Force re-evaluation
+          newStatus = 'active'; // Force re-evaluation by setting a status that getStatus will re-evaluate
           notificationMessage = `El duelo "${duel.title}" ha sido activado de nuevo.`;
         }
-        return { ...duel, status: newStatus };
+        // Let getStatus determine the final state based on dates
+        const tempDuel = { ...duel, status: newStatus };
+        return { ...tempDuel, status: getStatus(tempDuel) };
       }
       return duel;
     }));
@@ -400,6 +404,47 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }));
     }
   }, [duels, user.id]);
+
+  const activateMultipleDuels = useCallback((duelIds: string[]) => {
+    const duelsToActivate = duels.filter(d => duelIds.includes(d.id));
+    const draftCount = duelsToActivate.filter(d => getStatus(d) === 'draft').length;
+
+    if (user.keys < draftCount * DUEL_CREATION_COST) {
+        addNotification({ type: 'keys-spent', message: 'No tienes suficientes llaves para activar los borradores seleccionados.', link: null });
+        return;
+    }
+
+    let keysSpent = 0;
+    const updatedDuels = duels.map(d => {
+        if (duelIds.includes(d.id)) {
+            const currentStatus = getStatus(d);
+            if (currentStatus === 'draft') {
+                keysSpent += DUEL_CREATION_COST;
+                addKeyTransaction('spent', DUEL_CREATION_COST, `Activación de "${d.title}"`);
+                const tempDuel = { ...d, status: 'active' as Duel['status'] };
+                return { ...tempDuel, status: getStatus(tempDuel) };
+            }
+            if (['inactive', 'closed'].includes(currentStatus)) {
+                const tempDuel = { ...d, status: 'active' as Duel['status'] };
+                return { ...tempDuel, status: getStatus(tempDuel) };
+            }
+        }
+        return d;
+    });
+
+    setUser(prevUser => ({ ...prevUser, keys: prevUser.keys - keysSpent }));
+    setDuels(updatedDuels);
+  }, [duels, user.keys, addNotification, addKeyTransaction]);
+
+  const deactivateMultipleDuels = useCallback((duelIds: string[]) => {
+    setDuels(prevDuels => prevDuels.map(d => {
+        if (duelIds.includes(d.id) && ['active', 'scheduled'].includes(getStatus(d))) {
+            return { ...d, status: 'inactive' };
+        }
+        return d;
+    }));
+  }, [duels]);
+
 
   const resetDuelVotes = useCallback((duelId: string, isOwnerReset: boolean = false) => {
     let duelTitle = '';
@@ -477,6 +522,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toggleDuelStatus, 
     deleteDuel, 
     deleteMultipleDuels,
+    activateMultipleDuels,
+    deactivateMultipleDuels,
     resetDuelVotes, 
     votedDuelIds, 
     userVotedOptions,
