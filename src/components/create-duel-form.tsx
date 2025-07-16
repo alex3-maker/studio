@@ -139,6 +139,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
   const [productUrls, setProductUrls] = useState<string[]>(['', '']);
   const [isScraping, setIsScraping] = useState<boolean[]>([false, false]);
   const { apiKey, isAiEnabled, addDuel } = useAppContext();
+  const [formSubmitted, setFormSubmitted] = useState(false);
   
   const defaultValues = duelData ? {
       type: duelData.type || 'A_VS_B',
@@ -186,14 +187,15 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
 
   // Effect to show toast on server-side validation errors
   useEffect(() => {
-    if (state.message && !state.success) {
+    if (state.message && !state.success && formSubmitted) {
       toast({
         variant: 'destructive',
         title: 'Error de validación',
         description: state.message,
       });
+      setFormSubmitted(false);
     }
-  }, [state, toast]);
+  }, [state, toast, formSubmitted]);
 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
@@ -274,16 +276,44 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
     } finally {
         setIsScraping(prev => {
             const newScraping = [...prev];
-            newScraping[index] = true;
+            newScraping[index] = false;
             return newScraping;
         });
     }
   };
+  
+  const handleFormSubmit = (data: any) => {
+    setFormSubmitted(true);
+    const formData = new FormData();
+    Object.keys(data).forEach(key => {
+        if (key === 'options') {
+            data.options.forEach((option: any, index: number) => {
+                Object.keys(option).forEach(optionKey => {
+                    formData.append(`options[${index}].${optionKey}`, option[optionKey]);
+                });
+            });
+        } else if (data[key] instanceof Date) {
+            formData.append(key, formatISO(data[key]));
+        } else {
+            formData.append(key, data[key]);
+        }
+    });
+
+    if (isEditing && duelData?.id) {
+        formData.append('id', duelData.id);
+    }
+    if (!isEditing && user) {
+        formData.append('userKeys', String(user.keys));
+    }
+    
+    formAction(formData);
+  };
+
 
   return (
     <Form {...form}>
       <form
-        action={formAction}
+        onSubmit={form.handleSubmit(handleFormSubmit)}
         className="space-y-8"
       >
         {isEditing && duelData?.id && <input type="hidden" name="id" value={duelData.id} />}
@@ -340,16 +370,16 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
             </div>
             
             <div className="flex flex-col md:flex-row gap-6 items-start">
-                 <div className="w-full md:w-2/3">
+                 <div className="w-full md:w-2/3 flex">
                     <FormField
                       control={form.control}
                       name="description"
                       render={({ field }) => (
-                        <FormItem className="flex flex-col h-full">
+                        <FormItem className="flex flex-col flex-grow">
                           <FormLabel>Descripción (Opcional)</FormLabel>
                           <div className="relative flex-grow">
                               <FormControl>
-                                <Textarea placeholder="Añade una breve descripción para dar contexto." {...field} maxLength={MAX_DESC_LENGTH} className="h-full resize-none" />
+                                <Textarea placeholder="Añade una breve descripción para dar contexto." {...field} maxLength={MAX_DESC_LENGTH} className="resize-none h-full" />
                               </FormControl>
                               <p className="absolute top-2.5 right-3 text-xs text-muted-foreground">
                                     {(descriptionValue || '').length} / {MAX_DESC_LENGTH}
@@ -564,7 +594,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
             </Alert>
         )}
 
-        {state.errors?._form && !state.success && (
+        {state.errors?._form && !state.success && formSubmitted && (
              <Alert variant="destructive">
                 <Terminal className="h-4 w-4" />
                 <AlertTitle>Error al Procesar el Formulario</AlertTitle>
@@ -579,3 +609,4 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
     </Form>
   );
 }
+
