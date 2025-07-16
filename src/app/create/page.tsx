@@ -14,6 +14,8 @@ import { Key, Info, Sparkles, Loader2 } from 'lucide-react';
 import { generateDuelIdea } from '@/ai/flows/generate-duel-idea-flow';
 import type { CreateDuelFormValues } from '@/lib/schemas';
 import { Button } from '@/components/ui/button';
+import { useSession } from 'next-auth/react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const DUEL_CREATION_COST = 5;
 
@@ -25,23 +27,26 @@ const initialState: FormState = {
 
 export default function CreateDuelPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const { toast } = useToast();
-  const { user, addDuel, apiKey, isAiEnabled } = useAppContext();
+  const { addDuel, apiKey, isAiEnabled, getUserById } = useAppContext();
   const [state, formAction, isPending] = useActionState(createDuelAction, initialState);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedData, setGeneratedData] = useState<Partial<CreateDuelFormValues> | null>(null);
 
+  const user = session?.user ? getUserById(session.user.id) : undefined;
+
   useEffect(() => {
-    // This effect handles the successful creation from the server action
-    if (state.success && state.newDuel) {
-        addDuel(state.newDuel);
+    if (state.success && state.newDuel && user) {
+        // The AppContext now returns the created duel, so we can use it directly
+        addDuel(state.newDuel, { id: user.id, name: user.name, avatarUrl: user.avatarUrl });
         toast({
             title: '¡Éxito!',
             description: state.message,
         });
         router.push('/panel/mis-duelos');
     }
-  }, [state, addDuel, toast, router]);
+  }, [state, addDuel, toast, router, user]);
 
 
   const handleGenerate = async () => {
@@ -84,6 +89,22 @@ export default function CreateDuelPage() {
     }
   }
 
+  if (status === 'loading' || (status === 'authenticated' && !user)) {
+     return (
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-6xl mx-auto">
+             <Skeleton className="h-96 w-full" />
+          </div>
+        </div>
+     )
+  }
+  
+  if (!user) {
+    // This case should ideally not be reached due to middleware, but it's a good fallback.
+    return <p>Debes iniciar sesión para crear un duelo.</p>;
+  }
+
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-6xl mx-auto">
@@ -108,7 +129,7 @@ export default function CreateDuelPage() {
                   </span>
                 </CardDescription>
               </div>
-               {user.role === 'admin' && isAiEnabled && (
+               {user.role === 'ADMIN' && isAiEnabled && (
                   <Button variant="outline" onClick={handleGenerate} disabled={isGenerating}>
                     {isGenerating ? (
                         <Loader2 className="animate-spin" />

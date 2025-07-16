@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 const initialState: FormState = {
   message: '',
@@ -22,11 +23,13 @@ const initialState: FormState = {
 
 export default function EditUserDuelPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const { toast } = useToast();
-  const { duels, updateDuel, user } = useAppContext();
+  const { duels, updateDuel, getUserById } = useAppContext();
   const [state, formAction, isPending] = useActionState(updateDuelAction, initialState);
 
   const duel = duels.find(d => d.id === params.id);
+  const user = session?.user ? getUserById(session.user.id) : undefined;
 
   useEffect(() => {
     if (state.success && state.updatedDuel) {
@@ -45,7 +48,7 @@ export default function EditUserDuelPage({ params }: { params: { id: string } })
     }
   }, [state, toast, router, updateDuel]);
 
-  if (!duel) {
+  if (status === 'loading' || !duel || (status === 'authenticated' && !user)) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto">
@@ -67,8 +70,7 @@ export default function EditUserDuelPage({ params }: { params: { id: string } })
     );
   }
 
-  // Security check: ensure the user owns this duel
-  if (duel.creator.id !== user.id) {
+  if (duel.creator.id !== user?.id) {
     return (
       <Card>
         <CardHeader>

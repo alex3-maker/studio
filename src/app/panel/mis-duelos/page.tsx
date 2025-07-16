@@ -6,11 +6,24 @@ import { useAppContext } from "@/context/app-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Key, Flame, Vote } from "lucide-react";
 import { useMemo } from "react";
+import { useSession } from "next-auth/react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MisDuelosPage() {
-    const { user, duels } = useAppContext();
+    const { data: session, status } = useSession();
+    const { duels, getUserById } = useAppContext();
     
-    const userDuels = useMemo(() => duels.filter(duel => duel.creator.id === user.id), [duels, user.id]);
+    const user = session?.user ? getUserById(session.user.id) : undefined;
+    const userDuels = useMemo(() => {
+        if (!user) return [];
+        return duels.filter(duel => duel.creator.id === user.id);
+    }, [duels, user]);
+
+    if (status === 'loading' || (status === 'authenticated' && !user)) {
+        return <DashboardSkeleton />;
+    }
+
+    if (!user) return null;
 
     const stats = [
         { label: "Llaves Ganadas", value: user.keys, icon: Key, color: "text-yellow-500" },
@@ -34,6 +47,27 @@ export default function MisDuelosPage() {
                 ))}
             </div>
             <DuelList duels={userDuels} />
+        </div>
+    );
+}
+
+function DashboardSkeleton() {
+    return (
+        <div className="space-y-8">
+            <div className="grid gap-4 md:grid-cols-3">
+                <Skeleton className="h-24" />
+                <Skeleton className="h-24" />
+                <Skeleton className="h-24" />
+            </div>
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-6 w-1/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-40 w-full" />
+                </CardContent>
+            </Card>
         </div>
     );
 }

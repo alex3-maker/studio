@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Swords, Users } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 
 const adminNavLinks = [
   { href: '/admin/duels', label: 'Gestionar Duelos', icon: Swords },
@@ -20,10 +21,14 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = useAppContext();
+  const { data: session, status } = useSession();
   const pathname = usePathname();
 
-  if (user.role !== 'admin') {
+  if (status === 'loading') {
+    return <p>Cargando...</p>;
+  }
+
+  if (session?.user?.role !== 'ADMIN') {
     return (
       <div className="container mx-auto px-4 py-8 flex items-center justify-center">
         <Card className="max-w-md w-full">

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Trash2, Power, PowerOff, Edit, RotateCcw, Clock, CalendarDays, BarChart2, CheckCircle, X, ShieldQuestion } from "lucide-react";
-import type { Duel } from "@/lib/types";
+import type { Duel, User } from "@/lib/types";
 import ResultsChart from "./results-chart";
 import {
   AlertDialog,
@@ -27,20 +27,22 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 import { Checkbox } from "../ui/checkbox";
+import { useSession } from "next-auth/react";
 
 interface DuelListProps {
   duels: Duel[];
 }
 
 const statusConfig = {
-  active: { text: "Activo", className: "bg-green-500 hover:bg-green-600" },
-  closed: { text: "Cerrado", className: "bg-red-500 hover:bg-red-600" },
-  scheduled: { text: "Programado", className: "bg-blue-500 hover:bg-blue-600" },
-  draft: { text: "Borrador", className: "bg-gray-400 hover:bg-gray-500" },
-  inactive: { text: "Inactivo", className: "bg-orange-400 hover:bg-orange-500" },
+  ACTIVE: { text: "Activo", className: "bg-green-500 hover:bg-green-600" },
+  CLOSED: { text: "Cerrado", className: "bg-red-500 hover:bg-red-600" },
+  SCHEDULED: { text: "Programado", className: "bg-blue-500 hover:bg-blue-600" },
+  DRAFT: { text: "Borrador", className: "bg-gray-400 hover:bg-gray-500" },
+  INACTIVE: { text: "Inactivo", className: "bg-orange-400 hover:bg-orange-500" },
 };
 
 export default function DuelList({ duels }: DuelListProps) {
+  const { data: session } = useSession();
   const { 
     toggleDuelStatus, 
     deleteDuel, 
@@ -50,39 +52,40 @@ export default function DuelList({ duels }: DuelListProps) {
     deleteMultipleDuels,
     activateMultipleDuels,
     deactivateMultipleDuels,
-    user
+    getUserById,
   } = useAppContext();
 
   const [selectedDuel, setSelectedDuel] = useState<Duel | null>(null);
   const [selectedDuelIds, setSelectedDuelIds] = useState<string[]>([]);
   const { toast } = useToast();
 
+  const user = session?.user ? getUserById(session.user.id) : undefined;
+
   const selectedDuels = useMemo(() => {
     return duels.filter(d => selectedDuelIds.includes(d.id));
   }, [duels, selectedDuelIds]);
 
   const canActivateSelected = useMemo(() => {
-    if (selectedDuels.length === 0) return false;
-    const activatableCount = selectedDuels.filter(d => ['draft', 'inactive', 'closed'].includes(getDuelStatus(d))).length;
-    // Check if user has enough keys for draft activations
-    const draftCount = selectedDuels.filter(d => getDuelStatus(d) === 'draft').length;
+    if (selectedDuels.length === 0 || !user) return false;
+    const activatableCount = selectedDuels.filter(d => ['DRAFT', 'INACTIVE', 'CLOSED'].includes(getDuelStatus(d))).length;
+    const draftCount = selectedDuels.filter(d => getDuelStatus(d) === 'DRAFT').length;
     return activatableCount > 0 && user.keys >= draftCount * 5;
-  }, [selectedDuels, getDuelStatus, user.keys]);
+  }, [selectedDuels, getDuelStatus, user]);
 
   const canDeactivateSelected = useMemo(() => {
     if (selectedDuels.length === 0) return false;
-    return selectedDuels.some(d => ['active', 'scheduled'].includes(getDuelStatus(d)));
+    return selectedDuels.some(d => ['ACTIVE', 'SCHEDULED'].includes(getDuelStatus(d)));
   }, [selectedDuels, getDuelStatus]);
 
 
   const handleRowClick = (duel: Duel) => {
-    if (duel.status === 'draft') return; // Do not show results for drafts
+    if (duel.status === 'DRAFT') return;
     setSelectedDuel(duel);
   };
   
   const handleResetVotes = (e: React.MouseEvent, duelId: string) => {
     e.stopPropagation();
-    resetDuelVotes(duelId, true); // true to indicate it's the owner resetting
+    resetDuelVotes(duelId, true);
     toast({
       title: "Votos Reiniciados",
       description: `Los votos para tu duelo han sido reseteados.`,
@@ -91,7 +94,8 @@ export default function DuelList({ duels }: DuelListProps) {
 
   const handleActivateDuel = (e: React.MouseEvent, duelId: string) => {
      e.stopPropagation();
-     const success = activateDraftDuel(duelId);
+     if (!session?.user) return;
+     const success = activateDraftDuel(duelId, session.user.id);
       if (success) {
         toast({
           title: "Duelo Activado",
@@ -133,8 +137,8 @@ export default function DuelList({ duels }: DuelListProps) {
   };
   
   const handleActivateSelected = () => {
-    const count = selectedDuelIds.length;
-    activateMultipleDuels(selectedDuelIds);
+    if (!session?.user) return;
+    activateMultipleDuels(selectedDuelIds, session.user.id);
     setSelectedDuelIds([]);
      toast({
       title: "Duelos Activados",
@@ -143,7 +147,6 @@ export default function DuelList({ duels }: DuelListProps) {
   }
   
   const handleDeactivateSelected = () => {
-    const count = selectedDuelIds.length;
     deactivateMultipleDuels(selectedDuelIds);
     setSelectedDuelIds([]);
      toast({
@@ -152,7 +155,7 @@ export default function DuelList({ duels }: DuelListProps) {
     });
   }
 
-  const getTotalVotes = (duel: Duel) => duel.options.reduce((sum, option) => sum + option.votes, 0);
+  const getTotalVotes = (duel: Duel) => duel.options.reduce((sum, option) => sum + (option.votes || 0), 0);
 
   if (duels.length === 0) {
     return (
@@ -250,9 +253,9 @@ export default function DuelList({ duels }: DuelListProps) {
                     />
                      {/* Chart & Status */}
                     <div className="flex flex-row md:flex-col items-center justify-center gap-4 flex-shrink-0 w-full md:w-24 cursor-pointer" onClick={() => handleRowClick(duel)}>
-                       <div className={cn("w-24 h-24 relative", currentStatus !== 'draft' && "cursor-pointer")}>
+                       <div className={cn("w-24 h-24 relative", currentStatus !== 'DRAFT' && "cursor-pointer")}>
                            <ResultsChart duel={duel} />
-                           {currentStatus !== 'draft' ? (
+                           {currentStatus !== 'DRAFT' ? (
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity rounded-full">
                                   <BarChart2 className="text-white h-8 w-8" />
                               </div>
@@ -281,7 +284,7 @@ export default function DuelList({ duels }: DuelListProps) {
                           <div className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
                             <span>
-                                {currentStatus === 'draft' ? 'Pendiente' : `Cierra ${formatDistanceToNow(new Date(duel.endsAt), { locale: es, addSuffix: true })}`}
+                                {currentStatus === 'DRAFT' ? 'Pendiente' : `Cierra ${formatDistanceToNow(new Date(duel.endsAt), { locale: es, addSuffix: true })}`}
                             </span>
                           </div>
                         )}
@@ -294,13 +297,13 @@ export default function DuelList({ duels }: DuelListProps) {
 
                     {/* Action Buttons */}
                     <div className="flex flex-row md:flex-col items-center justify-center gap-1 self-start md:self-center pt-2 md:pt-0">
-                      {currentStatus === 'draft' ? (
+                      {currentStatus === 'DRAFT' ? (
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleActivateDuel(e, duel.id)}>
                               <CheckCircle className="h-4 w-4 text-green-500" />
                           </Button>
                       ) : (
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); toggleDuelStatus(duel.id); }}>
-                              {currentStatus === 'active' ? <PowerOff className="h-4 w-4 text-orange-500" /> : <Power className="h-4 w-4 text-green-500" />}
+                              {currentStatus === 'ACTIVE' ? <PowerOff className="h-4 w-4 text-orange-500" /> : <Power className="h-4 w-4 text-green-500" />}
                           </Button>
                       )}
                       <Button asChild variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
@@ -310,7 +313,7 @@ export default function DuelList({ duels }: DuelListProps) {
                       </Button>
                        <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()} disabled={currentStatus === 'draft'}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()} disabled={currentStatus === 'DRAFT'}>
                             <RotateCcw className="h-4 w-4 text-blue-500" />
                           </Button>
                         </AlertDialogTrigger>

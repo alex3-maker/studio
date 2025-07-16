@@ -29,15 +29,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { User } from '@/lib/types';
+import { useSession } from 'next-auth/react';
 
 
 export default function AdminUsersPage() {
-  const { getAllUsers, updateUserRole, deleteUser, adjustUserKeys, user: adminUser } = useAppContext();
+  const { getAllUsers, updateUserRole, deleteUser, adjustUserKeys } = useAppContext();
+  const { data: session } = useSession();
   const { toast } = useToast();
   const users = getAllUsers();
 
@@ -56,7 +58,7 @@ export default function AdminUsersPage() {
   
   const handleRoleChange = () => {
     if (dialogState.user) {
-      const newRole = dialogState.user.role === 'admin' ? 'user' : 'admin';
+      const newRole = dialogState.user.role === 'ADMIN' ? 'USER' : 'ADMIN';
       updateUserRole(dialogState.user.id, newRole);
       toast({
         title: 'Rol Actualizado',
@@ -94,6 +96,8 @@ export default function AdminUsersPage() {
         })
     }
   };
+  
+  const adminUser = session?.user;
 
   return (
     <>
@@ -120,7 +124,7 @@ export default function AdminUsersPage() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar>
-                        <AvatarImage src={user.avatarUrl} alt={user.name} />
+                        <AvatarImage src={user.avatarUrl || undefined} alt={user.name} />
                         <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div>
@@ -130,8 +134,8 @@ export default function AdminUsersPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                      {user.role === 'admin' ? <Shield className="mr-2 h-4 w-4" /> : <UserIcon className="mr-2 h-4 w-4" />}
+                    <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'}>
+                      {user.role === 'ADMIN' ? <Shield className="mr-2 h-4 w-4" /> : <UserIcon className="mr-2 h-4 w-4" />}
                       {user.role}
                     </Badge>
                   </TableCell>
@@ -149,9 +153,9 @@ export default function AdminUsersPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => openDialog('role', user)} disabled={user.id === adminUser.id}>
-                          {user.role === 'admin' ? <UserIcon className="mr-2 h-4 w-4" /> : <Shield className="mr-2 h-4 w-4" />}
-                          {user.role === 'admin' ? 'Cambiar a Usuario' : 'Cambiar a Admin'}
+                        <DropdownMenuItem onClick={() => openDialog('role', user)} disabled={user.id === adminUser?.id}>
+                          {user.role === 'ADMIN' ? <UserIcon className="mr-2 h-4 w-4" /> : <Shield className="mr-2 h-4 w-4" />}
+                          {user.role === 'ADMIN' ? 'Cambiar a Usuario' : 'Cambiar a Admin'}
                         </DropdownMenuItem>
                          <DropdownMenuItem onClick={() => openDialog('keys', user)}>
                           <Key className="mr-2 h-4 w-4" />
@@ -159,7 +163,7 @@ export default function AdminUsersPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem disabled>Ver Perfil</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDialog('delete', user)} disabled={user.id === adminUser.id}>
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDialog('delete', user)} disabled={user.id === adminUser?.id}>
                           <Trash2 className="mr-2 h-4 w-4" />
                           Eliminar Usuario
                         </DropdownMenuItem>

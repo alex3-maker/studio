@@ -6,6 +6,7 @@ import { createDuelSchema } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import type { Duel } from './types';
 import { formatISO } from 'date-fns';
+import { auth } from '@/app/api/auth/[...nextauth]/route';
 
 export type FormState = {
   message: string;
@@ -20,13 +21,13 @@ export type FormState = {
     moderation?: string;
     _form?: string[];
   };
-  newDuel?: Duel;
+  // We no longer pass the full duel object, just the data needed for the context to create it
+  newDuel?: Omit<Duel, 'id' | 'creator' | 'createdAt' | 'status'>;
   updatedDuel?: Partial<Duel> & { id: string };
 };
 
 const DUEL_CREATION_COST = 5;
 
-// Helper to process FormData and reconstruct nested options
 function processFormDataWithOptions(formData: FormData) {
   const data: Record<string, any> = {};
   const options: Record<number, Record<string, any>> = {};
@@ -53,7 +54,6 @@ function processFormDataWithOptions(formData: FormData) {
 
 
 async function runModeration(data: { title:string; options:{ title:string }[] }): Promise<{ success:boolean; message?:string; errors?:{ moderation:string } }> {
-  // Moderation logic is disabled for now to simplify debugging.
   return { success: true };
 }
 
@@ -61,12 +61,15 @@ export async function createDuelAction(
   prevState: FormState,
   formData: FormData
 ): Promise<FormState> {
-  
+  const session = await auth();
+  if (!session?.user) {
+    return { success: false, message: 'No autenticado.' };
+  }
+
   const rawData = processFormDataWithOptions(formData);
   
   const validatedFields = createDuelSchema.safeParse({
       ...rawData,
-      userKeys: Number(rawData.userKeys), // Ensure userKeys is a number
       startsAt: rawData.startsAt,
       endsAt: rawData.endsAt,
   });
@@ -83,32 +86,22 @@ export async function createDuelAction(
     };
   }
   
-  const { type, title, options: validatedOptions, description, startsAt, endsAt, userKeys } = validatedFields.data;
+  const { type, title, options, description, startsAt, endsAt } = validatedFields.data;
   
   try {
-    const moderationResult = await runModeration({ title, options: validatedOptions });
+    const moderationResult = await runModeration({ title, options });
     if (!moderationResult.success) {
       return { ...moderationResult, message: moderationResult.message! };
     }
     
-    const hasEnoughKeys = userKeys >= DUEL_CREATION_COST;
-    const status: Duel['status'] = hasEnoughKeys ? 'scheduled' : 'draft'; 
-
-    const newDuel: Duel = {
-      id: `duel-${Date.now()}-${Math.random()}`,
+    // The duel object that the context needs to create the full duel
+    const newDuelData: Omit<Duel, 'id' | 'creator' | 'createdAt' | 'status'> = {
       type,
       title,
       description: description || '',
-      status, 
-      createdAt: formatISO(new Date()),
       startsAt: formatISO(startsAt),
       endsAt: formatISO(endsAt),
-      creator: {
-        id: 'user-1',
-        name: 'Alex Doe',
-        avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop'
-      },
-      options: validatedOptions.map((opt, i) => ({
+      options: options.map((opt, i) => ({
         id: `opt-${Date.now()}-${i}`,
         title: opt.title,
         imageUrl: opt.imageUrl || undefined,
@@ -122,10 +115,8 @@ export async function createDuelAction(
     
     return {
       success: true,
-      message: status === 'draft' 
-        ? '¡Tu duelo ha sido guardado como borrador!' 
-        : '¡Duelo creado y activado con éxito!',
-      newDuel: newDuel
+      message: '¡Tu duelo ha sido guardado! El estado final (borrador o activo) dependerá de tus llaves.',
+      newDuel: newDuelData,
     };
     
   } catch (error) {
@@ -152,7 +143,6 @@ export async function updateDuelAction(
 
   const validatedFields = createDuelSchema.safeParse({
       ...rawData,
-      userKeys: Number(rawData.userKeys || 0), // Ensure userKeys is a number
       startsAt: rawData.startsAt,
       endsAt: rawData.endsAt,
   });
@@ -189,7 +179,7 @@ export async function updateDuelAction(
         title: opt.title,
         imageUrl: opt.imageUrl || undefined,
         affiliateUrl: opt.affiliateUrl || undefined,
-        votes: 0, 
+        votes: 0, // Votes are preserved in AppContext, not reset here
       }))
     };
     

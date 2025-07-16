@@ -23,7 +23,7 @@ import { Skeleton } from '../ui/skeleton';
 
 const navLinks = [
   { href: '/', label: 'Inicio', icon: Swords },
-  { href: '/create', label: 'Crear Duelo', icon: Flame },
+  { href: '/create', label: 'Crear Duelo', icon: Flame, auth: true },
   { href: '/panel/mis-duelos', label: 'Panel', icon: Key, auth: true },
 ];
 
@@ -31,7 +31,6 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, status } = useSession();
-  const user = session?.user;
 
   const { 
     notifications, 
@@ -39,10 +38,15 @@ export default function Header() {
     markAllNotificationsAsRead, 
     deleteNotification, 
     clearAllNotifications,
-    keyHistory
+    keyHistory,
+    getUserById,
   } = useAppContext();
   
-  const unreadNotifications = notifications.filter(n => !n.read);
+  const user = session?.user ? getUserById(session.user.id) : undefined;
+  
+  const userNotifications = notifications.filter(n => n.userId === user?.id);
+  const unreadNotifications = userNotifications.filter(n => !n.read);
+  const userKeyHistory = keyHistory.filter(k => k.userId === user?.id);
 
   const handleNotificationClick = (notification: Notification) => {
     markNotificationAsRead(notification.id);
@@ -50,6 +54,16 @@ export default function Header() {
       router.push(notification.link);
     }
   };
+
+  const handleClearAll = () => {
+    if (!user) return;
+    clearAllNotifications(user.id);
+  }
+
+  const handleMarkAllRead = () => {
+    if (!user) return;
+    markAllNotificationsAsRead(user.id);
+  }
 
   const renderUserSection = () => {
     if (status === 'loading') {
@@ -90,9 +104,9 @@ export default function Header() {
             <PopoverContent className="w-80 md:w-96" align="end">
                <div className="flex items-center justify-between mb-2">
                   <h4 className="font-medium leading-none">Notificaciones</h4>
-                  {notifications.length > 0 && (
+                  {userNotifications.length > 0 && (
                       <div className="flex items-center gap-1">
-                        <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={markAllNotificationsAsRead}>
+                        <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={handleMarkAllRead}>
                             <CheckCheck className="mr-1 h-3 w-3" />
                             Marcar leídas
                         </Button>
@@ -112,7 +126,7 @@ export default function Header() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={clearAllNotifications}>Limpiar</AlertDialogAction>
+                              <AlertDialogAction onClick={handleClearAll}>Limpiar</AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
@@ -121,13 +135,13 @@ export default function Header() {
                </div>
                <Separator />
                <div className="mt-2 flex flex-col gap-1 max-h-80 overflow-y-auto p-1">
-                  {notifications.length === 0 ? (
+                  {userNotifications.length === 0 ? (
                       <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-4 space-y-2">
                           <Bell className="w-8 h-8" />
                           <p className="text-sm">No tienes notificaciones</p>
                       </div>
                   ) : (
-                      notifications.map(n => (
+                      userNotifications.map(n => (
                          <div 
                             key={n.id} 
                             className={cn(
@@ -169,7 +183,7 @@ export default function Header() {
           <PopoverTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2 px-2">
                   <Key className="h-5 w-5 text-yellow-500" />
-                  <span className="font-bold text-lg text-foreground/80">{keyHistory.length}</span>
+                  <span className="font-bold text-lg text-foreground/80">{user.keys}</span>
               </Button>
           </PopoverTrigger>
           <PopoverContent className="w-80" align="end">
@@ -179,15 +193,15 @@ export default function Header() {
               </div>
               <Separator />
                <div className="mt-2 flex flex-col gap-1 max-h-80 overflow-y-auto p-1">
-                  {keyHistory.length === 0 ? (
+                  {userKeyHistory.length === 0 ? (
                       <div className="text-center text-sm text-muted-foreground py-4">
                           No hay transacciones.
                       </div>
                   ) : (
-                      keyHistory.map((item) => (
+                      userKeyHistory.map((item) => (
                           <div key={item.id} className="flex justify-between items-center p-2 rounded-md">
                               <div className="flex items-center gap-3">
-                                 {item.type === 'earned' ? <PlusCircle className="h-5 w-5 text-green-500" /> : <MinusCircle className="h-5 w-5 text-red-500" />}
+                                 {item.type === 'EARNED' ? <PlusCircle className="h-5 w-5 text-green-500" /> : <MinusCircle className="h-5 w-5 text-red-500" />}
                                   <div>
                                       <p className="text-sm font-medium">{item.description}</p>
                                       <p className="text-xs text-muted-foreground">{format(new Date(item.timestamp), "dd MMM yyyy 'a las' HH:mm", { locale: es })}</p>
@@ -195,9 +209,9 @@ export default function Header() {
                               </div>
                               <span className={cn(
                                   "font-bold text-sm",
-                                  item.type === 'earned' ? 'text-green-500' : 'text-red-500'
+                                  item.type === 'EARNED' ? 'text-green-500' : 'text-red-500'
                               )}>
-                                 {item.type === 'earned' ? '+' : '-'}{item.amount}
+                                 {item.type === 'EARNED' ? '+' : '-'}{item.amount}
                               </span>
                           </div>
                       ))
@@ -207,7 +221,7 @@ export default function Header() {
         </Popover>
         <Link href="/panel/perfil">
           <Avatar>
-              <AvatarImage src={user.image || ''} alt={user.name || ''} />
+              <AvatarImage src={user.avatarUrl || undefined} alt={user.name || ''} />
               <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
           </Avatar>
         </Link>

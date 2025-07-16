@@ -18,26 +18,28 @@ interface VotedDuelCardProps {
 
 export default function VotedDuelCard({ duel, votedOptionId }: VotedDuelCardProps) {
   const { getDuelStatus } = useAppContext();
-  const totalVotes = duel.options.reduce((sum, option) => sum + option.votes, 0);
+  const totalVotes = duel.options.reduce((sum, option) => sum + (option.votes || 0), 0);
   const currentStatus = getDuelStatus(duel);
   
   const getWinner = () => {
-    if (currentStatus !== 'closed') return null;
-    const [optionA, optionB] = duel.options;
-    if (optionA.votes > optionB.votes) return optionA;
-    if (optionB.votes > optionA.votes) return optionB;
-    return null; // Tie
+    if (currentStatus !== 'CLOSED') return null;
+    if (duel.options.length < 2) return null;
+    const sortedOptions = [...duel.options].sort((a,b) => (b.votes || 0) - (a.votes || 0));
+    if ((sortedOptions[0].votes || 0) > (sortedOptions[1].votes || 0)) {
+      return sortedOptions[0];
+    }
+    return null; // Tie or no winner
   };
 
   const winner = getWinner();
 
   const getStatusInfo = () => {
     switch (currentStatus) {
-      case 'active':
+      case 'ACTIVE':
         return { text: `Activo - Cierra ${formatDistanceToNow(new Date(duel.endsAt), { locale: es, addSuffix: true })}`, className: "bg-green-500/20 text-green-700" };
-      case 'closed':
+      case 'CLOSED':
         return { text: "Cerrado", className: "bg-red-500/20 text-red-700" };
-      case 'scheduled':
+      case 'SCHEDULED':
          return { text: `Programado - Empieza ${formatDistanceToNow(new Date(duel.startsAt), { locale: es, addSuffix: true })}`, className: "bg-blue-500/20 text-blue-700" };
       default:
         return { text: "Inactivo", className: "bg-gray-400/20 text-gray-700" };
@@ -54,7 +56,7 @@ export default function VotedDuelCard({ duel, votedOptionId }: VotedDuelCardProp
       </CardHeader>
       <CardContent className="flex-grow space-y-4">
         {duel.options.map(option => {
-          const percentage = totalVotes > 0 ? (option.votes / totalVotes) * 100 : 0;
+          const percentage = totalVotes > 0 ? ((option.votes || 0) / totalVotes) * 100 : 0;
           const userVotedForThis = option.id === votedOptionId;
           const isWinner = winner && winner.id === option.id;
 
@@ -69,7 +71,7 @@ export default function VotedDuelCard({ duel, votedOptionId }: VotedDuelCardProp
                 </div>
                 <div className="flex items-center gap-2">
                     {isWinner && <Trophy className="h-4 w-4 text-yellow-500" />}
-                    <span className="font-semibold">{option.votes}</span>
+                    <span className="font-semibold">{option.votes || 0}</span>
                 </div>
               </div>
               <Progress value={percentage} className={cn(userVotedForThis && "[&>div]:bg-primary")} />

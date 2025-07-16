@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/app-context';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import DuelResultsDetails from './duel-results-details';
+import { useSession } from 'next-auth/react';
 
 const HINT_STORAGE_KEY = 'dueliax-landscape-hint-dismissed';
 
@@ -91,6 +92,7 @@ function AutoAdvanceButton({ onComplete, hasMoreDuels }: { onComplete: () => voi
 
 
 export default function VotingFeed() {
+  const { data: session } = useSession();
   const { duels, castVote, votedDuelIds, getDuelStatus } = useAppContext();
   const [currentDuelIndex, setCurrentDuelIndex] = useState(0);
   const [votedDuelDetails, setVotedDuelDetails] = useState<Duel | null>(null);
@@ -100,8 +102,7 @@ export default function VotingFeed() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
-    // Mostrar pista solo en móvil y si no se ha descartado previamente
-    if (window.innerWidth < 768) {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
       const hintDismissed = localStorage.getItem(HINT_STORAGE_KEY);
       if (hintDismissed !== 'true') {
         setShowHint(true);
@@ -132,7 +133,7 @@ export default function VotingFeed() {
 
 
   const handleVote = (selectedOption: DuelOption, direction?: 'left' | 'right') => {
-    if (votedDuelDetails || !currentDuel) return;
+    if (votedDuelDetails || !currentDuel || !session?.user) return;
     
     if(direction){
         setAnimationClass(direction === 'left' ? 'animate-card-select-left' : 'animate-card-select-right');
@@ -140,7 +141,7 @@ export default function VotingFeed() {
 
     setTimeout(() => {
       startTransition(() => {
-        const { awardedKey, updatedDuel } = castVote(currentDuel.id, selectedOption.id);
+        const { awardedKey, updatedDuel } = castVote(currentDuel.id, selectedOption.id, session.user.id);
         
         if (updatedDuel) {
           setVotedDuelDetails(updatedDuel);
@@ -166,7 +167,6 @@ export default function VotingFeed() {
   const handleDialogClose = () => {
       setIsDialogOpen(false);
       
-      // Delay state reset to allow dialog to animate out
       setTimeout(() => {
         setAnimationClass('');
         setVotedDuelDetails(null);
