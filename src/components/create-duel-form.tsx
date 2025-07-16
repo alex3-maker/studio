@@ -421,13 +421,13 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                                     Importar
                                 </Button>
                             </div>
-                            <FormDescription>La IA extraerá el título y la imagen del producto. Aún podrás editarlos después.</FormDescription>
+                            <FormDescription>El sistema extraerá el título y la imagen del producto. Aún podrás editarlos después.</FormDescription>
                           </div>
                         </TabsContent>
                       </Tabs>
                       {form.watch(`options.${index}.imageUrl`) && (
-                          <div className="relative w-full h-48 mt-4 rounded-md overflow-hidden border">
-                              <img src={form.watch(`options.${index}.imageUrl`) as string} alt="Vista previa" className="w-full h-full object-cover" />
+                          <div className="relative w-full h-48 mt-4 rounded-md overflow-hidden border bg-muted/30">
+                              <img src={form.watch(`options.${index}.imageUrl`) as string} alt="Vista previa" className="w-full h-full object-contain" />
                           </div>
                       )}
                     </CardContent>
