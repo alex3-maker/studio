@@ -3,15 +3,22 @@ import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { z } from 'zod';
 import { authConfig } from '@/lib/auth.config';
-import { mockUsers } from '@/lib/data';
-import type { User } from '@/lib/types';
 import bcrypt from 'bcryptjs';
+import { db } from '@/lib/db';
+import { users } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
+import type { User as DbUser } from '@/lib/types'; // Using our extended User type
 
-async function getUser(email: string): Promise<(User & { password?: string }) | undefined> {
-  // En una aplicación real, esto consultaría la base de datos.
-  // pg.query('SELECT * FROM "User" WHERE email = $1', [email]);
-  const user = mockUsers.find((user) => user.email === email);
-  return user;
+async function getUser(email: string): Promise<(DbUser & { password?: string }) | undefined> {
+  try {
+    const user = await db.query.users.findFirst({
+      where: eq(users.email, email),
+    });
+    return user as (DbUser & { password?: string }) | undefined;
+  } catch (error) {
+    console.error('Failed to fetch user:', error);
+    throw new Error('Failed to fetch user.');
+  }
 }
 
 export const { auth, signIn, signOut, handlers } = NextAuth({
@@ -33,11 +40,12 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           
           if (passwordsMatch) {
             // Return the full user object including the role
-            return user;
+            const { password, ...userWithoutPassword } = user;
+            return userWithoutPassword;
           }
         }
         
-        console.log('Autorización fallida: Credenciales inválidas.');
+        console.log('Authorization failed: Invalid credentials.');
         return null;
       },
     }),

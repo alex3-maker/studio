@@ -4,8 +4,10 @@
 import { signIn, signOut } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
 import { AuthError } from 'next-auth';
-import { mockUsers } from './data';
 import bcrypt from 'bcryptjs';
+import { db } from './db';
+import { users } from './schema';
+import { eq } from 'drizzle-orm';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
@@ -14,7 +16,10 @@ const loginSchema = z.object({
 
 export async function login(prevState: any, formData: FormData) {
   try {
+    // Esto llamará al `authorize` de NextAuth y manejará la redirección
     await signIn('credentials', Object.fromEntries(formData));
+    // La redirección es manejada por NextAuth, por lo que no es necesario devolver un estado aquí.
+    // Si llegamos aquí, es un caso inesperado.
     return { success: true, message: '¡Sesión iniciada!' };
   } catch (error) {
     if (error instanceof AuthError) {
@@ -22,9 +27,11 @@ export async function login(prevState: any, formData: FormData) {
         case 'CredentialsSignin':
           return { message: 'Email o contraseña incorrectos.', success: false };
         default:
-          return { message: `Algo salió mal: ${error.type}.`, success: false };
+          console.error('Auth Error:', error);
+          return { message: 'Algo salió mal. Por favor, inténtalo de nuevo.', success: false };
       }
     }
+    // Si no es un AuthError, relánzalo para que Next.js lo maneje.
     throw error;
   }
 }
@@ -49,9 +56,14 @@ export async function signup(prevState: any, formData: FormData) {
     }
 
     const { name, email, password } = validatedFields.data;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const userId = `user_${Date.now()}`;
 
     try {
-        const existingUser = mockUsers.find(u => u.email === email);
+        const existingUser = await db.query.users.findFirst({
+            where: eq(users.email, email),
+        });
+
         if (existingUser) {
             return {
                 message: 'Ya existe un usuario con este email.',
@@ -59,25 +71,19 @@ export async function signup(prevState: any, formData: FormData) {
                 success: false,
             }
         }
-        
-        const hashedPassword = await bcrypt.hash(password, 10);
 
-        const newUser = {
-            id: `user-${Date.now()}`,
+        await db.insert(users).values({
+            id: userId,
             name,
             email,
             password: hashedPassword,
+            image: `https://i.pravatar.cc/150?u=${email}`,
             role: 'USER',
-            avatarUrl: `https://i.pravatar.cc/150?u=${email}`,
             keys: 5,
-            duelsCreated: 0,
-            votesCast: 0,
-            createdAt: new Date().toISOString(),
-        };
-        mockUsers.push(newUser as any);
+        });
 
     } catch (error) {
-       console.error("Error creating user:", error);
+       console.error("Error creating user in DB:", error);
        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
        return { 
          message: `Un error inesperado ocurrió al crear el usuario. Detalle: ${errorMessage}`,
@@ -85,8 +91,7 @@ export async function signup(prevState: any, formData: FormData) {
        };
     }
     
-    // On success, just return a success state.
-    // The client will handle the signIn call.
+    // Devolvemos éxito, y el cliente se encargará de llamar a signIn
     return { 
         success: true, 
         message: '¡Registro completado!',

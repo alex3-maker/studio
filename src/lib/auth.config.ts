@@ -4,6 +4,7 @@ import type { NextAuthConfig } from 'next-auth';
 export const authConfig = {
   pages: {
     signIn: '/login',
+    error: '/login', // Redirect errors to login page
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
@@ -28,15 +29,23 @@ export const authConfig = {
     },
     jwt({ token, user }) {
       if (user) {
-        token.sub = user.id;
+        // On sign in, persist the user data to the token
+        token.id = user.id;
         token.role = user.role;
+        token.name = user.name;
+        token.email = user.email;
+        token.picture = user.image;
       }
       return token;
     },
     session({ session, token }) {
-      if (session.user && token.sub) {
-        session.user.id = token.sub;
+      // Pass user data from the token to the session
+      if (session.user) {
+        session.user.id = token.id as string;
         session.user.role = token.role as 'ADMIN' | 'USER';
+        session.user.name = token.name;
+        session.user.email = token.email;
+        session.user.image = token.picture;
       }
       return session;
     },
