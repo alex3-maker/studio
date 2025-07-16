@@ -75,7 +75,7 @@ function ManualInputFields({ form, index, handleFileChange, fileInputRefs }: any
         <div className="space-y-4 mt-4">
             <FormField
                 control={form.control}
-                name={`options[${index}].imageUrl`}
+                name={`options.${index}.imageUrl`}
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>URL de la Imagen (Opcional)</FormLabel>
@@ -105,7 +105,7 @@ function ManualInputFields({ form, index, handleFileChange, fileInputRefs }: any
             />
              <FormField
                 control={form.control}
-                name={`options[${index}].affiliateUrl`}
+                name={`options.${index}.affiliateUrl`}
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>URL (Opcional)</FormLabel>
@@ -162,7 +162,6 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
 
   useEffect(() => {
     if (duelType === 'A_VS_B' && fields.length > 2) {
-      // If user switches back to A vs B, remove extra options
       for (let i = fields.length - 1; i > 1; i--) {
         remove(i);
       }
@@ -175,7 +174,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
       form.reset({
         ...defaultValues,
         ...duelDataFromAI,
-        type: 'A_VS_B', // AI generation is always for A_VS_B
+        type: 'A_VS_B',
         startsAt: defaultValues.startsAt,
         endsAt: defaultValues.endsAt,
       });
@@ -195,7 +194,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        form.setValue(`options[${index}].imageUrl`, reader.result as string, { shouldValidate: true });
+        form.setValue(`options.${index}.imageUrl`, reader.result as string, { shouldValidate: true });
       };
       reader.readAsDataURL(file);
     }
@@ -228,18 +227,18 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
         const result = await scrapeUrl({ url });
 
         if (result.title && result.imageUrl) {
-            form.setValue(`options[${index}].title`, result.title, { shouldValidate: true });
-            form.setValue(`options[${index}].imageUrl`, result.imageUrl, { shouldValidate: true });
-            form.setValue(`options[${index}].affiliateUrl`, url, { shouldValidate: true });
+            form.setValue(`options.${index}.title`, result.title, { shouldValidate: true });
+            form.setValue(`options.${index}.imageUrl`, result.imageUrl, { shouldValidate: true });
+            form.setValue(`options.${index}.affiliateUrl`, url, { shouldValidate: true });
             toast({ title: "¡Éxito!", description: "Producto importado directamente." });
         } else {
             toast({ title: "Análisis Profundo", description: "No se encontraron metadatos. Usando IA para analizar la página. Esto puede tardar un momento..." });
             
             const aiResult = await analyzeProductPage({ htmlContent: result.htmlContent, url, apiKey });
 
-            form.setValue(`options[${index}].title`, aiResult.title, { shouldValidate: true });
-            form.setValue(`options[${index}].imageUrl`, aiResult.imageUrl, { shouldValidate: true });
-            form.setValue(`options[${index}].affiliateUrl`, url, { shouldValidate: true });
+            form.setValue(`options.${index}.title`, aiResult.title, { shouldValidate: true });
+            form.setValue(`options.${index}.imageUrl`, aiResult.imageUrl, { shouldValidate: true });
+            form.setValue(`options.${index}.affiliateUrl`, url, { shouldValidate: true });
             toast({ title: "¡Éxito con IA!", description: "Producto importado usando análisis de IA." });
         }
     } catch (error) {

@@ -31,7 +31,7 @@ function processFormDataWithOptions(formData: FormData): Record<string, any> {
   const options: Record<string, any>[] = [];
 
   for (const [key, value] of formData.entries()) {
-    const optionMatch = key.match(/options\.(\d+)\.(.+)/);
+    const optionMatch = key.match(/^options\[(\d+)\]\.(.+)$/);
     if (optionMatch) {
       const index = parseInt(optionMatch[1], 10);
       const field = optionMatch[2];
