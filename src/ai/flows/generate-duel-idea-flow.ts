@@ -8,6 +8,7 @@
  */
 import { z } from 'genkit';
 import { ai } from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
 const DuelIdeaOutputSchema = z.object({
   title: z.string().describe('The title of the duel. Should be a question.'),
@@ -17,11 +18,7 @@ const DuelIdeaOutputSchema = z.object({
 });
 export type DuelIdeaOutput = z.infer<typeof DuelIdeaOutputSchema>;
 
-const generateDuelIdeaPrompt = ai.definePrompt({
-  name: 'generateDuelIdeaPrompt',
-  input: { schema: z.object({}) },
-  output: { schema: DuelIdeaOutputSchema },
-  prompt: `You are a creative assistant specialized in creating engaging "A vs B" style duel topics for a social voting app called DuelDash.
+const promptText = `You are a creative assistant specialized in creating engaging "A vs B" style duel topics for a social voting app called DuelDash.
 
   Generate a compelling and fun duel topic that people would have strong opinions about.
   The topic can be about anything: movies, food, technology, hypothetical scenarios, pop culture, etc.
@@ -37,31 +34,20 @@ const generateDuelIdeaPrompt = ai.definePrompt({
   Option 2: Invisibilidad
 
   Return the output in the specified JSON format.
-  `,
-});
+  `;
 
 
-const generateDuelIdeaFlow = ai.defineFlow(
-  {
-    name: 'generateDuelIdeaFlow',
-    inputSchema: z.object({}),
-    outputSchema: DuelIdeaOutputSchema,
-  },
-  async () => {
-    // For debugging: This will log in the server console (visible in the terminal running the app)
-    // to confirm the API key is loaded from the environment.
-    if (!process.env.GEMINI_API_KEY) {
-      console.log('GEMINI_API_KEY is not available in the environment.');
-      throw new Error('GEMINI_API_KEY environment variable not set.');
-    } else {
-      console.log('GEMINI_API_KEY is loaded on the server.');
-    }
+export async function generateDuelIdea(apiKey: string): Promise<DuelIdeaOutput> {
+  const model = googleAI.model('gemini-pro');
 
-    const { output } = await generateDuelIdeaPrompt({});
-    return output!;
-  }
-);
-
-export async function generateDuelIdea(): Promise<DuelIdeaOutput> {
-  return generateDuelIdeaFlow({});
+  const { output } = await ai.generate({
+      model,
+      prompt: promptText,
+      output: {
+          schema: DuelIdeaOutputSchema,
+      },
+      config: { apiKey },
+  });
+  
+  return output!;
 }
