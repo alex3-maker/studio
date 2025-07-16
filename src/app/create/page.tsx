@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import CreateDuelForm from "@/components/create-duel-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,13 +26,22 @@ const initialState: FormState = {
 export default function CreateDuelPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user, apiKey, isAiEnabled } = useAppContext();
+  const { user, addDuel, apiKey, isAiEnabled } = useAppContext();
   const [state, formAction, isPending] = useActionState(createDuelAction, initialState);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedData, setGeneratedData] = useState<Partial<CreateDuelFormValues> | null>(null);
 
-  // NOTE: The logic for redirection and toast is now handled inside the server action
-  // to prevent multiple submissions in React Strict Mode.
+  useEffect(() => {
+    if (state.success && state.newDuel) {
+        addDuel(state.newDuel);
+        toast({
+            title: '¡Éxito!',
+            description: state.message,
+        });
+        router.push('/panel/mis-duelos');
+    }
+  }, [state, addDuel, toast, router]);
+
 
   const handleGenerate = async () => {
     if (!apiKey) {

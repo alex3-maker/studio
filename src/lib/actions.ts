@@ -6,7 +6,6 @@ import { createDuelSchema } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import type { Duel } from './types';
 import { formatISO } from 'date-fns';
-import { redirect } from 'next/navigation';
 
 export type FormState = {
   message: string;
@@ -31,12 +30,13 @@ const DUEL_CREATION_COST = 5;
 function processFormDataWithOptions(formData: FormData) {
   const data: Record<string, any> = {};
   const options: Record<number, Record<string, any>> = {};
+  const optionRegex = /options\[(\d+)\]\.(id|title|imageUrl|affiliateUrl)/;
 
   for (const [key, value] of formData.entries()) {
-    const optionMatch = key.match(/options\[(\d+)\]\.(.*)/);
-    if (optionMatch) {
-      const index = parseInt(optionMatch[1], 10);
-      const field = optionMatch[2];
+    const match = key.match(optionRegex);
+    if (match) {
+      const index = parseInt(match[1], 10);
+      const field = match[2];
       if (!options[index]) {
         options[index] = {};
       }
@@ -46,10 +46,7 @@ function processFormDataWithOptions(formData: FormData) {
     }
   }
 
-  // Convert the options object to a sorted array
-  data.options = Object.keys(options)
-    .sort((a, b) => Number(a) - Number(b))
-    .map(key => options[Number(key)]);
+  data.options = Object.values(options);
     
   return data;
 }
@@ -69,7 +66,9 @@ export async function createDuelAction(
   
   const validatedFields = createDuelSchema.safeParse({
       ...rawData,
-      userKeys: Number(rawData.userKeys) // Ensure userKeys is a number
+      userKeys: Number(rawData.userKeys), // Ensure userKeys is a number
+      startsAt: rawData.startsAt,
+      endsAt: rawData.endsAt,
   });
   
   if (!validatedFields.success) {
@@ -118,12 +117,16 @@ export async function createDuelAction(
       }))
     };
 
-    // Revalidation should happen before redirection
     revalidatePath('/');
     revalidatePath('/panel/mis-duelos');
     
-    // The redirect function throws an error, which is how Next.js handles it.
-    // It should be called outside a try/catch block or be the last thing in the try block.
+    return {
+      success: true,
+      message: status === 'draft' 
+        ? '¡Tu duelo ha sido guardado como borrador!' 
+        : '¡Duelo creado y activado con éxito!',
+      newDuel: newDuel
+    };
     
   } catch (error) {
     console.error('Error creando duelo:', error);
@@ -134,9 +137,6 @@ export async function createDuelAction(
       errors: { _form: [`Ocurrió un error inesperado. Por favor, inténtalo de nuevo. Detalle: ${errorMessage}`] },
     };
   }
-
-  // Redirect after successful creation.
-  redirect('/panel/mis-duelos');
 }
 
 export async function updateDuelAction(
@@ -152,7 +152,9 @@ export async function updateDuelAction(
 
   const validatedFields = createDuelSchema.safeParse({
       ...rawData,
-      userKeys: Number(rawData.userKeys || 0) // Ensure userKeys is a number
+      userKeys: Number(rawData.userKeys || 0), // Ensure userKeys is a number
+      startsAt: rawData.startsAt,
+      endsAt: rawData.endsAt,
   });
 
   if (!validatedFields.success) {
@@ -191,11 +193,16 @@ export async function updateDuelAction(
       }))
     };
     
-    // Revalidation should happen before redirection
     revalidatePath('/admin/duels');
     revalidatePath(`/admin/duels/${rawData.id}/edit`);
     revalidatePath('/panel/mis-duelos');
     revalidatePath(`/panel/mis-duelos/${rawData.id}/edit`);
+
+    return {
+      success: true,
+      message: '¡Duelo actualizado con éxito!',
+      updatedDuel: updatedDuel
+    }
 
   } catch (error) {
     console.error('Error actualizando duelo:', error);
@@ -206,7 +213,4 @@ export async function updateDuelAction(
       errors: { _form: [`Error del servidor al actualizar. Detalle: ${errorMessage}`] },
     };
   }
-  
-  // Redirect after successful update
-  redirect('/panel/mis-duelos');
 }
