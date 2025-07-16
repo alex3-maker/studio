@@ -8,7 +8,6 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/googleai';
 import type { AnalyzeProductPageInput, AnalyzeProductPageOutput } from '@/lib/types';
 import { AnalyzeProductPageInputSchema, AnalyzeProductPageOutputSchema } from '@/lib/types';
 
@@ -29,7 +28,7 @@ Analyze the following HTML content:
 \`\`\`
 `,
     config: {
-        model: googleAI.model('gemini-1.5-flash'),
+        model: 'gemini-1.5-flash',
     },
 });
 
@@ -41,7 +40,8 @@ const analyzeProductPageFlow = ai.defineFlow(
         outputSchema: AnalyzeProductPageOutputSchema,
     },
     async (input) => {
-        const { output } = await analyzePrompt(input, { config: { apiKey: input.apiKey } });
+        // The second argument to a prompt is the per-request config.
+        const { output } = await analyzePrompt(input, { apiKey: input.apiKey });
         if (!output) {
             throw new Error('La IA no pudo analizar la página del producto.');
         }
