@@ -26,12 +26,26 @@ export type FormState = {
 
 const DUEL_CREATION_COST = 5;
 
-function processFormDataWithOptions(formData: FormData): Record<string, any> {
-  const data: Record<string, any> = {};
-  const options: Record<string, any>[] = [];
+// This function is no longer needed and will be removed.
+// The logic will be handled directly and more robustly inside the actions.
 
-  for (const [key, value] of formData.entries()) {
-    const optionMatch = key.match(/^options\[(\d+)\]\.(.+)$/);
+async function runModeration(data: { title:string; options:{ title:string }[] }): Promise<{ success:boolean; message?:string; errors?:{ moderation:string } }> {
+  // Moderation logic is disabled for now to simplify debugging.
+  return { success: true };
+}
+
+export async function createDuelAction(
+  prevState: FormState,
+  formData: FormData
+): Promise<FormState> {
+  
+  // Robust data processing
+  const rawData: Record<string, any> = {};
+  const options: any[] = [];
+  const formDataEntries = Array.from(formData.entries());
+
+  for (const [key, value] of formDataEntries) {
+    const optionMatch = key.match(/options\.(\d+)\.(.*)/);
     if (optionMatch) {
       const index = parseInt(optionMatch[1], 10);
       const field = optionMatch[2];
@@ -40,48 +54,12 @@ function processFormDataWithOptions(formData: FormData): Record<string, any> {
       }
       options[index][field] = value;
     } else {
-      data[key] = value;
+      rawData[key] = value;
     }
   }
+  rawData.options = options.filter(opt => opt && typeof opt === 'object');
 
-  data.options = options;
-  return data;
-}
-
-
-async function runModeration(data: { title:string; options:{ title:string }[] }): Promise<{ success:boolean; message?:string; errors?:{ moderation:string } }> {
-  // const { title, options } = data;
-  // const titleModeration = await moderateContent({ content: title, contentType: 'text' });
-  // if (!titleModeration.isSafe) {
-  //   return {
-  //     success: false,
-  //     message: `El título del duelo fue marcado como inapropiado. Razones: ${titleModeration.reasons.join(', ')}`,
-  //     errors: { moderation: `El título del duelo fue marcado como inapropiado.` },
-  //   };
-  // }
-
-  // for (const option of options) {
-  //   const optionTitleModeration = await moderateContent({ content: option.title, contentType: 'text' });
-  //   if (!optionTitleModeration.isSafe) {
-  //     return {
-  //       success: false,
-  //       message: `El título de la opción "${option.title}" fue marcado como inapropiado. Razones: ${optionTitleModeration.reasons.join(', ')}`,
-  //       errors: { moderation: `El título de la opción "${option.title}" es inapropiado.` },
-  //     };
-  //   }
-  // }
-  return { success: true };
-}
-
-
-export async function createDuelAction(
-  prevState: FormState,
-  formData: FormData
-): Promise<FormState> {
-  
-  const rawFormData = processFormDataWithOptions(formData);
-  
-  const validatedFields = createDuelSchema.safeParse(rawFormData);
+  const validatedFields = createDuelSchema.safeParse(rawData);
   
   if (!validatedFields.success) {
     const errorDetails = JSON.stringify(validatedFields.error.flatten(), null, 2);
@@ -95,10 +73,10 @@ export async function createDuelAction(
     };
   }
   
-  const { type, title, options, description, startsAt, endsAt, userKeys } = validatedFields.data;
+  const { type, title, options: validatedOptions, description, startsAt, endsAt, userKeys } = validatedFields.data;
   
   try {
-    const moderationResult = await runModeration({ title, options });
+    const moderationResult = await runModeration({ title, options: validatedOptions });
     if (!moderationResult.success) {
       return { ...moderationResult, message: moderationResult.message! };
     }
@@ -106,7 +84,7 @@ export async function createDuelAction(
     revalidatePath('/');
     revalidatePath('/panel/mis-duelos');
 
-    const hasEnoughKeys = (Number(userKeys) || 0) >= DUEL_CREATION_COST;
+    const hasEnoughKeys = Number(userKeys || 0) >= DUEL_CREATION_COST;
     const status: Duel['status'] = hasEnoughKeys ? 'scheduled' : 'draft'; 
 
     const newDuel: Duel = {
@@ -116,14 +94,14 @@ export async function createDuelAction(
       description: description || '',
       status, 
       createdAt: formatISO(new Date()),
-      startsAt: startsAt,
-      endsAt: endsAt,
+      startsAt: formatISO(startsAt),
+      endsAt: formatISO(endsAt),
       creator: {
         id: 'user-1',
         name: 'Alex Doe',
         avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop'
       },
-      options: options.map((opt, i) => ({
+      options: validatedOptions.map((opt, i) => ({
         id: `opt-${Date.now()}-${i}`,
         title: opt.title,
         imageUrl: opt.imageUrl || undefined,
@@ -157,13 +135,31 @@ export async function updateDuelAction(
   prevState: FormState,
   formData: FormData
 ): Promise<FormState> {
-  const rawFormData = processFormDataWithOptions(formData);
+  // Robust data processing
+  const rawData: Record<string, any> = {};
+  const options: any[] = [];
+  const formDataEntries = Array.from(formData.entries());
+
+  for (const [key, value] of formDataEntries) {
+    const optionMatch = key.match(/options\.(\d+)\.(.*)/);
+    if (optionMatch) {
+      const index = parseInt(optionMatch[1], 10);
+      const field = optionMatch[2];
+      if (!options[index]) {
+        options[index] = {};
+      }
+      options[index][field] = value;
+    } else {
+      rawData[key] = value;
+    }
+  }
+  rawData.options = options.filter(opt => opt && typeof opt === 'object');
   
-  if (!rawFormData.id) {
+  if (!rawData.id) {
     return { success: false, message: "ID del duelo no encontrado.", errors: { _form: ["ID del duelo no encontrado."] } };
   }
 
-  const validatedFields = createDuelSchema.safeParse(rawFormData);
+  const validatedFields = createDuelSchema.safeParse(rawData);
 
   if (!validatedFields.success) {
     const errorDetails = JSON.stringify(validatedFields.error.flatten(), null, 2);
@@ -177,28 +173,28 @@ export async function updateDuelAction(
     };
   }
 
-  const { title, options, description, startsAt, endsAt, type } = validatedFields.data;
+  const { title, options: validatedOptions, description, startsAt, endsAt, type } = validatedFields.data;
 
   try {
-    const moderationResult = await runModeration({ title, options });
+    const moderationResult = await runModeration({ title, options: validatedOptions });
     if (!moderationResult.success) {
       return { ...moderationResult, message: moderationResult.message! };
     }
 
     revalidatePath('/admin/duels');
-    revalidatePath(`/admin/duels/${rawFormData.id}/edit`);
+    revalidatePath(`/admin/duels/${rawData.id}/edit`);
     revalidatePath('/panel/mis-duelos');
-    revalidatePath(`/panel/mis-duelos/${rawFormData.id}/edit`);
+    revalidatePath(`/panel/mis-duelos/${rawData.id}/edit`);
 
     const updatedDuel: Partial<Duel> & { id: string } = {
-      id: rawFormData.id,
+      id: rawData.id,
       type,
       title,
       description: description || '',
-      startsAt: startsAt,
-      endsAt: endsAt,
-      options: options.map((opt, index) => ({
-        id: opt.id || `opt-${rawFormData.id}-${index}`, 
+      startsAt: formatISO(startsAt),
+      endsAt: formatISO(endsAt),
+      options: validatedOptions.map((opt, index) => ({
+        id: opt.id || `opt-${rawData.id}-${index}`, 
         title: opt.title,
         imageUrl: opt.imageUrl || undefined,
         affiliateUrl: opt.affiliateUrl || undefined,

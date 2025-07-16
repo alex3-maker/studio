@@ -24,17 +24,17 @@ export const createDuelSchema = z.object({
   title: z.string().min(3, { message: "El título debe tener al menos 3 caracteres." }).max(100),
   description: z.string().max(500).optional(),
   options: z.array(duelOptionSchema).min(1, "Debe haber al menos una opción."),
-  startsAt: z.string({
+  startsAt: z.coerce.date({
       required_error: "La fecha de inicio es requerida.",
       invalid_type_error: "Por favor, selecciona una fecha de inicio válida."
-  }).datetime({ message: "Por favor, selecciona una fecha de inicio válida." }),
-  endsAt: z.string({
+  }),
+  endsAt: z.coerce.date({
       required_error: "La fecha de fin es requerida.",
       invalid_type_error: "Por favor, selecciona una fecha de fin válida."
-  }).datetime({ message: "Por favor, selecciona una fecha de fin válida." }),
+  }),
   userKeys: z.string().optional(),
 }).superRefine((data, ctx) => {
-    if (new Date(data.endsAt) <= new Date(data.startsAt)) {
+    if (data.endsAt <= data.startsAt) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: "La fecha de fin debe ser posterior a la fecha de inicio.",
