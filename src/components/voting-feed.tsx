@@ -86,12 +86,8 @@ export default function VotingFeed() {
   [duels, votedDuelIds, getDuelStatus]);
 
   const currentDuel: Duel | undefined = useMemo(() => {
+    // Si la lista de duelos activos está vacía, no hay nada que mostrar.
     if (activeDuels.length === 0) return undefined;
-    
-    // Si hay un duelo votado, seguimos mostrándolo hasta que se cierre el diálogo
-    if (votedDuelDetails) {
-        return votedDuelDetails;
-    }
 
     // Asegurarse de que el índice no esté fuera de los límites
     const newIndex = Math.min(currentDuelIndex, activeDuels.length - 1);
@@ -99,7 +95,7 @@ export default function VotingFeed() {
         setCurrentDuelIndex(newIndex);
     }
     return activeDuels[newIndex];
-  }, [activeDuels, currentDuelIndex, votedDuelDetails]);
+  }, [activeDuels, currentDuelIndex]);
 
 
   const handleVote = (selectedOption: DuelOption, direction?: 'left' | 'right') => {
@@ -153,23 +149,15 @@ export default function VotingFeed() {
     return <VotingFeedSkeleton />;
   }
   
-  // Condición de fin de duelos, pero solo si no estamos viendo los resultados de un voto
-  if (activeDuels.length === 0 && !votedDuelDetails) {
+  const duelToShow = votedDuelDetails || currentDuel;
+  
+  if (!duelToShow) {
     return (
        <div className="text-center py-16">
         <h2 className="text-2xl font-headline mb-4">¡No hay más duelos!</h2>
         <p className="text-muted-foreground">Has votado en todos los duelos disponibles. ¡Vuelve más tarde o crea el tuyo!</p>
       </div>
     )
-  }
-
-  if (!currentDuel) {
-    // Esto puede pasar brevemente si el último duelo es votado
-    return (
-        <div className="text-center py-16">
-         <h2 className="text-2xl font-headline mb-4">Cargando...</h2>
-       </div>
-     )
   }
 
 
@@ -195,18 +183,18 @@ export default function VotingFeed() {
 
       <Card className="mb-8 border-none bg-transparent shadow-none">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl md:text-4xl font-headline">{currentDuel.title}</CardTitle>
-          {currentDuel.description && (
-             <CardDescription className="text-lg">{currentDuel.description}</CardDescription>
+          <CardTitle className="text-3xl md:text-4xl font-headline">{duelToShow.title}</CardTitle>
+          {duelToShow.description && (
+             <CardDescription className="text-lg">{duelToShow.description}</CardDescription>
           )}
         </CardHeader>
       </Card>
       
       <div className={cn(animationClass)}>
-        {currentDuel.type === 'A_VS_B' ? (
-          <A_VS_B_Duel duel={currentDuel} onVote={(option, direction) => handleVote(option, direction)} />
+        {duelToShow.type === 'A_VS_B' ? (
+          <A_VS_B_Duel duel={duelToShow} onVote={(option, direction) => handleVote(option, direction)} />
         ) : (
-          <ListDuel duel={currentDuel} onVote={(option) => handleVote(option)} />
+          <ListDuel duel={duelToShow} onVote={(option) => handleVote(option)} />
         )}
       </div>
 
@@ -221,7 +209,7 @@ export default function VotingFeed() {
                 </DialogHeader>
                 <DuelResultsDetails duel={votedDuelDetails} />
                 <DialogClose asChild>
-                  <Button id={`results-close-${currentDuel.id}`} className="w-full" size="lg">
+                  <Button id={`results-close-${votedDuelDetails.id}`} className="w-full" size="lg">
                     Siguiente Duelo <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </DialogClose>
