@@ -5,7 +5,6 @@ import { moderateContent } from '@/ai/flows/moderate-content';
 import { createDuelSchema } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import type { Duel } from './types';
-import { formatISO } from 'date-fns';
 import { auth } from '@/app/api/auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 import { headers } from 'next/headers';
@@ -24,29 +23,34 @@ export type FormState = {
     moderation?: string;
     _form?: string[];
   };
-  newDuel?: Omit<Duel, 'id' | 'creator' | 'createdAt' | 'status'>;
-  updatedDuel?: Partial<Duel> & { id: string };
+  newDuel?: Duel;
+  updatedDuel?: Duel;
 };
 
 const DUEL_CREATION_COST = 5;
 
 function getClientIp(): string {
   const h = headers();
+  // When running behind a proxy (like in most cloud environments), the client IP is in this header.
   const xfwd = h.get('x-forwarded-for');
-  if (xfwd) return xfwd.split(',')[0].trim();
+  if (xfwd) {
+    // The header can contain a list of IPs, the first one is the client.
+    return xfwd.split(',')[0].trim();
+  }
+  // For direct connections or local development, fall back to other headers or a default.
   const rip = h.get('x-real-ip');
-  return rip ?? '127.0.0.1'; // Fallback for local dev
+  return rip ?? '127.0.0.1';
 }
 
 function hashIp(ip: string): string {
   return crypto.createHash('sha256').update(ip).digest('hex');
 }
 
-export async function castVoteAction({ duelId, optionId }: { duelId: string; optionId: string; }): Promise<{ awardedKey: boolean; updatedDuel: Duel | null; error?: string; voteRegistered?: boolean }> {
+export async function castVoteAction({ duelId, optionId }: { duelId: string; optionId: string; }): Promise<{ awardedKey: boolean; updatedDuel: Duel | null; error?: string; voteRegisteredForGuest?: boolean }> {
     const session = await auth();
     const userId = session?.user?.id;
     
-    const duel = await prisma.duel.findUnique({ where: { id: duelId }, include: { options: true } });
+    const duel = await prisma.duel.findUnique({ where: { id: duelId }, include: { options: true, creator: true } });
     if (!duel || duel.status !== 'ACTIVE') {
         return { error: "Este duelo no está activo o no existe.", awardedKey: false, updatedDuel: null };
     }
@@ -64,17 +68,16 @@ export async function castVoteAction({ duelId, optionId }: { duelId: string; opt
     } else { // Guest user
         const ipHash = hashIp(getClientIp());
         
-        const existingGuestVote = await prisma.dueliax_guest_votes.findUnique({
+        const existingGuestVote = await prisma.guestVote.findUnique({
             where: { duel_id_ip_hash: { duel_id: duelId, ip_hash: ipHash } }
         });
 
         if (existingGuestVote) {
-            return { error: "Ya has votado en este duelo.", awardedKey: false, updatedDuel: null };
+            return { error: "Ya has votado en este duelo como invitado.", awardedKey: false, updatedDuel: null };
         }
         
-        await prisma.dueliax_guest_votes.create({
+        await prisma.guestVote.create({
           data: {
-            id: `guestvote-${Date.now()}`,
             duel_id: duelId,
             option_id: optionId,
             ip_hash: ipHash
@@ -82,18 +85,11 @@ export async function castVoteAction({ duelId, optionId }: { duelId: string; opt
         });
     }
     
-    // Increment vote count on the option in the JSON field
-    const updatedOptions = duel.options.map(opt => 
-        opt.id === optionId ? { ...opt, votes: (opt.votes || 0) + 1 } : opt
-    );
-
-    const updatedDuelResult = await prisma.duel.update({
-        where: { id: duelId },
-        data: { options: updatedOptions as any }, // Cast to any to match Prisma's expected JSON type
-        include: { options: true }
+    await prisma.duelOption.update({
+        where: { id: optionId },
+        data: { votes: { increment: 1 } },
     });
     
-    // Update user stats if logged in
     let awardedKey = false;
     if(userId) {
         await prisma.user.update({
@@ -106,17 +102,25 @@ export async function castVoteAction({ duelId, optionId }: { duelId: string; opt
         awardedKey = true;
     }
 
-    revalidatePath('/');
+    // Fetch the updated duel to return to the client
+    const updatedDuelResult = await prisma.duel.findUnique({
+        where: { id: duelId },
+        include: { options: { orderBy: { title: 'asc' }}, creator: true }
+    });
     
-    const creator = await prisma.user.findUnique({ where: { id: updatedDuelResult.creatorId } });
+    if (!updatedDuelResult) {
+       return { error: "No se pudo encontrar el duelo después de votar.", awardedKey: false, updatedDuel: null };
+    }
+    
+    revalidatePath('/');
     
     return {
         awardedKey,
-        voteRegistered: !userId,
+        voteRegisteredForGuest: !userId,
         updatedDuel: {
           ...updatedDuelResult,
           options: updatedDuelResult.options || [],
-          creator: creator ? { id: creator.id, name: creator.name || 'N/A', avatarUrl: creator.image || null } : { id: 'unknown', name: 'Usuario Desconocido', avatarUrl: null }
+          creator: updatedDuelResult.creator ? { id: updatedDuelResult.creator.id, name: updatedDuelResult.creator.name || 'N/A', avatarUrl: updatedDuelResult.creator.image || null } : { id: 'unknown', name: 'Usuario Desconocido', avatarUrl: null }
         } as Duel,
     };
 }
@@ -148,6 +152,7 @@ function processFormDataWithOptions(formData: FormData) {
 
 
 async function runModeration(data: { title:string; options:{ title:string }[] }): Promise<{ success:boolean; message?:string; errors?:{ moderation:string } }> {
+  // Moderation logic is currently disabled for simplicity, but can be re-enabled here.
   return { success: true };
 }
 
@@ -200,7 +205,6 @@ export async function createDuelAction(
     const newDuel = await prisma.$transaction(async (tx) => {
       const createdDuel = await tx.duel.create({
         data: {
-          id: `duel-${Date.now()}`,
           type,
           title,
           description,
@@ -210,14 +214,13 @@ export async function createDuelAction(
           status,
           options: {
             create: options.map(opt => ({
-              id: `opt-${Date.now()}-${Math.random()}`,
               title: opt.title,
               imageUrl: opt.imageUrl,
               affiliateUrl: opt.affiliateUrl,
             }))
           }
         },
-        include: { options: true }
+        include: { options: true, creator: true }
       });
 
       if (status === 'SCHEDULED') {
@@ -241,7 +244,11 @@ export async function createDuelAction(
     return {
       success: true,
       message: '¡Tu duelo ha sido guardado! El estado final (borrador o activo) dependerá de tus llaves.',
-      newDuel: { ...newDuel, options: newDuel.options || [] } as any, // Cast to satisfy FormState
+      newDuel: { 
+          ...newDuel, 
+          options: newDuel.options || [],
+          creator: newDuel.creator ? { id: newDuel.creator.id, name: newDuel.creator.name || 'N/A', avatarUrl: newDuel.creator.image || null } : { id: 'unknown', name: 'Usuario Desconocido', avatarUrl: null }
+      } as Duel,
     };
     
   } catch (error) {
@@ -293,9 +300,8 @@ export async function updateDuelAction(
       return { ...moderationResult, message: moderationResult.message! };
     }
     
-    // In a transaction, update the duel and its options
-    await prisma.$transaction(async (tx) => {
-        await tx.duel.update({
+    const updatedDuel = await prisma.$transaction(async (tx) => {
+        const duel = await tx.duel.update({
             where: { id: duelId },
             data: {
                 title,
@@ -303,20 +309,22 @@ export async function updateDuelAction(
                 startsAt,
                 endsAt,
                 type,
-            }
+            },
+            include: { creator: true }
         });
 
         // Delete existing options and create new ones
         await tx.duelOption.deleteMany({ where: { duelId } });
-        await tx.duelOption.createMany({
+        const newOptions = await tx.duelOption.createManyAndReturn({
             data: validatedOptions.map(opt => ({
-                id: opt.id || `opt-${duelId}-${Math.random()}`,
                 duelId,
                 title: opt.title,
                 imageUrl: opt.imageUrl,
                 affiliateUrl: opt.affiliateUrl,
             }))
         });
+
+        return { ...duel, options: newOptions };
     });
 
     revalidatePath('/admin/duels');
@@ -327,7 +335,10 @@ export async function updateDuelAction(
     return {
       success: true,
       message: '¡Duelo actualizado con éxito!',
-      updatedDuel: { id: duelId, ...validatedFields.data } as any,
+      updatedDuel: {
+          ...updatedDuel, 
+          creator: updatedDuel.creator ? { id: updatedDuel.creator.id, name: updatedDuel.creator.name || 'N/A', avatarUrl: updatedDuel.creator.image || null } : { id: 'unknown', name: 'Usuario Desconocido', avatarUrl: null }
+      } as Duel
     }
 
   } catch (error) {

@@ -96,7 +96,7 @@ interface VotingFeedProps {
 }
 
 export default function VotingFeed({ initialDuels, initialUsers, userId }: VotingFeedProps) {
-  const { setDuels, setUsers, getDuelStatus } = useAppContext();
+  const { setDuels, setUsers, getDuelStatus, updateDuel, duels: contextDuels } = useAppContext();
   const [currentDuelIndex, setCurrentDuelIndex] = useState(0);
   const [votedDuelDetails, setVotedDuelDetails] = useState<Duel | null>(null);
   const [animationClass, setAnimationClass] = useState('');
@@ -128,22 +128,14 @@ export default function VotingFeed({ initialDuels, initialUsers, userId }: Votin
   };
   
   const activeDuels = useMemo(() => 
-    initialDuels.filter(d => {
+    contextDuels.filter(d => {
         const status = getDuelStatus(d);
-        // We only check client-side voted IDs for guests. Server will handle auth'd users.
         const hasVoted = userId ? false : clientVotedIds.has(d.id);
         return status === 'active' && !hasVoted;
     }), 
-  [initialDuels, getDuelStatus, clientVotedIds, userId]);
+  [contextDuels, getDuelStatus, clientVotedIds, userId]);
 
-  const currentDuel: Duel | undefined = useMemo(() => {
-    if (activeDuels.length === 0) return undefined;
-    const newIndex = Math.min(currentDuelIndex, activeDuels.length - 1);
-    if (newIndex !== currentDuelIndex) {
-        setCurrentDuelIndex(newIndex);
-    }
-    return activeDuels[newIndex];
-  }, [activeDuels, currentDuelIndex]);
+  const currentDuel: Duel | undefined = activeDuels[currentDuelIndex];
 
   const handleVote = (selectedOption: DuelOption, direction?: 'left' | 'right') => {
     if (votedDuelDetails || !currentDuel) return;
@@ -162,11 +154,11 @@ export default function VotingFeed({ initialDuels, initialUsers, userId }: Votin
                 title: "Error al votar",
                 description: result.error,
             });
-            setAnimationClass(''); // Reset animation
+            setAnimationClass('');
             return;
         }
-
-        if (result.voteRegistered && !userId) {
+        
+        if (result.voteRegisteredForGuest) {
           const newVotedIds = new Set(clientVotedIds).add(currentDuel.id);
           setClientVotedIds(newVotedIds);
           localStorage.setItem(GUEST_VOTED_DUELS_STORAGE_KEY, JSON.stringify(Array.from(newVotedIds)));
@@ -174,6 +166,7 @@ export default function VotingFeed({ initialDuels, initialUsers, userId }: Votin
         
         if (result.updatedDuel) {
           setVotedDuelDetails(result.updatedDuel);
+          updateDuel(result.updatedDuel);
         }
 
         toast({
@@ -203,7 +196,7 @@ export default function VotingFeed({ initialDuels, initialUsers, userId }: Votin
         if (currentDuelIndex >= activeDuels.length - 1) {
             setCurrentDuelIndex(0); 
         } else {
-            // Let the re-render find the next duel
+            setCurrentDuelIndex(prev => prev + 1);
         }
       }, 300);
   }
@@ -214,8 +207,8 @@ export default function VotingFeed({ initialDuels, initialUsers, userId }: Votin
      return <VotingFeedSkeleton />;
    }
 
-  if (!duelToShow) {
-     if (initialDuels.length > 0 && activeDuels.length === 0) {
+  if (!duelToShow && initialDuels.length > 0) {
+      if (activeDuels.length === 0) {
         return (
             <div className="text-center py-16">
                 <h2 className="text-2xl font-headline mb-4">¡No hay más duelos!</h2>
@@ -225,6 +218,8 @@ export default function VotingFeed({ initialDuels, initialUsers, userId }: Votin
      }
      return <VotingFeedSkeleton />;
   }
+
+  if (!duelToShow) return <VotingFeedSkeleton />;
 
 
   return (
