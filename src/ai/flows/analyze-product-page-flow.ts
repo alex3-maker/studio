@@ -6,7 +6,7 @@
  *
  * - analyzeProductPage - A function that takes HTML content and extracts product info.
  */
-
+import { googleAI } from '@genkit-ai/googleai';
 import { ai } from '@/ai/genkit';
 import type { AnalyzeProductPageInput, AnalyzeProductPageOutput } from '@/lib/types';
 import { AnalyzeProductPageInputSchema, AnalyzeProductPageOutputSchema } from '@/lib/types';
@@ -32,7 +32,7 @@ const analyzeProductPageFlow = ai.defineFlow(
     },
     async (input) => {
         const { output } = await ai.generate({
-            model: 'gemini-pro',
+            model: googleAI.model('gemini-pro'),
             prompt: analyzePromptText,
             input,
             output: {

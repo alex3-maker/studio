@@ -8,6 +8,7 @@
  */
 import { z } from 'genkit';
 import { ai } from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
 const DuelIdeaOutputSchema = z.object({
   title: z.string().describe('The title of the duel. Should be a question.'),
@@ -24,7 +25,7 @@ const generateDuelIdeaFlow = ai.defineFlow(
   },
   async () => {
     const { output } = await ai.generate({
-      model: 'gemini-pro',
+      model: googleAI.model('gemini-pro'),
       output: { schema: DuelIdeaOutputSchema },
       prompt: `You are a creative assistant specialized in creating engaging "A vs B" style duel topics for a social voting app called DuelDash.
 
