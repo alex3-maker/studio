@@ -25,11 +25,11 @@ export const createDuelSchema = z.object({
   options: z.array(duelOptionSchema).min(1, "Debe haber al menos una opción."),
   startsAt: z.coerce.date({
       required_error: 'Por favor, selecciona una fecha de inicio.',
-      errorMap: () => ({ message: 'Por favor, selecciona una fecha de inicio válida.' }),
+      invalid_type_error: "Por favor, selecciona una fecha de inicio válida."
   }),
   endsAt: z.coerce.date({
       required_error: 'Por favor, selecciona una fecha de fin.',
-      errorMap: () => ({ message: 'Por favor, selecciona una fecha de fin válida.' }),
+      invalid_type_error: "Por favor, selecciona una fecha de fin válida."
   }),
   userKeys: z.coerce.number().optional(), // Make this optional for updates
 }).superRefine((data, ctx) => {
