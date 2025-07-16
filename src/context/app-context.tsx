@@ -2,9 +2,8 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect, Dispatch, SetStateAction } from 'react';
-import type { User, Duel, DuelOption, Notification, KeyTransaction, UserVote } from '@/lib/types';
-import { isAfter, isBefore, parseISO, formatISO } from 'date-fns';
-import { castVoteAction } from '@/lib/actions';
+import type { User, Duel, Notification, KeyTransaction, UserVote } from '@/lib/types';
+import { isAfter, isBefore, parseISO } from 'date-fns';
 
 const VOTED_DUELS_STORAGE_KEY = 'dueliax_voted_duels';
 const USER_VOTES_STORAGE_KEY = 'dueliax_user_votes';
@@ -12,7 +11,6 @@ const NOTIFICATIONS_STORAGE_KEY = 'dueliax_notifications';
 const KEY_HISTORY_STORAGE_KEY = 'dueliax_key_history';
 const API_KEY_STORAGE_KEY = 'dueliax_api_key';
 const AI_ENABLED_STORAGE_KEY = 'dueliax_ai_enabled';
-const DUEL_CREATION_COST = 5;
 
 interface AppContextType {
   duels: Duel[];
@@ -27,8 +25,8 @@ interface AppContextType {
   setApiKey: (key: string) => void;
   isAiEnabled: boolean;
   setIsAiEnabled: (enabled: boolean) => void;
-  castVote: (duelId: string, optionId: string, userId?: string) => Promise<{ awardedKey: boolean; updatedDuel: Duel | null; error?: string, voteRegistered?: boolean }>;
-  addDuel: (newDuel: Omit<Duel, 'id' | 'creator' | 'createdAt' | 'status'>, creator: Pick<User, 'id' | 'name' | 'avatarUrl'>) => Duel;
+  // castVote is now a Server Action, so it's not part of the context
+  addDuel: (newDuel: Duel, creator: Pick<User, 'id' | 'name' | 'avatarUrl'>) => void;
   updateDuel: (updatedDuel: Partial<Duel> & { id: string }) => void;
   toggleDuelStatus: (duelId: string) => void;
   deleteDuel: (duelId: string) => void;
@@ -58,8 +56,8 @@ const getStatus = (duel: Duel): Duel['status'] => {
     
     try {
         const now = new Date();
-        const startsAt = parseISO(duel.startsAt);
-        const endsAt = parseISO(duel.endsAt);
+        const startsAt = duel.startsAt instanceof Date ? duel.startsAt : parseISO(duel.startsAt);
+        const endsAt = duel.endsAt instanceof Date ? duel.endsAt : parseISO(duel.endsAt);
 
         if (isBefore(now, startsAt)) return 'SCHEDULED';
         if (isAfter(now, endsAt)) return 'CLOSED';
@@ -81,13 +79,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isAiEnabled, setAiEnabledState] = useState<boolean>(true);
   
   useEffect(() => {
+    // Load only UI-related state from localStorage.
+    // Main data (duels, users) is now passed via props from server components.
     try {
-      const storedVotedIds = localStorage.getItem(VOTED_DUELS_STORAGE_KEY);
-      if (storedVotedIds) setVotedDuelIds(JSON.parse(storedVotedIds));
-
-      const storedUserVotes = localStorage.getItem(USER_VOTES_STORAGE_KEY);
-      if (storedUserVotes) setUserVotedOptions(JSON.parse(storedUserVotes));
-        
       const storedApiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
       if (storedApiKey) setApiKeyState(storedApiKey);
       
@@ -104,9 +98,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
   
-  // Persist state to localStorage
-  useEffect(() => { localStorage.setItem(VOTED_DUELS_STORAGE_KEY, JSON.stringify(votedDuelIds)); }, [votedDuelIds]);
-  useEffect(() => { localStorage.setItem(USER_VOTES_STORAGE_KEY, JSON.stringify(userVotedOptions)); }, [userVotedOptions]);
+  // Persist UI state to localStorage
   useEffect(() => { localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifications)); }, [notifications]);
   useEffect(() => { localStorage.setItem(KEY_HISTORY_STORAGE_KEY, JSON.stringify(keyHistory)); }, [keyHistory]);
 
@@ -156,313 +148,52 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
   const getDuelStatus = useCallback((duel: Duel): Duel['status'] => getStatus(duel), []);
   
-  const spendKeys = useCallback((userId: string, amount: number, description: string) => {
-    console.warn("spendKeys should be a server action");
-    let success = false;
-    setUsers(prevUsers => {
-        const newUsers = prevUsers.map(u => {
-            if (u.id === userId && u.keys >= amount) {
-                success = true;
-                addKeyTransaction(userId, 'SPENT', amount, description);
-                addNotification(userId, {
-                  type: 'KEYS_SPENT',
-                  message: `Has gastado ${amount} llaves en: ${description}.`,
-                  link: null,
-                });
-                return {...u, keys: u.keys - amount};
-            }
-            return u;
-        })
-        return newUsers;
-    });
-    return success;
-  }, [addKeyTransaction, addNotification]);
-
-  const castVote = useCallback(async (duelId: string, optionId: string, userId?: string): Promise<{ awardedKey: boolean; updatedDuel: Duel | null; error?: string, voteRegistered?: boolean }> => {
-    const result = await castVoteAction(duelId, optionId);
-
-    if (result.error) {
-      return { ...result, awardedKey: false, updatedDuel: null };
-    }
-    
-    if (result.updatedDuel) {
-        setDuels(prevDuels => {
-           const newDuels = prevDuels.map(d => d.id === duelId ? result.updatedDuel! : d);
-           return newDuels;
-        });
-        setVotedDuelIds(prev => [...prev, duelId]);
-
-        if (result.awardedKey && userId) {
-            setUsers(prevUsers => {
-                const newUsers = prevUsers.map(u => {
-                    if (u.id === userId) {
-                        addKeyTransaction(userId, 'EARNED', 1, `Voto en "${result.updatedDuel!.title}"`);
-                        return { ...u, votesCast: u.votesCast + 1, keys: u.keys + 1 };
-                    }
-                    return u;
-                })
-                return newUsers;
-            });
-        }
-
-        if (userId) {
-            setUserVotedOptions(prevVotes => ({
-                ...prevVotes,
-                [duelId]: { optionId, timestamp: new Date().toISOString() },
-            }));
-        }
-    }
-
-    return result;
-  }, [addKeyTransaction]);
-
-  const addDuel = useCallback((newDuelData: Omit<Duel, 'id' | 'creator' | 'createdAt' | 'status'>, creator: Pick<User, 'id' | 'name' | 'avatarUrl'>): Duel => {
-    console.warn("addDuel should be a server action");
-    const creatorUser = users.find(u => u.id === creator.id);
-    if (!creatorUser) throw new Error("Creator not found");
-    
-    const hasEnoughKeys = creatorUser.keys >= DUEL_CREATION_COST;
-    const initialStatus = hasEnoughKeys ? 'SCHEDULED' : 'DRAFT'; 
-    const status = getStatus({ ...newDuelData, status: initialStatus } as Duel);
-    
-    const newDuel: Duel = { 
-      ...newDuelData, 
-      id: `duel-${Date.now()}-${Math.random()}`,
-      creator: creator,
-      createdAt: formatISO(new Date()),
-      status 
-    };
-
-    setDuels(prevDuels => {
-      const newDuels = [newDuel, ...prevDuels];
-      return newDuels;
-    });
-    
-    if (status !== 'DRAFT') {
-        spendKeys(creator.id, DUEL_CREATION_COST, `Creación de "${newDuelData.title}"`);
-    }
-    
-    setUsers(prevUsers => {
-      const newUsers = prevUsers.map(u => u.id === creator.id ? {...u, duelsCreated: u.duelsCreated + 1 } : u);
-      return newUsers;
-    });
-
-    return newDuel;
-  }, [users, spendKeys]);
-
-  const activateDraftDuel = useCallback((duelId: string, userId: string): boolean => {
-    console.warn("activateDraftDuel should be a server action");
-    const duel = duels.find(d => d.id === duelId);
-    const user = users.find(u => u.id === userId);
-    if (!duel || !user || duel.status !== 'DRAFT' || user.keys < DUEL_CREATION_COST) return false;
-    
-    const success = spendKeys(userId, DUEL_CREATION_COST, `Activación de "${duel.title}"`);
-    if (success) {
-      setDuels(prevDuels => {
-          const newDuels = prevDuels.map(d => d.id === duelId ? { ...d, status: getStatus({ ...d, status: 'ACTIVE' } as Duel) } : d);
-          return newDuels;
-      });
-    }
-    return success;
-  }, [duels, users, spendKeys]);
+  // These functions are now simulations as real logic is in Server Actions
+  // They update the client-side state for immediate UI feedback.
+  const addDuel = useCallback((newDuel: Duel) => {
+    setDuels(prev => [newDuel, ...prev]);
+  }, []);
 
   const updateDuel = useCallback((updatedDuelData: Partial<Duel> & { id: string }) => {
-    console.warn("updateDuel should be a server action");
-    setDuels(prevDuels => {
-      const newDuels = prevDuels.map(duel => {
-        if (duel.id === updatedDuelData.id) {
-          const originalDuel = prevDuels.find(d => d.id === updatedDuelData.id);
-          if (!originalDuel) return duel;
-
-          const updatedOptions = updatedDuelData.options?.map(updatedOpt => {
-            const originalOpt = originalDuel.options.find(o => o.id === updatedOpt.id);
-            return {
-              ...updatedOpt,
-              votes: originalOpt ? (originalOpt.votes || 0) : 0,
-            };
-          });
-          
-          const potentiallyUpdatedDuel = { ...duel, ...updatedDuelData, options: updatedOptions || duel.options };
-          if (updatedDuelData.startsAt || updatedDuelData.endsAt) {
-            return { ...potentiallyUpdatedDuel, status: getStatus(potentiallyUpdatedDuel) };
-          }
-          return potentiallyUpdatedDuel;
-        }
-        return duel;
-      })
-      return newDuels;
-    });
+    setDuels(prev => prev.map(d => d.id === updatedDuelData.id ? { ...d, ...updatedDuelData } : d));
   }, []);
 
   const toggleDuelStatus = useCallback((duelId: string) => {
-    console.warn("toggleDuelStatus should be a server action");
-    let notificationMessage = '';
-    let duelToNotify: Duel | undefined;
-    
-    setDuels(prevDuels => {
-      const newDuels = prevDuels.map(duel => {
-        if (duel.id === duelId) {
-          const currentStatus = getStatus(duel);
-          let newStatus: Duel['status'];
-          if (currentStatus === 'ACTIVE') {
-            newStatus = 'INACTIVE';
-            notificationMessage = `El duelo "${duel.title}" ha sido desactivado.`;
-          } else {
-            newStatus = 'ACTIVE';
-            notificationMessage = `El duelo "${duel.title}" ha sido activado de nuevo.`;
-          }
-          const tempDuel = { ...duel, status: newStatus };
-          duelToNotify = { ...tempDuel, status: getStatus(tempDuel) };
-          return duelToNotify;
-        }
-        return duel;
-      })
-      return newDuels;
-    });
-
-    if (notificationMessage && duelToNotify) {
-        addNotification(duelToNotify.creator.id, {
-            type: 'DUEL_EDITED',
-            message: notificationMessage,
-            link: `/`
-        });
-    }
-  }, [addNotification]);
-
-
-  const deleteDuel = useCallback((duelId: string) => {
-    console.warn("deleteDuel should be a server action");
-    const duelToDelete = duels.find(d => d.id === duelId);
-    if (!duelToDelete) return;
-    
-    setDuels(prevDuels => {
-      const newDuels = prevDuels.filter(duel => duel.id !== duelId);
-      return newDuels;
-    });
-    
-    setUsers(prevUsers => {
-        const newUsers = prevUsers.map(u => {
-            if (u.id === duelToDelete.creator.id) {
-                return { ...u, duelsCreated: Math.max(0, u.duelsCreated - 1) };
-            }
-            return u;
-        })
-        return newUsers;
-    });
-  }, [duels]);
-  
-  const deleteMultipleDuels = useCallback((duelIds: string[]) => {
-    console.warn("deleteMultipleDuels should be a server action");
-    const duelsToDelete = duels.filter(d => duelIds.includes(d.id));
-    if (duelsToDelete.length === 0) return;
-
-    setDuels(prevDuels => {
-      const newDuels = prevDuels.filter(duel => !duelIds.includes(duel.id));
-      return newDuels;
-    });
-
-    const duelsByCreator = duelsToDelete.reduce((acc, duel) => {
-        acc[duel.creator.id] = (acc[duel.creator.id] || 0) + 1;
-        return acc;
-    }, {} as Record<string, number>);
-
-    setUsers(prevUsers => {
-        const newUsers = prevUsers.map(u => {
-            if (duelsByCreator[u.id]) {
-                return { ...u, duelsCreated: Math.max(0, u.duelsCreated - duelsByCreator[u.id]) };
-            }
-            return u;
-        })
-        return newUsers;
-    });
-  }, [duels]);
-
-  const activateMultipleDuels = useCallback((duelIds: string[], userId: string) => {
-    console.warn("activateMultipleDuels should be a server action");
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
-    
-    const duelsToActivate = duels.filter(d => duelIds.includes(d.id));
-    const draftCount = duelsToActivate.filter(d => getStatus(d) === 'DRAFT').length;
-
-    if (user.keys < draftCount * DUEL_CREATION_COST) {
-        addNotification(userId, { type: 'KEYS_SPENT', message: 'No tienes suficientes llaves para activar los borradores seleccionados.', link: null });
-        return;
-    }
-
-    let keysSpent = 0;
-    const updatedDuels = duels.map(d => {
-        if (duelIds.includes(d.id)) {
-            const currentStatus = getStatus(d);
-            if (currentStatus === 'DRAFT') {
-                keysSpent += DUEL_CREATION_COST;
-                addKeyTransaction(userId, 'SPENT', DUEL_CREATION_COST, `Activación de "${d.title}"`);
-                const tempDuel = { ...d, status: 'ACTIVE' as Duel['status'] };
-                return { ...tempDuel, status: getStatus(tempDuel) };
-            }
-            if (['INACTIVE', 'CLOSED'].includes(currentStatus)) {
-                const tempDuel = { ...d, status: 'ACTIVE' as Duel['status'] };
-                return { ...tempDuel, status: getStatus(tempDuel) };
-            }
-        }
-        return d;
-    });
-
-    if (keysSpent > 0) {
-      setUsers(prevUsers => {
-        const newUsers = prevUsers.map(u => u.id === userId ? { ...u, keys: u.keys - keysSpent } : u);
-        return newUsers;
-      });
-    }
-    setDuels(updatedDuels);
-  }, [duels, users, addNotification, addKeyTransaction]);
-
-  const deactivateMultipleDuels = useCallback((duelIds: string[]) => {
-    console.warn("deactivateMultipleDuels should be a server action");
-    setDuels(prevDuels => {
-      const newDuels = prevDuels.map(d => {
-          if (duelIds.includes(d.id) && ['ACTIVE', 'SCHEDULED'].includes(getStatus(d))) {
-              return { ...d, status: 'INACTIVE' };
-          }
-          return d;
-      });
-      return newDuels;
-    });
+     setDuels(prev => prev.map(d => {
+       if (d.id === duelId) {
+         const currentStatus = getStatus(d);
+         const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+         const tempDuel = { ...d, status: newStatus };
+         return { ...tempDuel, status: getStatus(tempDuel) };
+       }
+       return d;
+     }));
   }, []);
 
+  const deleteDuel = useCallback((duelId: string) => {
+    setDuels(prev => prev.filter(d => d.id !== duelId));
+  }, []);
+  
+  const deleteMultipleDuels = useCallback((duelIds: string[]) => {
+    setDuels(prev => prev.filter(d => !duelIds.includes(d.id)));
+  }, []);
 
-  const resetDuelVotes = useCallback((duelId: string, isOwnerReset: boolean = false) => {
-    console.warn("resetDuelVotes should be a server action");
-    let duelToNotify: Duel | undefined;
-    setDuels(prevDuels => {
-        const newDuels = prevDuels.map(duel => {
-          if (duel.id === duelId) {
-            duelToNotify = duel;
-            const resetOptions = duel.options.map(option => ({ ...option, votes: 0 }));
-            return { ...duel, options: resetOptions };
-          }
-          return duel;
-        })
-        return newDuels;
-    });
-    
-    const updatedUserVotes = { ...userVotedOptions };
-    Object.keys(updatedUserVotes).forEach(dId => {
-      if (dId === duelId) {
-        delete updatedUserVotes[dId];
+  const activateMultipleDuels = (duelIds: string[], userId: string) => { console.warn("activateMultipleDuels needs to be a server action") };
+  const deactivateMultipleDuels = (duelIds: string[]) => { console.warn("deactivateMultipleDuels needs to be a server action") };
+
+  const resetDuelVotes = (duelId: string, isAdminReset?: boolean) => {
+    setDuels(prev => prev.map(d => {
+      if (d.id === duelId) {
+        return { ...d, options: d.options.map(o => ({ ...o, votes: 0 })) };
       }
-    });
-    setUserVotedOptions(updatedUserVotes);
-    
-    setVotedDuelIds(prevIds => prevIds.filter(id => id !== duelId));
+      return d;
+    }));
+  };
 
-    if (duelToNotify) {
-      const message = isOwnerReset 
-          ? `Has reiniciado los votos de tu duelo "${duelToNotify.title}".`
-          : `Un administrador ha reiniciado los votos del duelo "${duelToNotify.title}".`;
-      addNotification(duelToNotify.creator.id, { type: 'DUEL_RESET', message: message, link: null });
-    }
-  }, [addNotification, userVotedOptions]);
+  const activateDraftDuel = (duelId: string, userId: string): boolean => {
+    console.warn("activateDraftDuel should be a server action");
+    return false; // This must be a server action now to check keys and spend them.
+  }
 
   const markNotificationAsRead = useCallback((notificationId: string) => {
     setNotifications(prev => prev.map(n => n.id === notificationId ? {...n, read: true} : n));
@@ -480,56 +211,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setNotifications(prev => prev.filter(n => n.userId !== userId));
   }, []);
 
-  const getAllUsers = useCallback(() => {
-    return users
-  }, [users]);
-  const getUserById = useCallback((userId: string) => {
-    return users.find(u => u.id === userId)
-  }, [users]);
+  const getAllUsers = useCallback(() => users, [users]);
+  const getUserById = useCallback((userId: string) => users.find(u => u.id === userId), [users]);
+  const updateUserRole = (userId: string, newRole: 'ADMIN' | 'USER') => { console.warn("updateUserRole needs to be a server action") };
+  const deleteUser = (userId: string) => { console.warn("deleteUser needs to be a server action") };
+  const adjustUserKeys = (userId: string, amount: number, reason: string) => { console.warn("adjustUserKeys needs to be a server action") };
 
-  const updateUserRole = useCallback((userId: string, newRole: 'ADMIN' | 'USER') => {
-    console.warn("updateUserRole should be a server action");
-    setUsers(prevUsers => {
-      const newUsers = prevUsers.map(u => u.id === userId ? { ...u, role: newRole } : u);
-      return newUsers;
-    });
-  }, []);
-
-  const deleteUser = useCallback((userId: string) => {
-    console.warn("deleteUser should be a server action");
-    setUsers(prevUsers => {
-      const newUsers = prevUsers.filter(u => u.id !== userId);
-      return newUsers;
-    });
-    setDuels(prevDuels => {
-      const newDuels = prevDuels.filter(d => d.creator.id !== userId);
-      return newDuels;
-    });
-  }, []);
-  
-  const adjustUserKeys = useCallback((userId: string, amount: number, reason: string) => {
-    console.warn("adjustUserKeys should be a server action");
-    setUsers(prevUsers => {
-      const newUsers = prevUsers.map(u => {
-        if (u.id === userId) {
-          const newKeys = Math.max(0, u.keys + amount);
-          const transactionType = amount > 0 ? 'EARNED' : 'SPENT';
-          addKeyTransaction(userId, transactionType, Math.abs(amount), reason);
-          return { ...u, keys: newKeys };
-        }
-        return u;
-      })
-      return newUsers;
-    })
-  }, [addKeyTransaction]);
-
-  const value = { 
+  const value: AppContextType = { 
     duels,
     setDuels,
     users,
     setUsers,
-    castVote, 
-    addDuel, 
+    votedDuelIds, 
+    userVotedOptions,
+    notifications, 
+    keyHistory,
+    apiKey,
+    setApiKey,
+    isAiEnabled,
+    setIsAiEnabled,
+    addDuel: addDuel as any,
     updateDuel, 
     toggleDuelStatus, 
     deleteDuel, 
@@ -537,25 +238,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     activateMultipleDuels,
     deactivateMultipleDuels,
     resetDuelVotes, 
-    votedDuelIds, 
-    userVotedOptions,
     getDuelStatus, 
-    notifications, 
     markNotificationAsRead, 
     markAllNotificationsAsRead,
     deleteNotification,
     clearAllNotifications,
-    keyHistory,
     activateDraftDuel,
     getAllUsers,
     getUserById,
     updateUserRole,
     deleteUser,
     adjustUserKeys,
-    apiKey,
-    setApiKey,
-    isAiEnabled,
-    setIsAiEnabled,
   };
 
   return (

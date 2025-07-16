@@ -7,7 +7,7 @@ import { ArrowRight, Key, Smartphone, X } from 'lucide-react';
 import DuelCard from './duel-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import type { Duel, DuelOption, User } from '@/lib/types';
@@ -15,11 +15,10 @@ import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/app-context';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import DuelResultsDetails from './duel-results-details';
-import { useSession } from 'next-auth/react';
+import { castVoteAction } from '@/lib/actions';
 
 const HINT_STORAGE_KEY = 'dueliax-landscape-hint-dismissed';
 const GUEST_VOTED_DUELS_STORAGE_KEY = 'dueliax_guest_voted_duels';
-
 
 // Component for "A vs B" duel type
 function A_VS_B_Duel({ duel, onVote }: { duel: Duel, onVote: (option: DuelOption, direction: 'left' | 'right') => void }) {
@@ -62,7 +61,6 @@ function AutoAdvanceButton({ onComplete, hasMoreDuels }: { onComplete: () => voi
       onComplete();
     }, 3000);
 
-    // Update progress every 30ms for a smooth 3-second animation
     const interval = setInterval(() => {
       setProgress(prev => {
         const newProgress = prev + 1;
@@ -94,37 +92,27 @@ function AutoAdvanceButton({ onComplete, hasMoreDuels }: { onComplete: () => voi
 interface VotingFeedProps {
     initialDuels: Duel[];
     initialUsers: User[];
+    userId?: string;
 }
 
-export default function VotingFeed({ initialDuels, initialUsers }: VotingFeedProps) {
-  const { data: session } = useSession();
-  const { duels, setDuels, users, setUsers, castVote, votedDuelIds, getDuelStatus } = useAppContext();
+export default function VotingFeed({ initialDuels, initialUsers, userId }: VotingFeedProps) {
+  const { setDuels, setUsers, getDuelStatus } = useAppContext();
   const [currentDuelIndex, setCurrentDuelIndex] = useState(0);
   const [votedDuelDetails, setVotedDuelDetails] = useState<Duel | null>(null);
   const [animationClass, setAnimationClass] = useState('');
   const [isPending, startTransition] = useTransition();
   const [showHint, setShowHint] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [guestVotedDuels, setGuestVotedDuels] = useState<string[]>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [clientVotedIds, setClientVotedIds] = useState<Set<string>>(new Set());
 
-
+  // Initialize context and local state from server-passed props
   useEffect(() => {
-    if (!isInitialized) {
       setDuels(initialDuels);
       setUsers(initialUsers);
-      setIsInitialized(true);
-    }
-  }, [initialDuels, initialUsers, setDuels, setUsers, isInitialized]);
-
-
-  useEffect(() => {
-    const storedGuestVotes = localStorage.getItem(GUEST_VOTED_DUELS_STORAGE_KEY);
-    if (storedGuestVotes) {
-      setGuestVotedDuels(JSON.parse(storedGuestVotes));
-    }
-  }, []);
-
+      const guestVotes = JSON.parse(localStorage.getItem(GUEST_VOTED_DUELS_STORAGE_KEY) || '[]');
+      setClientVotedIds(new Set(guestVotes));
+  }, [initialDuels, initialUsers, setDuels, setUsers]);
+  
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       const hintDismissed = localStorage.getItem(HINT_STORAGE_KEY);
@@ -139,17 +127,14 @@ export default function VotingFeed({ initialDuels, initialUsers }: VotingFeedPro
     setShowHint(false);
   };
   
-  const allVotedIds = useMemo(() => {
-    return new Set([...votedDuelIds, ...guestVotedDuels]);
-  }, [votedDuelIds, guestVotedDuels]);
-
-
   const activeDuels = useMemo(() => 
-    duels.filter(d => {
+    initialDuels.filter(d => {
         const status = getDuelStatus(d);
-        return status === 'active' && !allVotedIds.has(d.id)
+        // We only check client-side voted IDs for guests. Server will handle auth'd users.
+        const hasVoted = userId ? false : clientVotedIds.has(d.id);
+        return status === 'active' && !hasVoted;
     }), 
-  [duels, allVotedIds, getDuelStatus]);
+  [initialDuels, getDuelStatus, clientVotedIds, userId]);
 
   const currentDuel: Duel | undefined = useMemo(() => {
     if (activeDuels.length === 0) return undefined;
@@ -160,7 +145,6 @@ export default function VotingFeed({ initialDuels, initialUsers }: VotingFeedPro
     return activeDuels[newIndex];
   }, [activeDuels, currentDuelIndex]);
 
-
   const handleVote = (selectedOption: DuelOption, direction?: 'left' | 'right') => {
     if (votedDuelDetails || !currentDuel) return;
     
@@ -170,7 +154,7 @@ export default function VotingFeed({ initialDuels, initialUsers }: VotingFeedPro
 
     setTimeout(() => {
       startTransition(async () => {
-        const result = await castVote(currentDuel.id, selectedOption.id, session?.user?.id);
+        const result = await castVoteAction({ duelId: currentDuel.id, optionId: selectedOption.id });
         
         if(result.error) {
             toast({
@@ -182,10 +166,10 @@ export default function VotingFeed({ initialDuels, initialUsers }: VotingFeedPro
             return;
         }
 
-        if (result.voteRegistered) {
-          const newGuestVotes = [...guestVotedDuels, currentDuel.id];
-          setGuestVotedDuels(newGuestVotes);
-          localStorage.setItem(GUEST_VOTED_DUELS_STORAGE_KEY, JSON.stringify(newGuestVotes));
+        if (result.voteRegistered && !userId) {
+          const newVotedIds = new Set(clientVotedIds).add(currentDuel.id);
+          setClientVotedIds(newVotedIds);
+          localStorage.setItem(GUEST_VOTED_DUELS_STORAGE_KEY, JSON.stringify(Array.from(newVotedIds)));
         }
         
         if (result.updatedDuel) {
@@ -217,22 +201,21 @@ export default function VotingFeed({ initialDuels, initialUsers }: VotingFeedPro
         setVotedDuelDetails(null);
 
         if (currentDuelIndex >= activeDuels.length - 1) {
-            // Optional: loop back to the start or show end message
             setCurrentDuelIndex(0); 
         } else {
-            // This is handled by the useMemo for currentDuel automatically
+            // Let the re-render find the next duel
         }
       }, 300);
   }
 
   const duelToShow = votedDuelDetails || currentDuel;
   
-   if (!isInitialized || isPending) {
+   if (isPending && !votedDuelDetails) {
      return <VotingFeedSkeleton />;
    }
 
   if (!duelToShow) {
-     if (duels.length > 0 && activeDuels.length === 0) {
+     if (initialDuels.length > 0 && activeDuels.length === 0) {
         return (
             <div className="text-center py-16">
                 <h2 className="text-2xl font-headline mb-4">¡No hay más duelos!</h2>
@@ -291,7 +274,7 @@ export default function VotingFeed({ initialDuels, initialUsers }: VotingFeedPro
                   <DialogTitle>Resultados: {votedDuelDetails.title}</DialogTitle>
                 </DialogHeader>
                 <DuelResultsDetails duel={votedDuelDetails} />
-                <AutoAdvanceButton onComplete={handleDialogClose} hasMoreDuels={activeDuels.length > 0} />
+                <AutoAdvanceButton onComplete={handleDialogClose} hasMoreDuels={activeDuels.length > 1} />
               </>
             )}
           </DialogContent>

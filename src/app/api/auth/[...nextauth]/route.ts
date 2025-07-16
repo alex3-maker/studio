@@ -4,18 +4,25 @@ import Credentials from 'next-auth/providers/credentials';
 import { z } from 'zod';
 import { authConfig } from '@/lib/auth.config';
 import bcrypt from 'bcryptjs';
-import { getDb } from '@/lib/db';
-import { users } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
-import type { User as DbUser } from '@/lib/types'; // Using our extended User type
+import { prisma } from '@/lib/prisma';
+import type { User as DbUser } from '@/lib/types';
 
-async function getUser(email: string): Promise<(DbUser & { password?: string }) | undefined> {
-  const db = getDb();
+async function getUser(email: string): Promise<(DbUser & { password?: string }) | null> {
   try {
-    const user = await db.query.users.findFirst({
-      where: eq(users.email, email),
+    const user = await prisma.user.findUnique({
+      where: { email },
     });
-    return user as (DbUser & { password?: string }) | undefined;
+    if (!user) return null;
+    
+    // Adapt prisma user to our DbUser type
+    return {
+        ...user,
+        avatarUrl: user.image,
+        duelsCreated: user.duelsCreated ?? 0,
+        votesCast: user.votesCast ?? 0,
+        role: user.role as 'ADMIN' | 'USER',
+        createdAt: user.createdAt?.toISOString(),
+    };
   } catch (error) {
     console.error('Failed to fetch user:', error);
     throw new Error('Failed to fetch user.');
@@ -40,9 +47,8 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           const passwordsMatch = await bcrypt.compare(password, user.password);
           
           if (passwordsMatch) {
-            // Return the full user object including the role
             const { password, ...userWithoutPassword } = user;
-            return userWithoutPassword;
+            return userWithoutPassword as any; // Cast to any to satisfy NextAuth type
           }
         }
         
