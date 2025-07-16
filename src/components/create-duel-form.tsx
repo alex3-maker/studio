@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -137,7 +138,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [productUrls, setProductUrls] = useState<string[]>(['', '']);
   const [isScraping, setIsScraping] = useState<boolean[]>([false, false]);
-  const { apiKey, isAiEnabled } = useAppContext();
+  const { apiKey, isAiEnabled, addDuel } = useAppContext();
   
   const defaultValues = duelData ? {
       type: duelData.type || 'A_VS_B',
@@ -183,26 +184,6 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
   }, [duelType, fields.length, remove]);
 
 
-  const [formSubmitted, setFormSubmitted] = useState(false);
-
-  useEffect(() => {
-    if (state.success && state.newDuel && formSubmitted) {
-        addDuel(state.newDuel);
-        toast({
-            title: '¡Éxito!',
-            description: state.message,
-        });
-        setFormSubmitted(false);
-        // router.push('/panel/mis-duelos'); // This would be handled by AppContext now
-    }
-  }, [state, addDuel, toast, formSubmitted]);
-
-  // Wrapper for the form action to set the submission flag
-  const handleFormAction = (payload: FormData) => {
-    setFormSubmitted(true);
-    formAction(payload);
-  };
-  
   // Effect to show toast on server-side validation errors
   useEffect(() => {
     if (state.message && !state.success) {
@@ -302,7 +283,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
   return (
     <Form {...form}>
       <form
-        action={handleFormAction}
+        action={formAction}
         className="space-y-8"
       >
         {isEditing && duelData?.id && <input type="hidden" name="id" value={duelData.id} />}
@@ -358,7 +339,7 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
                 />
             </div>
             
-            <div className="flex flex-col md:flex-row gap-6">
+            <div className="flex flex-col md:flex-row gap-6 items-start">
                  <div className="w-full md:w-2/3">
                     <FormField
                       control={form.control}
@@ -598,5 +579,3 @@ export default function CreateDuelForm({ user, state, formAction, duelData, isEd
     </Form>
   );
 }
-
-    
