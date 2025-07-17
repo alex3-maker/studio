@@ -1,78 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
-  provider        = "prisma-client-js"
-  binaryTargets   = ["native", "debian-openssl-3.0.x"]
-  previewFeatures = ["driverAdapters"]
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = "postgresql://postgres.ukevxalsfdtrfksdksux:z3w7v%25Twu%26%28%29@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?sslmode=require"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum DuelType {
+  A_VS_B
+  LIST
+}
+
+enum DuelStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  CLOSED
+  INACTIVE
 }
 
 model User {
-  id           String @id @default(cuid())
-  name         String
-  email        String @unique
-  password     String?
-  role         Role     @default(USER)
+  id           String  @id @default(cuid())
+  name         String?
+  email        String? @unique
+  password     String? // For NextAuth credential provider
+  emailVerified DateTime?
   image        String?
-  keys         Int      @default(0)
-  duelsCreated Int?     @default(0)
-  votesCast    Int?     @default(0)
-  createdAt    DateTime @default(now())
+  role         Role    @default(USER)
+  keys         Int     @default(5)
+  duelsCreated Int     @default(0) @map("duels_created")
+  votesCast    Int     @default(0) @map("votes_cast")
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  duels Duel[]
-  votes Vote[]
+  duels         Duel[]
+  votes         Vote[]
+  keyHistory    KeyTransaction[]
+  notifications Notification[]
+
+  @@map("User")
 }
 
 model Duel {
-  id          String  @id @default(cuid())
-  type        String
+  id          String     @id @default(cuid())
+  type        DuelType
   title       String
   description String?
-  creatorId   String
-  status      String
-  createdAt   DateTime @default(now())
-  startsAt    DateTime
-  endsAt      DateTime
+  creatorId   String     @map("creator_id")
+  status      DuelStatus
+  createdAt   DateTime   @default(now()) @map("created_at")
+  startsAt    DateTime   @map("starts_at")
+  endsAt      DateTime   @map("ends_at")
 
   creator User         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   options DuelOption[]
   votes   Vote[]
   guestVotes GuestVote[]
 
-  @@index([creatorId])
+  @@map("Duel")
 }
 
 model DuelOption {
   id           String  @id @default(cuid())
+  duelId       String  @map("duel_id")
   title        String
-  imageUrl     String?
-  affiliateUrl String?
+  imageUrl     String? @map("image_url")
+  affiliateUrl String? @map("affiliate_url")
   votes        Int     @default(0)
-  duelId       String
 
-  duel       Duel        @relation(fields: [duelId], references: [id], onDelete: Cascade)
-  votes      Vote[]
-  guestVotes GuestVote[]
+  duel  Duel   @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  Vote  Vote[]
+  GuestVote GuestVote[]
 
-  @@index([duelId])
+  @@map("DuelOption")
 }
 
 model Vote {
-  id       String @id @default(cuid())
-  userId   String
-  duelId   String
-  optionId String
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  duelId    String   @map("duel_id")
+  optionId  String   @map("option_id")
+  createdAt DateTime @default(now()) @map("created_at")
 
   user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   duel   Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
   option DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, duelId])
-  @@index([userId])
-  @@index([duelId])
-  @@index([optionId])
+  @@map("Vote")
 }
 
 model GuestVote {
@@ -80,16 +104,33 @@ model GuestVote {
   duelId    String   @map("duel_id")
   optionId  String   @map("option_id")
   ipHash    String   @map("ip_hash")
-  createdAt DateTime @default(now()) @db.Timestamptz
+  createdAt DateTime @default(dbgenerated("now()")) @map("created_at") @db.Timestamptz(6)
 
-  duel      Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
-  option    DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  duel   Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  option DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
   @@unique([duelId, ipHash], map: "dueliax_guest_votes_duel_ip_unique")
   @@map("dueliax_guest_votes")
 }
 
-enum Role {
-  USER
-  ADMIN
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  message   String
+  link      String?
+  read      Boolean  @default(false)
+  timestamp DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model KeyTransaction {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  amount      Int
+  description String
+  timestamp   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
