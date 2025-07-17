@@ -1,0 +1,93 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  password      String?
+  image         String?
+  role          String    @default("USER") // USER or ADMIN
+  keys          Int       @default(5)
+  duelsCreated  Int       @default(0)
+  votesCast     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  duels         Duel[]
+  votes         Vote[]
+}
+
+enum DuelType {
+  A_VS_B
+  LIST
+}
+
+enum DuelStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  CLOSED
+  INACTIVE
+}
+
+model Duel {
+  id          String      @id @default(cuid())
+  type        DuelType
+  title       String
+  description String?
+  creator     User        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId   String
+  status      DuelStatus
+  createdAt   DateTime    @default(now())
+  startsAt    DateTime
+  endsAt      DateTime
+  options     DuelOption[]
+  votes       Vote[]
+  guestVotes  GuestVote[]
+}
+
+model DuelOption {
+  id           String      @id @default(cuid())
+  duelId       String
+  title        String
+  imageUrl     String?
+  affiliateUrl String?
+  votes        Int         @default(0)
+  duel         Duel        @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  userVotes    Vote[]
+  guestVotes   GuestVote[]
+}
+
+model Vote {
+  id       String     @id @default(cuid())
+  userId   String
+  duelId   String
+  optionId String
+  createdAt DateTime   @default(now())
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  duel     Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  option   DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, duelId])
+}
+
+model GuestVote {
+  id        String     @id @default(cuid())
+  duelId    String
+  optionId  String
+  ipHash    String // Anonymized representation of the user
+  createdAt DateTime   @default(now())
+  duel      Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  option    DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([duelId, ipHash], name: "dueliax_guest_votes_duel_ip_unique")
+}
