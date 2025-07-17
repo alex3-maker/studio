@@ -1,5 +1,5 @@
-
 import { PrismaClient } from '@prisma/client';
+import { env } from '@/env';
 
 // Prisma's `singleton` pattern for efficient connection management.
 // Ensures that only one instance of PrismaClient is created in the application.
@@ -9,6 +9,8 @@ const globalForPrisma = global as unknown as { prisma?: PrismaClient };
 
 export const prisma =
   globalForPrisma.prisma ??
-  new PrismaClient();
+  new PrismaClient({
+    datasources: { db: { url: env.DATABASE_URL } },
+  });
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
