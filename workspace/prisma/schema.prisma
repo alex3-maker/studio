@@ -1,9 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "debian-openssl-3.0.x"]
+  provider        = "prisma-client-js"
+  binaryTargets   = ["native", "debian-openssl-3.0.x"]
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -12,29 +10,23 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  role          Role      @default(USER)
-  keys          Int       @default(5)
-  duelsCreated  Int?      @default(0)
-  votesCast     Int?      @default(0)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String @id @default(cuid())
+  name         String
+  email        String @unique
+  password     String?
+  role         Role     @default(USER)
+  image        String?
+  keys         Int      @default(0)
+  duelsCreated Int?     @default(0)
+  votesCast    Int?     @default(0)
+  createdAt    DateTime @default(now())
 
-  duels         Duel[]
-  votes         Vote[]
-  keyHistory    KeyTransaction[]
-  notifications Notification[]
-
-  @@map("users")
+  duels Duel[]
+  votes Vote[]
 }
 
 model Duel {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   type        String
   title       String
   description String?
@@ -44,84 +36,57 @@ model Duel {
   startsAt    DateTime
   endsAt      DateTime
 
-  creator     User         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  options     DuelOption[]
-  votes       Vote[]
-  guestVotes  GuestVote[]
+  creator User         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  options DuelOption[]
+  votes   Vote[]
+  guestVotes GuestVote[]
 
-  @@map("duels")
+  @@index([creatorId])
 }
 
 model DuelOption {
-  id           String   @id @default(cuid())
+  id           String  @id @default(cuid())
   title        String
   imageUrl     String?
   affiliateUrl String?
-  votes        Int      @default(0)
+  votes        Int     @default(0)
   duelId       String
 
-  duel        Duel        @relation(fields: [duelId], references: [id], onDelete: Cascade)
-  Vote        Vote[]
-  GuestVote   GuestVote[]
+  duel       Duel        @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  votes      Vote[]
+  guestVotes GuestVote[]
 
-  @@map("duel_options")
+  @@index([duelId])
 }
 
 model Vote {
-  id        String   @id @default(cuid())
-  userId    String
-  duelId    String
-  optionId  String
-  createdAt DateTime @default(now())
+  id       String @id @default(cuid())
+  userId   String
+  duelId   String
+  optionId String
 
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  duel      Duel      @relation(fields: [duelId], references: [id], onDelete: Cascade)
-  option    DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  duel   Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  option DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, duelId])
-  @@map("votes")
+  @@index([userId])
+  @@index([duelId])
+  @@index([optionId])
 }
 
 model GuestVote {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Text
-  duelId    String
-  optionId  String
-  ipHash    String
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  duelId    String   @map("duel_id")
+  optionId  String   @map("option_id")
+  ipHash    String   @map("ip_hash")
+  createdAt DateTime @default(now()) @db.Timestamptz
 
-  duel      Duel      @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  duel      Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
   option    DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
-  @@unique([duelId, ipHash], name: "dueliax_guest_votes_duel_id_ip_hash_key")
+  @@unique([duelId, ipHash], map: "dueliax_guest_votes_duel_ip_unique")
   @@map("dueliax_guest_votes")
-}
-
-
-model KeyTransaction {
-  id          String   @id @default(cuid())
-  userId      String
-  type        String
-  amount      Int
-  description String
-  timestamp   DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id])
-
-  @@map("key_transactions")
-}
-
-model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  type      String
-  message   String
-  link      String?
-  timestamp DateTime @default(now())
-  read      Boolean  @default(false)
-
-  user User @relation(fields: [userId], references: [id])
-
-  @@map("notifications")
 }
 
 enum Role {
