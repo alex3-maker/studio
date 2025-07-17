@@ -1,5 +1,6 @@
+
 import { PrismaClient } from '@prisma/client';
-import { env } from '@/env';
+import { env } from '../env';
 
 // Prisma's `singleton` pattern for efficient connection management.
 // Ensures that only one instance of PrismaClient is created in the application.
