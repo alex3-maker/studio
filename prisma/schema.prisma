@@ -12,68 +12,66 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  name         String?
-  email        String?   @unique
-  emailVerified DateTime? @map("email_verified")
+  id           String @id @default(cuid())
+  name         String
+  email        String @unique
+  passwordHash String? @map("password_hash")
   image        String?
-  password     String?
-  role         Role      @default(USER)
-  keys         Int       @default(0)
-  duelsCreated Int?      @default(0) @map("duels_created")
-  votesCast    Int?      @default(0) @map("votes_cast")
-  createdAt    DateTime  @default(now()) @map("created_at")
+  role         Role   @default(USER)
+  keys         Int    @default(0)
+  duelsCreated Int    @default(0)
+  votesCast    Int    @default(0)
+
+  createdAt DateTime @default(now())
 
   duels         Duel[]
   votes         Vote[]
-  
-  @@map("users")
+  keyHistory    KeyTransaction[]
+  notifications Notification[]
 }
 
 model Duel {
   id          String   @id @default(cuid())
-  type        String
+  type        DuelType
   title       String
-  description String
-  creatorId   String   @map("creator_id")
-  status      String
-  createdAt   DateTime @default(now()) @map("created_at")
-  startsAt    DateTime @map("starts_at")
-  endsAt      DateTime @map("ends_at")
+  description String?
+  creatorId   String
+  status      DuelStatus @default(DRAFT)
+  createdAt   DateTime @default(now())
+  startsAt    DateTime
+  endsAt      DateTime
 
-  creator     User          @relation(fields: [creatorId], references: [id])
-  options     DuelOption[]
-  votes       Vote[]
-  guestVotes  GuestVote[]
+  creator User         @relation(fields: [creatorId], references: [id])
+  options DuelOption[]
+  votes   Vote[]
+  guestVotes GuestVote[]
 
   @@map("Duel")
 }
 
 model DuelOption {
-  id            String  @id @default(cuid())
-  duelId        String  @map("duel_id")
-  title         String
-  imageUrl      String? @map("image_url")
-  affiliateUrl  String? @map("affiliate_url")
-  votes         Int     @default(0)
+  id           String  @id @default(cuid())
+  title        String
+  imageUrl     String?
+  affiliateUrl String?
+  votes        Int     @default(0)
+  duelId       String
 
-  duel          Duel        @relation(fields: [duelId], references: [id], onDelete: Cascade)
-  votes         Vote[]
-  guestVotes    GuestVote[]
-  
+  duel       Duel        @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  guestVotes GuestVote[]
+
   @@map("DuelOption")
 }
 
 model Vote {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  duelId    String   @map("duel_id")
-  optionId  String   @map("option_id")
-  createdAt DateTime @default(now()) @map("created_at")
+  id       String @id @default(cuid())
+  userId   String
+  duelId   String
+  optionId String
 
-  user      User       @relation(fields: [userId], references: [id])
-  duel      Duel       @relation(fields: [duelId], references: [id])
-  option    DuelOption @relation(fields: [optionId], references: [id])
+  user   User       @relation(fields: [userId], references: [id])
+  duel   Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  option DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, duelId])
   @@map("Vote")
@@ -84,17 +82,65 @@ model GuestVote {
   duelId    String   @map("duel_id")
   optionId  String   @map("option_id")
   ipHash    String   @map("ip_hash")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdAt DateTime @default(dbgenerated("now()")) @map("created_at") @db.Timestamptz(6)
 
-  duel      Duel      @relation(fields: [duelId], references: [id], onDelete: Cascade)
-  option    DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  duel   Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  option DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
   @@unique([duelId, ipHash], map: "dueliax_guest_votes_duel_ip_unique")
   @@map("dueliax_guest_votes")
 }
 
 
+model KeyTransaction {
+  id          String           @id @default(cuid())
+  userId      String
+  type        TransactionType
+  amount      Int
+  description String
+  timestamp   DateTime         @default(now())
+  user        User             @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  message   String
+  link      String?
+  timestamp DateTime         @default(now())
+  read      Boolean          @default(false)
+  user      User             @relation(fields: [userId], references: [id])
+}
+
+
+enum DuelType {
+  A_VS_B
+  LIST
+}
+
+enum DuelStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  CLOSED
+  INACTIVE
+}
+
 enum Role {
   USER
   ADMIN
+}
+
+enum TransactionType {
+  EARNED
+  SPENT
+}
+
+enum NotificationType {
+  DUEL_CLOSED
+  DUEL_EDITED
+  DUEL_RESET
+  WINNER_CHANGED
+  KEYS_SPENT
 }
