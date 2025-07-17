@@ -17,33 +17,30 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
-  role          String    @default("USER") // USER or ADMIN
+  role          String    @default("USER") // ADMIN or USER
   keys          Int       @default(0)
   duelsCreated  Int       @default(0)
   votesCast     Int       @default(0)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-
-  duels       Duel[]
-  votes       Vote[]
-  guestVotes  GuestVote[]
+  duels         Duel[]
+  votes         Vote[]
 }
 
 model Duel {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   type        String // A_VS_B or LIST
   title       String
   description String?
+  creator     User         @relation(fields: [creatorId], references: [id])
   creatorId   String
-  status      String   @default("DRAFT") // DRAFT, SCHEDULED, ACTIVE, CLOSED, INACTIVE
-  createdAt   DateTime @default(now())
+  status      String // DRAFT, SCHEDULED, ACTIVE, CLOSED, INACTIVE
+  createdAt   DateTime     @default(now())
   startsAt    DateTime
   endsAt      DateTime
-
-  creator User          @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  options DuelOption[]
-  votes   Vote[]
-  guestVotes GuestVote[]
+  options     DuelOption[]
+  votes       Vote[]
+  guestVotes  GuestVote[]
 }
 
 model DuelOption {
@@ -53,35 +50,28 @@ model DuelOption {
   imageUrl     String?
   affiliateUrl String?
   votes        Int     @default(0)
-
-  duel  Duel   @relation(fields: [duelId], references: [id], onDelete: Cascade)
-  votes Vote[]
-  guestVotes GuestVote[]
+  duel         Duel    @relation(fields: [duelId], references: [id], onDelete: Cascade)
 }
 
 model Vote {
-  id        String   @id @default(cuid())
-  userId    String
-  duelId    String
-  optionId  String
-  createdAt DateTime @default(now())
-
-  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  duel   Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
-  option DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  id       String     @id @default(cuid())
+  userId   String
+  duelId   String
+  optionId String
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  duel     Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  option   DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, duelId])
 }
 
 model GuestVote {
-  id        String @id @default(cuid())
-  ipHash    String
-  duelId    String
-  optionId  String
-  createdAt DateTime @default(now())
-
-  duel   Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
-  option DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
-
-  @@unique([ipHash, duelId], name: "dueliax_guest_votes_duel_ip_unique")
+  id       String   @id @default(cuid())
+  duelId   String
+  optionId String
+  ipHash   String
+  duel     Duel     @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  option   DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  
+  @@unique([duelId, ipHash], name: "dueliax_guest_votes_duel_ip_unique")
 }
