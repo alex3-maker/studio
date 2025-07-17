@@ -1,4 +1,3 @@
-
 import type { NextAuthConfig } from 'next-auth';
 import { env } from '../env';
  
