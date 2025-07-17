@@ -1,6 +1,6 @@
 
 import type { NextAuthConfig } from 'next-auth';
-import { env } from '@/env';
+import { env } from '../env';
  
 export const authConfig = {
   pages: {
