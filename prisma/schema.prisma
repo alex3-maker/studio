@@ -12,135 +12,106 @@ datasource db {
 }
 
 model User {
-  id           String @id @default(cuid())
-  name         String
-  email        String @unique
-  passwordHash String? @map("password_hash")
-  image        String?
-  role         Role   @default(USER)
-  keys         Int    @default(0)
-  duelsCreated Int    @default(0)
-  votesCast    Int    @default(0)
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime? @map("email_verified")
+  image         String?
+  role          String    @default("USER") // ADMIN or USER
+  keys          Int       @default(0)
+  duelsCreated  Int       @default(0) @map("duels_created")
+  votesCast     Int       @default(0) @map("votes_cast")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  password      String?
 
-  createdAt DateTime @default(now())
+  duels    Duel[]
+  votes    Vote[]
+  accounts Account[]
+  sessions Session[]
 
-  duels         Duel[]
-  votes         Vote[]
-  keyHistory    KeyTransaction[]
-  notifications Notification[]
+  @@map("users")
 }
 
 model Duel {
-  id          String   @id @default(cuid())
-  type        DuelType
+  id          String       @id @default(cuid())
+  type        String       @default("A_VS_B") // A_VS_B or LIST
   title       String
   description String?
   creatorId   String
-  status      DuelStatus @default(DRAFT)
-  createdAt   DateTime @default(now())
+  status      String       @default("DRAFT") // DRAFT, SCHEDULED, ACTIVE, CLOSED, INACTIVE
+  createdAt   DateTime     @default(now())
   startsAt    DateTime
   endsAt      DateTime
-
-  creator User         @relation(fields: [creatorId], references: [id])
-  options DuelOption[]
-  votes   Vote[]
-  guestVotes GuestVote[]
-
-  @@map("Duel")
+  options     DuelOption[]
+  votes       Vote[]
+  guestVotes  GuestVote[]
+  creator     User         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 }
 
 model DuelOption {
-  id           String  @id @default(cuid())
-  title        String
-  imageUrl     String?
-  affiliateUrl String?
-  votes        Int     @default(0)
-  duelId       String
-
-  duel       Duel        @relation(fields: [duelId], references: [id], onDelete: Cascade)
-  guestVotes GuestVote[]
-
-  @@map("DuelOption")
+  id            String  @id @default(cuid())
+  duelId        String
+  title         String
+  imageUrl      String?
+  affiliateUrl  String?
+  votes         Int     @default(0)
+  duel          Duel    @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  userVotes     Vote[] // The field that links back to the Vote model
 }
 
 model Vote {
-  id       String @id @default(cuid())
+  id       String     @id @default(cuid())
   userId   String
   duelId   String
   optionId String
-
-  user   User       @relation(fields: [userId], references: [id])
-  duel   Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
-  option DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  duel      Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  option    DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, duelId])
-  @@map("Vote")
 }
 
 model GuestVote {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Text
-  duelId    String   @map("duel_id")
-  optionId  String   @map("option_id")
-  ipHash    String   @map("ip_hash")
-  createdAt DateTime @default(dbgenerated("now()")) @map("created_at") @db.Timestamptz(6)
+  id        String   @id @default(cuid())
+  duelId    String
+  optionId  String
+  ipHash    String // Hashed IP address
+  createdAt DateTime @default(now())
 
-  duel   Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
-  option DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  duel Duel @relation(fields: [duelId], references: [id], onDelete: Cascade)
 
-  @@unique([duelId, ipHash], map: "dueliax_guest_votes_duel_ip_unique")
-  @@map("dueliax_guest_votes")
+  @@unique([duelId, ipHash], name: "dueliax_guest_votes_duel_ip_unique")
+  @@map("guest_votes")
 }
 
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
 
-model KeyTransaction {
-  id          String           @id @default(cuid())
-  userId      String
-  type        TransactionType
-  amount      Int
-  description String
-  timestamp   DateTime         @default(now())
-  user        User             @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
 }
 
-model Notification {
-  id        String           @id @default(cuid())
-  userId    String
-  type      NotificationType
-  message   String
-  link      String?
-  timestamp DateTime         @default(now())
-  read      Boolean          @default(false)
-  user      User             @relation(fields: [userId], references: [id])
-}
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-
-enum DuelType {
-  A_VS_B
-  LIST
-}
-
-enum DuelStatus {
-  DRAFT
-  SCHEDULED
-  ACTIVE
-  CLOSED
-  INACTIVE
-}
-
-enum Role {
-  USER
-  ADMIN
-}
-
-enum TransactionType {
-  EARNED
-  SPENT
-}
-
-enum NotificationType {
-  DUEL_CLOSED
-  DUEL_EDITED
-  DUEL_RESET
-  WINNER_CHANGED
-  KEYS_SPENT
+  @@map("sessions")
 }
