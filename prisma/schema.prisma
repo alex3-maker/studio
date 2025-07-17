@@ -32,46 +32,58 @@ model Duel {
   type        String // A_VS_B or LIST
   title       String
   description String?
-  creator     User         @relation(fields: [creatorId], references: [id])
-  creatorId   String
-  status      String // DRAFT, SCHEDULED, ACTIVE, CLOSED, INACTIVE
+  status      String       @default("DRAFT") // DRAFT, SCHEDULED, ACTIVE, CLOSED, INACTIVE
   createdAt   DateTime     @default(now())
   startsAt    DateTime
   endsAt      DateTime
+  creatorId   String
+  creator     User         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   options     DuelOption[]
   votes       Vote[]
   guestVotes  GuestVote[]
+
+  @@index([creatorId])
 }
 
 model DuelOption {
-  id           String  @id @default(cuid())
-  duelId       String
+  id           String      @id @default(cuid())
   title        String
   imageUrl     String?
   affiliateUrl String?
-  votes        Int     @default(0)
-  duel         Duel    @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  votes        Int         @default(0)
+  duelId       String
+  duel         Duel        @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  userVotes    Vote[]
+  guestVotes   GuestVote[]
+
+  @@index([duelId])
 }
 
 model Vote {
-  id       String     @id @default(cuid())
-  userId   String
-  duelId   String
-  optionId String
+  id        String   @id @default(cuid())
+  userId    String
+  duelId    String
+  optionId  String
+  createdAt DateTime @default(now())
+
   user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   duel     Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
   option   DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, duelId])
+  @@index([optionId])
 }
 
 model GuestVote {
-  id       String   @id @default(cuid())
-  duelId   String
-  optionId String
-  ipHash   String
+  id        String   @id @default(cuid())
+  ipHash    String // Anonymized IP hash
+  duelId    String
+  optionId  String
+  createdAt DateTime @default(now())
+
   duel     Duel     @relation(fields: [duelId], references: [id], onDelete: Cascade)
   option   DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
-  
-  @@unique([duelId, ipHash], name: "dueliax_guest_votes_duel_ip_unique")
+
+  @@unique([ipHash, duelId], name: "dueliax_guest_votes_duel_ip_unique")
+  @@index([optionId])
 }
