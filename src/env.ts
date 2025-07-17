@@ -1,9 +1,4 @@
-import * as path from 'path';
-import dotenv from 'dotenv';
 import { z } from 'zod';
-
-// Load .env from the project root, even if the process starts elsewhere.
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const EnvSchema = z.object({
   DATABASE_URL: z.string().url('DATABASE_URL is not a valid URL'),
