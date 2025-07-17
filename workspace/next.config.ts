@@ -1,13 +1,10 @@
 // @ts-check
-import dotenv from 'dotenv';
-
-// Load environment variables from .env file
-dotenv.config();
+import type {NextConfig} from 'next';
 
 /**
  * @type {import('next').NextConfig}
  */
-const nextConfig = {
+const nextConfig: NextConfig = {
   /* config options here */
   experimental: {},
   typescript: {
