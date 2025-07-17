@@ -1,6 +1,14 @@
 
 import { PrismaClient } from '@prisma/client';
 
+// Prisma's `singleton` pattern for efficient connection management.
+// Ensures that only one instance of PrismaClient is created in the application.
+// This is crucial in serverless environments like Next.js to prevent exhausting database connections.
+
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL is not defined in the server environment');
+}
+
 const globalForPrisma = global as unknown as { prisma?: PrismaClient };
 
 export const prisma =

@@ -70,8 +70,8 @@ export async function signup(prevState: any, formData: FormData) {
             data: {
                 name,
                 email,
-                password: hashedPassword,
-                image: `https://i.pravatar.cc/150?u=${email}`,
+                passwordHash: hashedPassword,
+                avatarUrl: `https://i.pravatar.cc/150?u=${email}`,
                 role: 'USER',
                 keys: 5,
             }
