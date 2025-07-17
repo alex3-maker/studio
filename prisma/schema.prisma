@@ -8,81 +8,80 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // The DATABASE_URL is hardcoded to ensure connectivity in this environment.
-  // In a typical production setup, you would use env("DATABASE_URL").
-  url      = "postgresql://postgres:[z3w7v%25Twu&()]@db.ukevxalsfdtrfksdksux.supabase.co:5432/postgres"
+  url      = "postgresql://postgres:z3w7v%25Twu%26%28%29@db.ukevxalsfdtrfksdksux.supabase.co:5432/postgres"
 }
 
 model User {
   id           String    @id @default(cuid())
   name         String?
-  email        String    @unique
-  passwordHash String?   @map("password_hash")
-  avatarUrl    String?   @map("avatar_url")
-  keys         Int       @default(5)
-  duelsCreated Int       @default(0) @map("duels_created")
-  votesCast    Int       @default(0) @map("votes_cast")
+  email        String?   @unique
+  emailVerified DateTime? @map("email_verified")
+  image        String?
+  password     String?
   role         Role      @default(USER)
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  keys          Int       @default(5)
+  duelsCreated  Int       @default(0)
+  votesCast     Int       @default(0)
 
   duels         Duel[]
   votes         Vote[]
 }
 
 model Duel {
-  id          String       @id @default(cuid())
-  type        String
+  id          String   @id @default(cuid())
+  type        String   @default("A_VS_B")
   title       String
   description String?
-  creatorId   String       @map("creator_id")
-  status      String       @default("DRAFT")
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
-  startsAt    DateTime     @map("starts_at")
-  endsAt      DateTime     @map("ends_at")
-
-  creator     User         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId   String
+  status      String   @default("DRAFT")
+  createdAt   DateTime @default(now()) @map("created_at")
+  startsAt    DateTime @default(now()) @map("starts_at")
+  endsAt      DateTime @map("ends_at")
+  
+  creator     User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   options     DuelOption[]
   votes       Vote[]
   guestVotes  GuestVote[]
 }
 
 model DuelOption {
-  id           String  @id @default(cuid())
-  duelId       String  @map("duel_id")
-  title        String
-  imageUrl     String? @map("image_url")
-  affiliateUrl String? @map("affiliate_url")
-  votes        Int     @default(0)
+  id            String    @id @default(cuid())
+  duelId        String
+  title         String
+  imageUrl      String?
+  affiliateUrl  String?
+  votes         Int       @default(0)
 
-  duel        Duel        @relation(fields: [duelId], references: [id], onDelete: Cascade)
-  voteRecords Vote[]
-  guestVotes  GuestVote[]
+  duel          Duel      @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  userVotes     Vote[]
+  guestVotes    GuestVote[]
 }
 
 model Vote {
   id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  duelId    String   @map("duel_id")
-  optionId  String   @map("option_id")
-  createdAt DateTime @default(now()) @map("created_at")
+  userId    String
+  duelId    String
+  optionId  String
+  createdAt DateTime @default(now())
 
-  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  duel   Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
-  option DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  duel      Duel     @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  option    DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, duelId])
 }
 
 model GuestVote {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Text
+  id        String   @id @default(cuid())
   duelId    String   @map("duel_id")
   optionId  String   @map("option_id")
   ipHash    String   @map("ip_hash")
-  createdAt DateTime @default(dbgenerated("now()")) @map("created_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  duel      Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  duel      Duel      @relation(fields: [duelId], references: [id], onDelete: Cascade)
   option    DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
   @@unique([duelId, ipHash], map: "dueliax_guest_votes_duel_ip_unique")
