@@ -5,24 +5,14 @@ import { z } from 'zod';
 import { authConfig } from '@/lib/auth.config';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
-import type { User as DbUser } from '@/lib/types';
+import type { User as DbUser } from '@prisma/client';
 
-async function getUser(email: string): Promise<(DbUser & { password?: string }) | null> {
+async function getUser(email: string): Promise<DbUser | null> {
   try {
     const user = await prisma.user.findUnique({
       where: { email },
     });
-    if (!user) return null;
-    
-    // Adapt prisma user to our DbUser type
-    return {
-        ...user,
-        avatarUrl: user.image,
-        duelsCreated: user.duelsCreated ?? 0,
-        votesCast: user.votesCast ?? 0,
-        role: user.role as 'ADMIN' | 'USER',
-        createdAt: user.createdAt?.toISOString(),
-    };
+    return user;
   } catch (error) {
     console.error('Failed to fetch user:', error);
     throw new Error('Failed to fetch user.');
@@ -47,8 +37,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           const passwordsMatch = await bcrypt.compare(password, user.password);
           
           if (passwordsMatch) {
-            const { password, ...userWithoutPassword } = user;
-            return userWithoutPassword as any; // Cast to any to satisfy NextAuth type
+            return user;
           }
         }
         

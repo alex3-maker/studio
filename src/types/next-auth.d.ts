@@ -1,6 +1,5 @@
 
 import NextAuth, { type DefaultSession } from 'next-auth';
-import type { User as DbUser } from '@/lib/types';
 
 declare module 'next-auth' {
   /**
@@ -14,7 +13,10 @@ declare module 'next-auth' {
   }
 
   // Override the default User type to include our custom fields
-  interface User extends DbUser {}
+  interface User {
+      id: string;
+      role?: 'ADMIN' | 'USER';
+  }
 }
 
 declare module 'next-auth/jwt' {
@@ -22,8 +24,5 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
     role: 'ADMIN' | 'USER';
-    name: string | null;
-    email: string | null;
-    picture: string | null;
   }
 }

@@ -86,23 +86,27 @@ export async function signup(prevState: any, formData: FormData) {
        };
     }
     
+    // After successful creation, try to sign in
     try {
         await signIn('credentials', {
             email,
             password,
             redirectTo: '/',
         });
+        // This part is unlikely to be reached if signIn is successful, as it redirects.
         return { success: true, message: '¡Registro completado!' };
     } catch (error) {
         if (error instanceof AuthError) {
             console.error('Error signing in after signup:', error);
-            return { success: true, message: '¡Registro completado! Por favor, inicia sesión.' };
+            // Even if sign-in fails, registration was successful.
+            // The user can now log in manually.
+            return { success: true, message: '¡Registro completado! Ahora puedes iniciar sesión.' };
         }
         console.error('Unexpected error during signIn after signup:', error);
         const errorMessage = error instanceof Error ? error.message : String(error);
         return {
             success: false,
-            message: `Un error inesperado ocurrió. Detalle: ${errorMessage}`,
+            message: `El registro fue exitoso, pero ocurrió un error al iniciar sesión automáticamente. Detalle: ${errorMessage}`,
         };
     }
 }

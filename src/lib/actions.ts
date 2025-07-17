@@ -50,79 +50,86 @@ export async function castVoteAction({ duelId, optionId }: { duelId: string; opt
     const session = await auth();
     const userId = session?.user?.id;
     
-    const duel = await prisma.duel.findUnique({ where: { id: duelId }, include: { options: true, creator: true } });
-    if (!duel || duel.status !== 'ACTIVE') {
-        return { error: "Este duelo no está activo o no existe.", awardedKey: false, updatedDuel: null };
-    }
+    try {
+      const duel = await prisma.duel.findUnique({ where: { id: duelId } });
+      if (!duel || duel.status !== 'ACTIVE') {
+          return { error: "Este duelo no está activo o no existe.", awardedKey: false, updatedDuel: null };
+      }
 
-    if (userId) { // Authenticated user
-        const existingVote = await prisma.vote.findUnique({
-            where: { userId_duelId: { userId, duelId } },
-        });
-        if (existingVote) {
-             return { error: "Ya has votado en este duelo.", awardedKey: false, updatedDuel: null };
-        }
-        await prisma.vote.create({
-            data: { userId, duelId, optionId }
-        });
-    } else { // Guest user
-        const ipHash = hashIp(getClientIp());
-        
-        const existingGuestVote = await prisma.guestVote.findUnique({
-            where: { duelId_ipHash: { duelId: duelId, ipHash: ipHash } }
-        });
-
-        if (existingGuestVote) {
-            return { error: "Ya has votado en este duelo como invitado.", awardedKey: false, updatedDuel: null };
-        }
-        
-        await prisma.guestVote.create({
-          data: {
-            duelId: duelId,
-            optionId: optionId,
-            ipHash: ipHash
+      if (userId) { // Authenticated user
+          const existingVote = await prisma.vote.findUnique({
+              where: { userId_duelId: { userId, duelId } },
+          });
+          if (existingVote) {
+              return { error: "Ya has votado en este duelo.", awardedKey: false, updatedDuel: null };
           }
-        });
-    }
-    
-    await prisma.duelOption.update({
-        where: { id: optionId },
-        data: { votes: { increment: 1 } },
-    });
-    
-    let awardedKey = false;
-    if(userId) {
-        await prisma.user.update({
-            where: { id: userId },
-            data: { 
-                votesCast: { increment: 1 },
-                keys: { increment: 1 }
-            }
-        });
-        awardedKey = true;
-    }
+          await prisma.vote.create({
+              data: { userId, duelId, optionId }
+          });
+      } else { // Guest user
+          const ipHash = hashIp(getClientIp());
+          
+          const existingGuestVote = await prisma.guestVote.findUnique({
+              where: { dueliax_guest_votes_duel_ip_unique: { duelId, ipHash } }
+          });
 
-    // Fetch the updated duel to return to the client
-    const updatedDuelResult = await prisma.duel.findUnique({
-        where: { id: duelId },
-        include: { options: { orderBy: { title: 'asc' }}, creator: true }
-    });
-    
-    if (!updatedDuelResult) {
-       return { error: "No se pudo encontrar el duelo después de votar.", awardedKey: false, updatedDuel: null };
+          if (existingGuestVote) {
+              return { error: "Ya has votado en este duelo como invitado.", awardedKey: false, updatedDuel: null };
+          }
+          
+          await prisma.guestVote.create({
+            data: {
+              duelId: duelId,
+              optionId: optionId,
+              ipHash: ipHash
+            }
+          });
+      }
+      
+      // Increment vote count on the option
+      await prisma.duelOption.update({
+          where: { id: optionId },
+          data: { votes: { increment: 1 } },
+      });
+      
+      let awardedKey = false;
+      if(userId) {
+          await prisma.user.update({
+              where: { id: userId },
+              data: { 
+                  votesCast: { increment: 1 },
+                  keys: { increment: 1 }
+              }
+          });
+          awardedKey = true;
+      }
+
+      // Fetch the updated duel to return to the client
+      const updatedDuelResult = await prisma.duel.findUnique({
+          where: { id: duelId },
+          include: { options: { orderBy: { title: 'asc' }}, creator: true }
+      });
+      
+      if (!updatedDuelResult) {
+        return { error: "No se pudo encontrar el duelo después de votar.", awardedKey: false, updatedDuel: null };
+      }
+      
+      revalidatePath('/');
+      
+      return {
+          awardedKey,
+          voteRegisteredForGuest: !userId,
+          updatedDuel: {
+            ...updatedDuelResult,
+            options: updatedDuelResult.options || [],
+            creator: updatedDuelResult.creator ? { id: updatedDuelResult.creator.id, name: updatedDuelResult.creator.name || 'N/A', avatarUrl: updatedDuelResult.creator.image || null } : { id: 'unknown', name: 'Usuario Desconocido', avatarUrl: null }
+          } as Duel,
+      };
+
+    } catch (e: any) {
+        console.error('Error casting vote:', e);
+        return { error: `Ocurrió un error en el servidor: ${e.message}`, awardedKey: false, updatedDuel: null };
     }
-    
-    revalidatePath('/');
-    
-    return {
-        awardedKey,
-        voteRegisteredForGuest: !userId,
-        updatedDuel: {
-          ...updatedDuelResult,
-          options: updatedDuelResult.options || [],
-          creator: updatedDuelResult.creator ? { id: updatedDuelResult.creator.id, name: updatedDuelResult.creator.name || 'N/A', avatarUrl: updatedDuelResult.creator.image || null } : { id: 'unknown', name: 'Usuario Desconocido', avatarUrl: null }
-        } as Duel,
-    };
 }
 
 

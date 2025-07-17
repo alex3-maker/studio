@@ -32,7 +32,7 @@ async function getInitialData() {
         const transformedUsers: User[] = users.map(u => ({
           id: u.id,
           name: u.name || 'N/A',
-          email: u.email,
+          email: u.email || '',
           avatarUrl: u.image || null,
           keys: u.keys,
           duelsCreated: u.duelsCreated ?? 0,
@@ -44,6 +44,7 @@ async function getInitialData() {
         return { duels: transformedDuels as Duel[], users: transformedUsers };
     } catch (error) {
         console.error("Failed to fetch initial data from database:", error);
+        // In case of a database error, return empty arrays to prevent a crash
         return { duels: [], users: [] };
     }
 }

@@ -7,106 +7,91 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("POSTGRES_URL")
 }
 
 model User {
-  id            String          @id @default(cuid())
-  name          String
-  email         String          @unique
-  password      String?
-  image         String?
-  role          Role            @default(USER)
-  duelsCreated  Int             @default(0)
-  votesCast     Int             @default(0)
-  keys          Int             @default(0)
-  createdAt     DateTime        @default(now()) @map("created_at")
-  duels         Duel[]
-  votes         Vote[]
-  notifications Notification[]
-  keyHistory    KeyTransaction[]
+  id           String    @id @default(cuid())
+  name         String?
+  email        String?   @unique
+  emailVerified DateTime?
+  image        String?
+  password     String?
+  role         Role      @default(USER)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  keys         Int       @default(5)
+  duelsCreated Int       @default(0)
+  votesCast    Int       @default(0)
+
+  duels    Duel[]
+  votes    Vote[]
 }
 
 model Duel {
-  id          String       @id @default(cuid())
-  type        String
+  id          String   @id @default(cuid())
   title       String
-  description String
+  description String?
+  type        String   @default("A_VS_B") // A_VS_B or LIST
+  status      String   @default("DRAFT") // DRAFT, SCHEDULED, ACTIVE, CLOSED, INACTIVE
+  
+  createdAt   DateTime @default(now())
+  startsAt    DateTime @default(now())
+  endsAt      DateTime
+  
   creatorId   String
-  status      String
-  createdAt   DateTime     @default(now()) @map("created_at")
-  startsAt    DateTime     @map("starts_at")
-  endsAt      DateTime     @map("ends_at")
-  creator     User         @relation(fields: [creatorId], references: [id])
+  creator     User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  
   options     DuelOption[]
-  votes       Vote[]
   guestVotes  GuestVote[]
-
-  @@map("Duel")
+  votes       Vote[]
 }
 
 model DuelOption {
-  id           String      @id @default(cuid())
-  duelId       String
+  id           String  @id @default(cuid())
   title        String
   imageUrl     String?
   affiliateUrl String?
-  votes        Int         @default(0)
-  duel         Duel        @relation(fields: [duelId], references: [id])
-  voters       Vote[]
-  guestVoters  GuestVote[]
-
-  @@map("DuelOption")
+  votes        Int     @default(0)
+  
+  duelId       String
+  duel         Duel    @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  
+  guestVotes   GuestVote[]
+  votes        Vote[]
 }
 
 model Vote {
-  id       String   @id @default(cuid())
-  userId   String
-  duelId   String
-  optionId String
-  user     User     @relation(fields: [userId], references: [id])
-  duel     Duel     @relation(fields: [duelId], references: [id])
-  option   DuelOption @relation(fields: [optionId], references: [id])
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  userId    String
+  duelId    String
+  optionId  String
+  
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  duel      Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  option    DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, duelId])
 }
 
 model GuestVote {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Text
+  id        String   @id @default(cuid()) @db.Text
   duelId    String   @map("duel_id")
   optionId  String   @map("option_id")
   ipHash    String   @map("ip_hash")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  duel   Duel     @relation(fields: [duelId], references: [id], onDelete: Cascade)
-  option DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  duel      Duel       @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  option    DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
   @@unique([duelId, ipHash], map: "dueliax_guest_votes_duel_ip_unique")
   @@map("dueliax_guest_votes")
 }
 
-model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  type      String
-  message   String
-  link      String?
-  timestamp DateTime @default(now())
-  read      Boolean  @default(false)
-  user      User     @relation(fields: [userId], references: [id])
-}
-
-model KeyTransaction {
-  id          String   @id @default(cuid())
-  userId      String
-  type        String
-  amount      Int
-  description String
-  timestamp   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id])
-}
 
 enum Role {
   USER

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import type { Duel, DuelOption, User } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/app-context';
@@ -104,13 +104,19 @@ export default function VotingFeed({ initialDuels, initialUsers, userId }: Votin
   const [showHint, setShowHint] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [clientVotedIds, setClientVotedIds] = useState<Set<string>>(new Set());
+  const { toast } = useToast();
 
   // Initialize context and local state from server-passed props
   useEffect(() => {
       setDuels(initialDuels);
       setUsers(initialUsers);
-      const guestVotes = JSON.parse(localStorage.getItem(GUEST_VOTED_DUELS_STORAGE_KEY) || '[]');
-      setClientVotedIds(new Set(guestVotes));
+      try {
+        const guestVotes = JSON.parse(localStorage.getItem(GUEST_VOTED_DUELS_STORAGE_KEY) || '[]');
+        setClientVotedIds(new Set(guestVotes));
+      } catch (e) {
+        console.error("Could not parse guest votes from local storage", e);
+        setClientVotedIds(new Set());
+      }
   }, [initialDuels, initialUsers, setDuels, setUsers]);
   
   useEffect(() => {
@@ -130,8 +136,10 @@ export default function VotingFeed({ initialDuels, initialUsers, userId }: Votin
   const activeDuels = useMemo(() => 
     contextDuels.filter(d => {
         const status = getDuelStatus(d);
-        const hasVoted = userId ? false : clientVotedIds.has(d.id);
-        return status === 'active' && !hasVoted;
+        // For guests, we check a localstorage list of voted duel IDs.
+        // For logged-in users, the server action will prevent re-voting.
+        const hasVotedAsGuest = !userId && clientVotedIds.has(d.id);
+        return status === 'active' && !hasVotedAsGuest;
     }), 
   [contextDuels, getDuelStatus, clientVotedIds, userId]);
 
@@ -154,10 +162,11 @@ export default function VotingFeed({ initialDuels, initialUsers, userId }: Votin
                 title: "Error al votar",
                 description: result.error,
             });
-            setAnimationClass('');
+            setAnimationClass(''); // Reset animation if vote fails
             return;
         }
         
+        // If the vote was registered as a guest, add it to our local list to filter it out next time.
         if (result.voteRegisteredForGuest) {
           const newVotedIds = new Set(clientVotedIds).add(currentDuel.id);
           setClientVotedIds(newVotedIds);
@@ -166,7 +175,7 @@ export default function VotingFeed({ initialDuels, initialUsers, userId }: Votin
         
         if (result.updatedDuel) {
           setVotedDuelDetails(result.updatedDuel);
-          updateDuel(result.updatedDuel);
+          updateDuel(result.updatedDuel); // Update context for other components
         }
 
         toast({
@@ -193,10 +202,16 @@ export default function VotingFeed({ initialDuels, initialUsers, userId }: Votin
         setAnimationClass('');
         setVotedDuelDetails(null);
 
+        // Logic to advance to the next duel
         if (currentDuelIndex >= activeDuels.length - 1) {
+            // If we're at the end, just stay here. The list of activeDuels will shrink,
+            // effectively showing the "no more duels" message.
+            // We set index to 0 as a fallback.
             setCurrentDuelIndex(0); 
         } else {
-            setCurrentDuelIndex(prev => prev + 1);
+            // Otherwise, we just advance. No need to increment, as the current duel
+            // will be filtered out from activeDuels, and the next one will take its place.
+            // The component will re-render with the new list.
         }
       }, 300);
   }
@@ -207,19 +222,18 @@ export default function VotingFeed({ initialDuels, initialUsers, userId }: Votin
      return <VotingFeedSkeleton />;
    }
 
-  if (!duelToShow && initialDuels.length > 0) {
-      if (activeDuels.length === 0) {
-        return (
-            <div className="text-center py-16">
-                <h2 className="text-2xl font-headline mb-4">¡No hay más duelos!</h2>
-                <p className="text-muted-foreground">Has votado en todos los duelos disponibles. ¡Vuelve más tarde o crea el tuyo!</p>
-            </div>
-        )
-     }
-     return <VotingFeedSkeleton />;
+  if (activeDuels.length === 0) {
+      return (
+          <div className="text-center py-16">
+              <h2 className="text-2xl font-headline mb-4">¡No hay más duelos!</h2>
+              <p className="text-muted-foreground">Has votado en todos los duelos disponibles. ¡Vuelve más tarde o crea el tuyo!</p>
+          </div>
+      )
   }
 
-  if (!duelToShow) return <VotingFeedSkeleton />;
+  if (!duelToShow) {
+     return <VotingFeedSkeleton />;
+  }
 
 
   return (

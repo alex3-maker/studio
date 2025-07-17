@@ -2,7 +2,7 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect, Dispatch, SetStateAction } from 'react';
-import type { User, Duel, Notification, KeyTransaction, UserVote } from '@/lib/types';
+import type { User, Duel, Notification, KeyTransaction } from '@/lib/types';
 import { isAfter, isBefore, parseISO } from 'date-fns';
 
 const NOTIFICATIONS_STORAGE_KEY = 'dueliax_notifications';
@@ -46,8 +46,10 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const getStatus = (duel: Duel): Duel['status'] => {
     if (!duel) return 'CLOSED';
-    if (duel.status === 'INACTIVE') return 'INACTIVE';
-    if (duel.status === 'DRAFT') return 'DRAFT';
+    // Trust the status from the database if it's definitive (e.g., DRAFT, INACTIVE)
+    if (duel.status !== 'ACTIVE' && duel.status !== 'SCHEDULED') {
+      return duel.status;
+    }
     
     try {
         const now = new Date();
@@ -72,6 +74,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isAiEnabled, setAiEnabledState] = useState<boolean>(true);
   
   useEffect(() => {
+    // This effect now only loads non-critical UI state from local storage.
+    // Core data like duels and users are passed via props from server components.
     try {
       const storedApiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
       if (storedApiKey) setApiKeyState(storedApiKey);
@@ -111,7 +115,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const updateDuel = useCallback((updatedDuelData: Duel) => {
-    setDuels(prev => prev.map(d => d.id === updatedDuelData.id ? updatedDuelData : d));
+    setDuels(prev => prev.map(d => d.id === updatedDuelData.id ? {...d, ...updatedDuelData} : d));
   }, []);
 
   const toggleDuelStatus = useCallback((duelId: string) => {
