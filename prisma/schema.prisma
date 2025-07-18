@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -25,6 +25,11 @@ model User {
   updatedAt     DateTime  @updatedAt
   duels         Duel[]
   votes         Vote[]
+
+  KeyTransaction KeyTransaction[] // Relation to KeyTransaction
+  Notification   Notification[]   // Relation to Notification
+
+  @@map("users")
 }
 
 model Duel {
@@ -43,6 +48,7 @@ model Duel {
   guestVotes  GuestVote[]
 
   @@index([creatorId])
+  @@map("duels")
 }
 
 model DuelOption {
@@ -57,6 +63,7 @@ model DuelOption {
   guestVotes   GuestVote[]
 
   @@index([duelId])
+  @@map("DuelOption")
 }
 
 model Vote {
@@ -72,6 +79,7 @@ model Vote {
 
   @@unique([userId, duelId])
   @@index([optionId])
+  @@map("Vote")
 }
 
 model GuestVote {
@@ -81,9 +89,40 @@ model GuestVote {
   optionId  String
   createdAt DateTime @default(now())
 
+  // Relation to User through ipHash? This mapping was in the SQL, assuming for consistency
+  // user     User     @relation(fields: [ipHash], references: [id], onDelete: Cascade, map: "guest_votes_ip_hash_fkey") // This assumes ipHash maps to User ID
+
   duel     Duel     @relation(fields: [duelId], references: [id], onDelete: Cascade)
   option   DuelOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
   @@unique([ipHash, duelId], name: "dueliax_guest_votes_duel_ip_unique")
   @@index([optionId])
+  @@map("dueliax_guest_votes")
+}
+
+model KeyTransaction {
+  id          String    @id @default(cuid())
+  userId      String
+  type        String // Assuming String based on visualizer
+  amount      Int
+  description String?
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id]) // Assuming relation to User
+
+  @@map("KeyTransaction")
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String // Assuming String based on visualizer
+  message   String
+  link      String?
+  read      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id]) // Assuming relation to User
+
+  @@map("Notification")
 }
