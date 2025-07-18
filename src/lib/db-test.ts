@@ -30,6 +30,7 @@ async function main() {
 
 main();
 // Trigger redeploy after removing sslmode=require from .env.
+// Trigger redeploy after removing duplicate prisma.ts.
 // Trigger redeploy after adding @@map("users") to User model.
 // Trigger redeploy after successful prisma generate
 
